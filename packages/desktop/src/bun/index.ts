@@ -1,5 +1,5 @@
 /**
- * Chatrix — Electrobun main process entry point
+ * Zenchat — Electrobun main process entry point
  *
  * Responsibilities:
  *  - Initialise SQLite DB and client secret
@@ -18,21 +18,25 @@ import { getClientSecret } from "../store/client-secret";
 import { AccountStore, SettingsStore } from "../store";
 import { BackendConnection } from "../backend-connection";
 import { ChatAggregator } from "../chat/aggregator";
-import { startOverlayServer, pushOverlayMessage, pushOverlayEvent } from "../overlay-server";
+import {
+  startOverlayServer,
+  pushOverlayMessage,
+  pushOverlayEvent,
+} from "../overlay-server";
 
-import type { ChatrixRPCSchema, WebviewSender } from "../shared/rpc";
+import type { ZenchatRPCSchema, WebviewSender } from "../shared/rpc";
 
 // ============================================================
 // 1. Initialisation
 // ============================================================
 
-console.log("[Chatrix] Starting...");
+console.log("[Zenchat] Starting...");
 
 initDb();
-console.log("[Chatrix] Database ready");
+console.log("[Zenchat] Database ready");
 
 const clientSecret = getClientSecret();
-console.log(`[Chatrix] Client secret: ${clientSecret.slice(0, 8)}...`);
+console.log(`[Zenchat] Client secret: ${clientSecret.slice(0, 8)}...`);
 
 const backendConn = new BackendConnection(clientSecret);
 const aggregator = new ChatAggregator(500);
@@ -43,7 +47,7 @@ startOverlayServer();
 // 2. Define Electrobun RPC (bun side)
 // ============================================================
 
-const rpc = defineElectrobunRPC<ChatrixRPCSchema>("bun", {
+const rpc = defineElectrobunRPC<ZenchatRPCSchema>("bun", {
   handlers: {
     // --- Requests from the webview ---
     requests: {
@@ -97,7 +101,7 @@ async function resolveWindowUrl(): Promise<string> {
   try {
     const res = await fetch(viteUrl, { signal: AbortSignal.timeout(500) });
     if (res.ok || res.status < 500) {
-      console.log("[Chatrix] Vite dev server detected — using HMR URL");
+      console.log("[Zenchat] Vite dev server detected — using HMR URL");
       return viteUrl;
     }
   } catch {
@@ -109,7 +113,7 @@ async function resolveWindowUrl(): Promise<string> {
 const windowUrl = await resolveWindowUrl();
 
 const win = new BrowserWindow({
-  title: "Chatrix",
+  title: "Zenchat",
   url: windowUrl,
   frame: { x: 0, y: 0, width: 1200, height: 800 },
   rpc,
@@ -181,7 +185,9 @@ setInterval(() => {
 
 // Dev logging
 aggregator.onMessage((msg) => {
-  console.log(`[Chat] [${msg.platform}] ${msg.author.displayName}: ${msg.text}`);
+  console.log(
+    `[Chat] [${msg.platform}] ${msg.author.displayName}: ${msg.text}`,
+  );
 });
 aggregator.onEvent((ev) => {
   console.log(`[Event] [${ev.platform}] ${ev.type}: ${ev.user.displayName}`);
@@ -190,7 +196,7 @@ aggregator.onStatus((s) => {
   console.log(`[Status] ${s.platform}: ${s.status} (${s.mode})`);
 });
 
-console.log("[Chatrix] Ready.");
+console.log("[Zenchat] Ready.");
 
 // ============================================================
 // Helpers

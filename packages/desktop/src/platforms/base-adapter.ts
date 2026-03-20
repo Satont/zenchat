@@ -1,5 +1,5 @@
-import type { NormalizedChatMessage, NormalizedEvent, Platform } from "@chatrix/shared/types";
-import type { PlatformStatusInfo } from "@chatrix/shared/types";
+import type { NormalizedChatMessage, NormalizedEvent, Platform } from "@zenchat/shared/types";
+import type { PlatformStatusInfo } from "@zenchat/shared/types";
 
 export type PlatformEventMap = {
   message: NormalizedChatMessage;

@@ -1,6 +1,6 @@
-import type { NormalizedChatMessage, NormalizedEvent, PlatformStatusInfo } from "@chatrix/shared/types";
+import type { NormalizedChatMessage, NormalizedEvent, PlatformStatusInfo } from "@zenchat/shared/types";
 import type { IPlatformAdapter } from "../platforms/base-adapter";
-import type { Platform } from "@chatrix/shared/types";
+import type { Platform } from "@zenchat/shared/types";
 
 type AggregatorEventHandler<T> = (data: T) => void;
 

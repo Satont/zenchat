@@ -2,10 +2,7 @@ import { generateCodeVerifier, generateCodeChallenge, generateState } from "./pk
 import { KickOAuthSessionStore, AccountStore } from "../db/index.ts";
 import { connectionManager } from "../ws/connection-manager.ts";
 import { subscribeKickEvents } from "./kick-subscriptions.ts";
-
-const KICK_CLIENT_ID = process.env["KICK_CLIENT_ID"] ?? "";
-const KICK_CLIENT_SECRET = process.env["KICK_CLIENT_SECRET"] ?? "";
-const KICK_REDIRECT_URI = process.env["KICK_REDIRECT_URI"] ?? "http://localhost:3000/auth/kick/callback";
+import { config } from "../config.ts";
 
 const KICK_AUTH_URL = "https://id.kick.com/oauth/authorize";
 const KICK_TOKEN_URL = "https://id.kick.com/oauth/token";
@@ -35,8 +32,8 @@ export async function startKickOAuth(clientSecret: string): Promise<string> {
   await KickOAuthSessionStore.create({ state, clientSecret, codeVerifier });
 
   const params = new URLSearchParams({
-    client_id: KICK_CLIENT_ID,
-    redirect_uri: KICK_REDIRECT_URI,
+    client_id: config.KICK_CLIENT_ID,
+    redirect_uri: config.KICK_REDIRECT_URI,
     response_type: "code",
     scope: "user:read channel:read chat:write",
     state,
@@ -62,9 +59,9 @@ export async function handleKickCallback(
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "authorization_code",
-      client_id: KICK_CLIENT_ID,
-      client_secret: KICK_CLIENT_SECRET,
-      redirect_uri: KICK_REDIRECT_URI,
+      client_id: config.KICK_CLIENT_ID,
+      client_secret: config.KICK_CLIENT_SECRET,
+      redirect_uri: config.KICK_REDIRECT_URI,
       code,
       code_verifier: session.codeVerifier,
     }),
@@ -81,7 +78,7 @@ export async function handleKickCallback(
   const userRes = await fetch("https://api.kick.com/public/v1/user", {
     headers: {
       Authorization: `Bearer ${tokens.access_token}`,
-      "Client-ID": KICK_CLIENT_ID,
+      "Client-ID": config.KICK_CLIENT_ID,
     },
   });
 
@@ -111,7 +108,7 @@ export async function handleKickCallback(
 
   // Subscribe to Kick webhook events for this user's channel
   try {
-    await subscribeKickEvents(tokens.access_token, KICK_CLIENT_ID);
+    await subscribeKickEvents(tokens.access_token, config.KICK_CLIENT_ID);
   } catch (err) {
     console.error("[Kick OAuth] Failed to subscribe to events:", err);
     // Non-fatal: auth still succeeded; events subscription can be retried later

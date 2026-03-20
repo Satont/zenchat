@@ -1,2 +1,2 @@
-// Chatrix entry point — delegates to the Electrobun main process
+// Zenchat entry point — delegates to the Electrobun main process
 import "./src/bun/index";

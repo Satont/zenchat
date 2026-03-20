@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "chatrix",
+      "name": "zenchat",
       "devDependencies": {
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
@@ -11,10 +11,11 @@
       },
     },
     "packages/backend": {
-      "name": "@chatrix/backend",
+      "name": "@zenchat/backend",
       "version": "0.0.1",
       "dependencies": {
-        "@chatrix/shared": "workspace:*",
+        "@zenchat/shared": "workspace:*",
+        "zod": "4.3.6",
       },
       "devDependencies": {
         "@types/bun": "catalog:",
@@ -23,15 +24,15 @@
       },
     },
     "packages/desktop": {
-      "name": "@chatrix/desktop",
+      "name": "@zenchat/desktop",
       "version": "0.0.1",
       "dependencies": {
-        "@chatrix/shared": "workspace:*",
         "@grpc/grpc-js": "1.14.3",
         "@grpc/proto-loader": "0.8.0",
         "@twurple/api": "8.0.3",
         "@twurple/auth": "8.0.3",
         "@twurple/chat": "8.0.3",
+        "@zenchat/shared": "workspace:*",
         "bun-plugin-vue": "1.0.0",
         "electrobun": "1.16.0",
         "vue": "3.5.30",
@@ -46,7 +47,7 @@
       },
     },
     "packages/shared": {
-      "name": "@chatrix/shared",
+      "name": "@zenchat/shared",
       "version": "0.0.1",
       "devDependencies": {
         "@types/node": "catalog:",
@@ -68,12 +69,6 @@
     "@babel/types": ["@babel/types@7.29.0", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A=="],
 
     "@babylonjs/core": ["@babylonjs/core@7.54.3", "", {}, "sha512-P5ncXVd8GEUJLhwloP9V0oVwQYIrvZztguVeLlvd5Rx+9aQnenKjpV8auJ6SRsUlAmNZU4pFTKzwF6o2EUfhAw=="],
-
-    "@chatrix/backend": ["@chatrix/backend@workspace:packages/backend"],
-
-    "@chatrix/desktop": ["@chatrix/desktop@workspace:packages/desktop"],
-
-    "@chatrix/shared": ["@chatrix/shared@workspace:packages/shared"],
 
     "@d-fischer/cache-decorators": ["@d-fischer/cache-decorators@4.0.1", "", { "dependencies": { "@d-fischer/shared-utils": "^3.6.3", "tslib": "^2.6.2" } }, "sha512-HNYLBLWs/t28GFZZeqdIBqq8f37mqDIFO6xNPof94VjpKvuP6ROqCZGafx88dk5zZUlBfViV9jD8iNNlXfc4CA=="],
 
@@ -222,6 +217,12 @@
     "@vue/server-renderer": ["@vue/server-renderer@3.5.30", "", { "dependencies": { "@vue/compiler-ssr": "3.5.30", "@vue/shared": "3.5.30" }, "peerDependencies": { "vue": "3.5.30" } }, "sha512-v+R34icapydRwbZRD0sXwtHqrQJv38JuMB4JxbOxd8NEpGLny7cncMp53W9UH/zo4j8eDHjQ1dEJXwzFQknjtQ=="],
 
     "@vue/shared": ["@vue/shared@3.5.30", "", {}, "sha512-YXgQ7JjaO18NeK2K9VTbDHaFy62WrObMa6XERNfNOkAhD1F1oDSf3ZJ7K6GqabZ0BvSDHajp8qfS5Sa2I9n8uQ=="],
+
+    "@zenchat/backend": ["@zenchat/backend@workspace:packages/backend"],
+
+    "@zenchat/desktop": ["@zenchat/desktop@workspace:packages/desktop"],
+
+    "@zenchat/shared": ["@zenchat/shared@workspace:packages/shared"],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 
@@ -426,6 +427,8 @@
     "yargs": ["yargs@17.7.2", "", { "dependencies": { "cliui": "^8.0.1", "escalade": "^3.1.1", "get-caller-file": "^2.0.5", "require-directory": "^2.1.1", "string-width": "^4.2.3", "y18n": "^5.0.5", "yargs-parser": "^21.1.1" } }, "sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w=="],
 
     "yargs-parser": ["yargs-parser@21.1.1", "", {}, "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="],
+
+    "zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
     "chalk/supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
 

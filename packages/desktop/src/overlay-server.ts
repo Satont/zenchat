@@ -1,5 +1,5 @@
 /**
- * Chatrix OBS Overlay Server
+ * Zenchat OBS Overlay Server
  *
  * Serves the overlay page (built by Vite into dist/overlay/) and a WebSocket
  * endpoint that pushes chat messages and events to connected OBS browser
@@ -22,8 +22,11 @@
  *   platforms   — comma-separated filter e.g. "twitch,kick" (default: all)
  */
 
-import { OVERLAY_SERVER_PORT } from "@chatrix/shared/constants";
-import type { NormalizedChatMessage, NormalizedEvent } from "@chatrix/shared/types";
+import { OVERLAY_SERVER_PORT } from "@zenchat/shared/constants";
+import type {
+  NormalizedChatMessage,
+  NormalizedEvent,
+} from "@zenchat/shared/types";
 import { join } from "path";
 
 // ============================================================
@@ -89,7 +92,9 @@ export function clearOverlay(): void {
  */
 const OVERLAY_DIST = join(import.meta.dir, "..", "dist", "overlay");
 
-export function startOverlayServer(port: number = OVERLAY_SERVER_PORT): ReturnType<typeof Bun.serve> {
+export function startOverlayServer(
+  port: number = OVERLAY_SERVER_PORT,
+): ReturnType<typeof Bun.serve> {
   const server = Bun.serve({
     port,
     fetch(req, server) {

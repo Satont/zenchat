@@ -1,21 +1,19 @@
 {
-  "name": "@chatrix/desktop",
+  "name": "@zenchat/desktop",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run build:views && electrobun dev",
-    "dev:hmr": "concurrently \"bun run hmr:main\" \"bun run start\"",
-    "hmr:main": "vite --config vite.main.config.ts --port 5173",
-    "start": "bun src/bun/index.ts",
-    "build:views": "vite build --config vite.main.config.ts && vite build --config vite.overlay.config.ts",
-    "build": "bun run build:views && electrobun build",
-    "build:canary": "bun run build:views && electrobun build --env=canary",
+    "start": "vite --config vite.main.config.ts build && electrobun dev",
+    "dev": "electrobun dev --watch",
+    "dev:hmr": "concurrently \"bun run hmr\" \"bun run start\"",
+    "hmr": "vite --config vite.main.config.ts --port 5173",
     "typecheck": "tsgo --noEmit",
-    "test": "bun test tests/"
+    "test": "bun test tests/",
+    "build:prod": "vite --config vite.main.config.ts build && electrobun build --env=canary"
   },
   "dependencies": {
-    "@chatrix/shared": "workspace:*",
+    "@zenchat/shared": "workspace:*",
     "@grpc/grpc-js": "1.14.3",
     "@grpc/proto-loader": "0.8.0",
     "@twurple/api": "8.0.3",

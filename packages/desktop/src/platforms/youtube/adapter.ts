@@ -20,7 +20,11 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { BasePlatformAdapter } from "../base-adapter";
-import type { NormalizedChatMessage, NormalizedEvent, Badge } from "@chatrix/shared/types";
+import type {
+  NormalizedChatMessage,
+  NormalizedEvent,
+  Badge,
+} from "@zenchat/shared/types";
 import { AccountStore } from "@desktop/store/account-store";
 
 // ============================================================
@@ -41,7 +45,8 @@ const packageDef = protoLoader.loadSync(PROTO_PATH, {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const protoDescriptor = grpc.loadPackageDefinition(packageDef) as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const YouTubeLiveChatService = protoDescriptor?.youtube?.api?.v3?.V3DataLiveChatMessageService as any;
+const YouTubeLiveChatService = protoDescriptor?.youtube?.api?.v3
+  ?.V3DataLiveChatMessageService as any;
 
 const YOUTUBE_GRPC_ENDPOINT = "youtube.googleapis.com:443";
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
@@ -103,7 +108,9 @@ interface GrpcResponse {
 export class YouTubeAdapter extends BasePlatformAdapter {
   readonly platform = "youtube" as const;
 
-  private grpcClient: ReturnType<typeof grpc.makeGenericClientConstructor> | null = null;
+  private grpcClient: ReturnType<
+    typeof grpc.makeGenericClientConstructor
+  > | null = null;
   private activeStream: grpc.ClientReadableStream<GrpcResponse> | null = null;
   private channelId = "";
   private liveChatId: string | null = null;
@@ -199,7 +206,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     // Try as a video ID first
     const videoRes = await fetch(
       `${YOUTUBE_API_BASE}/videos?part=liveStreamingDetails&id=${encodeURIComponent(channelOrVideoId)}`,
-      { headers: { Authorization: `Bearer ${this.accessToken}` } }
+      { headers: { Authorization: `Bearer ${this.accessToken}` } },
     );
 
     if (videoRes.ok) {
@@ -216,7 +223,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     // Fallback: search for active live broadcast on the channel
     const searchRes = await fetch(
       `${YOUTUBE_API_BASE}/search?part=snippet&channelId=${encodeURIComponent(channelOrVideoId)}&eventType=live&type=video`,
-      { headers: { Authorization: `Bearer ${this.accessToken}` } }
+      { headers: { Authorization: `Bearer ${this.accessToken}` } },
     );
 
     if (!searchRes.ok) {
@@ -227,20 +234,25 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       items?: Array<{ id?: { videoId?: string } }>;
     };
     const videoId = searchBody.items?.[0]?.id?.videoId;
-    if (!videoId) throw new Error(`No active live broadcast found for "${channelOrVideoId}"`);
+    if (!videoId)
+      throw new Error(
+        `No active live broadcast found for "${channelOrVideoId}"`,
+      );
 
     const liveRes = await fetch(
       `${YOUTUBE_API_BASE}/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`,
-      { headers: { Authorization: `Bearer ${this.accessToken}` } }
+      { headers: { Authorization: `Bearer ${this.accessToken}` } },
     );
 
-    if (!liveRes.ok) throw new Error(`YouTube videos.list failed: ${liveRes.status}`);
+    if (!liveRes.ok)
+      throw new Error(`YouTube videos.list failed: ${liveRes.status}`);
 
     const liveBody = (await liveRes.json()) as {
       items?: Array<{ liveStreamingDetails?: { activeLiveChatId?: string } }>;
     };
     const chatId = liveBody.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
-    if (!chatId) throw new Error(`No active live chat found for video "${videoId}"`);
+    if (!chatId)
+      throw new Error(`No active live chat found for video "${videoId}"`);
 
     console.log(`[YouTube] Found liveChatId via channel search: ${chatId}`);
     return chatId;
@@ -263,10 +275,15 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       maxResults: 200,
     };
 
-    console.log(`[YouTube] Starting gRPC stream for liveChatId=${this.liveChatId}`);
+    console.log(
+      `[YouTube] Starting gRPC stream for liveChatId=${this.liveChatId}`,
+    );
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const stream = (client as any).StreamList(request, metadata) as grpc.ClientReadableStream<GrpcResponse>;
+    const stream = (client as any).StreamList(
+      request,
+      metadata,
+    ) as grpc.ClientReadableStream<GrpcResponse>;
     this.activeStream = stream;
 
     stream.on("data", (response: GrpcResponse) => {
@@ -275,7 +292,9 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       }
       // If stream ended (offlineAt is set), close cleanly
       if (response.offlineAt) {
-        console.log(`[YouTube] Stream ended — channel went offline at ${response.offlineAt}`);
+        console.log(
+          `[YouTube] Stream ended — channel went offline at ${response.offlineAt}`,
+        );
         stream.cancel();
       }
     });
@@ -320,15 +339,20 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     if (!snippet.hasDisplayContent) return;
 
     const type = snippet.type ?? "";
-    const timestamp = snippet.publishedAt ? new Date(snippet.publishedAt) : new Date();
+    const timestamp = snippet.publishedAt
+      ? new Date(snippet.publishedAt)
+      : new Date();
     const authorId = author.channelId ?? "";
     const displayName = author.displayName ?? "unknown";
     const avatarUrl = author.profileImageUrl ?? undefined;
 
     const badges: Badge[] = [];
-    if (author.isChatOwner) badges.push({ id: "owner", type: "broadcaster", text: "Owner" });
-    if (author.isChatModerator) badges.push({ id: "mod", type: "moderator", text: "Moderator" });
-    if (author.isChatSponsor) badges.push({ id: "sponsor", type: "subscriber", text: "Member" });
+    if (author.isChatOwner)
+      badges.push({ id: "owner", type: "broadcaster", text: "Owner" });
+    if (author.isChatModerator)
+      badges.push({ id: "mod", type: "moderator", text: "Moderator" });
+    if (author.isChatSponsor)
+      badges.push({ id: "sponsor", type: "subscriber", text: "Member" });
 
     switch (type) {
       case "TEXT_MESSAGE_EVENT": {

@@ -11,7 +11,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@chatrix/shared": resolve(__dirname, "../shared/index.ts"),
+      "@zenchat/shared/types": resolve(__dirname, "../shared/types.ts"),
+      "@zenchat/shared/constants": resolve(__dirname, "../shared/constants.ts"),
+      "@zenchat/shared/protocol": resolve(__dirname, "../shared/protocol.ts"),
+      "@zenchat/shared": resolve(__dirname, "../shared/index.ts"),
       "@desktop": resolve(__dirname, "src"),
     },
   },

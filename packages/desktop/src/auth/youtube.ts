@@ -2,7 +2,7 @@ import {
   YOUTUBE_AUTH_URL,
   YOUTUBE_TOKEN_URL,
   YOUTUBE_REDIRECT_URI,
-} from "@chatrix/shared/constants";
+} from "@zenchat/shared/constants";
 import { generateState } from "./pkce";
 import { AccountStore } from "@desktop/store/account-store";
 import { successPage } from "./server";
@@ -85,7 +85,9 @@ export async function handleYouTubeCallback(url: URL): Promise<Response> {
 
   if (!tokenRes.ok) {
     const body = await tokenRes.text();
-    throw new Error(`YouTube token exchange failed: ${tokenRes.status} ${body}`);
+    throw new Error(
+      `YouTube token exchange failed: ${tokenRes.status} ${body}`,
+    );
   }
 
   const tokens = (await tokenRes.json()) as {
@@ -100,7 +102,7 @@ export async function handleYouTubeCallback(url: URL): Promise<Response> {
     "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
     {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
-    }
+    },
   );
 
   if (!userRes.ok) {
@@ -121,7 +123,9 @@ export async function handleYouTubeCallback(url: URL): Promise<Response> {
   const channel = userData.items?.[0];
   if (!channel) throw new Error("YouTube channel data missing");
 
-  const expiresAt = tokens.expires_in ? Math.floor(Date.now() / 1000) + tokens.expires_in : undefined;
+  const expiresAt = tokens.expires_in
+    ? Math.floor(Date.now() / 1000) + tokens.expires_in
+    : undefined;
 
   AccountStore.upsert({
     id: `youtube:${channel.id}`,
@@ -147,7 +151,8 @@ export async function refreshYouTubeToken(accountId: string): Promise<string> {
   if (!_config) throw new Error("YouTube auth not configured");
 
   const tokens = AccountStore.getTokens(accountId);
-  if (!tokens?.refreshToken) throw new Error("No refresh token for YouTube account");
+  if (!tokens?.refreshToken)
+    throw new Error("No refresh token for YouTube account");
 
   const res = await fetch(YOUTUBE_TOKEN_URL, {
     method: "POST",
@@ -169,9 +174,16 @@ export async function refreshYouTubeToken(accountId: string): Promise<string> {
     expires_in?: number;
   };
 
-  const expiresAt = data.expires_in ? Math.floor(Date.now() / 1000) + data.expires_in : undefined;
+  const expiresAt = data.expires_in
+    ? Math.floor(Date.now() / 1000) + data.expires_in
+    : undefined;
   // YouTube не всегда возвращает новый refresh_token
-  AccountStore.updateTokens(accountId, data.access_token, tokens.refreshToken, expiresAt);
+  AccountStore.updateTokens(
+    accountId,
+    data.access_token,
+    tokens.refreshToken,
+    expiresAt,
+  );
 
   return data.access_token;
 }

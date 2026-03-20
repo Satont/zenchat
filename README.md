@@ -1,4 +1,4 @@
-# chatrix
+# zenchat
 
 To install dependencies:
 

@@ -1,4 +1,4 @@
-import { APP_NAME } from "@chatrix/shared/constants";
+import { APP_NAME } from "@zenchat/shared/constants";
 import { hostname } from "node:os";
 
 /**

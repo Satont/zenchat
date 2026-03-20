@@ -2,7 +2,7 @@ import {
   KICK_AUTH_URL,
   KICK_TOKEN_URL,
   KICK_REDIRECT_URI,
-} from "@chatrix/shared/constants";
+} from "@zenchat/shared/constants";
 import { generateCodeVerifier, generateCodeChallenge, generateState } from "./pkce";
 import { AccountStore } from "@desktop/store/account-store";
 import { successPage } from "./server";

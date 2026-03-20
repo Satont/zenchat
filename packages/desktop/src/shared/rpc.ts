@@ -1,5 +1,5 @@
 /**
- * Chatrix Electrobun RPC Schema
+ * Zenchat Electrobun RPC Schema
  *
  * Defines the typed RPC contract between the Bun main process and the
  * webview (Vue) side.  Import this type in both src/bun/index.ts and
@@ -20,7 +20,7 @@ import type {
   Account,
   AppSettings,
   Platform,
-} from "@chatrix/shared/types";
+} from "@zenchat/shared/types";
 
 // ----------------------------------------------------------------
 // Bun-side schema (what the webview calls into)
@@ -38,11 +38,20 @@ type BunRequests = {
   /** Log out from a platform */
   authLogout: { params: { platform: Platform }; response: void };
   /** Join a channel for live chat */
-  joinChannel: { params: { platform: Platform; channelSlug: string }; response: void };
+  joinChannel: {
+    params: { platform: Platform; channelSlug: string };
+    response: void;
+  };
   /** Leave a channel */
-  leaveChannel: { params: { platform: Platform; channelSlug: string }; response: void };
+  leaveChannel: {
+    params: { platform: Platform; channelSlug: string };
+    response: void;
+  };
   /** Send a chat message */
-  sendMessage: { params: { platform: Platform; channelId: string; text: string }; response: void };
+  sendMessage: {
+    params: { platform: Platform; channelId: string; text: string };
+    response: void;
+  };
 };
 
 type BunMessages = Record<never, unknown>;
@@ -72,7 +81,7 @@ type WebviewMessages = {
 // Combined schema exported for use on both sides
 // ----------------------------------------------------------------
 
-export type ChatrixRPCSchema = {
+export type ZenchatRPCSchema = {
   bun: RPCSchema<{ requests: BunRequests; messages: BunMessages }>;
   webview: RPCSchema<{ requests: WebviewRequests; messages: WebviewMessages }>;
 };

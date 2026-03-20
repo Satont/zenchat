@@ -14,8 +14,8 @@
  */
 
 import { BasePlatformAdapter } from "../base-adapter";
-import type { NormalizedChatMessage, NormalizedEvent, Badge } from "@chatrix/shared/types";
-import { TWITCH_ANON_PREFIX } from "@chatrix/shared/constants";
+import type { NormalizedChatMessage, NormalizedEvent, Badge } from "@zenchat/shared/types";
+import { TWITCH_ANON_PREFIX } from "@zenchat/shared/constants";
 import { AccountStore } from "@desktop/store/account-store";
 
 const TWITCH_IRC_WS = "wss://irc-ws.chat.twitch.tv:443";

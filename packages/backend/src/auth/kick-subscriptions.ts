@@ -7,12 +7,12 @@
  * Docs: https://docs.kick.com/events/subscriptions
  */
 
+import { config } from "../config.ts";
+
 const KICK_API_BASE = "https://api.kick.com/public/v1";
 
 // The public URL where Kick will POST webhook events.
-// Must be set in env; e.g. https://your-backend.example.com/webhook/kick
-const WEBHOOK_URL =
-  process.env["KICK_WEBHOOK_URL"] ?? "https://your-backend.example.com/webhook/kick";
+const WEBHOOK_URL = config.KICK_WEBHOOK_URL;
 
 const EVENT_TYPES = [
   "chat.message.sent",

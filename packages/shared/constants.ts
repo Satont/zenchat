@@ -8,19 +8,22 @@ export const TWITCH_REDIRECT_URI = `${AUTH_CALLBACK_BASE}/auth/twitch/callback`;
 export const YOUTUBE_REDIRECT_URI = `${AUTH_CALLBACK_BASE}/auth/youtube/callback`;
 export const KICK_REDIRECT_URI = `${AUTH_CALLBACK_BASE}/auth/kick/callback`;
 
-export const DB_PATH = `${process.env["HOME"]}/.chatrix/db.sqlite`;
+export const DB_PATH = `${process.env["HOME"]}/.zenchat/db.sqlite`;
 
-export const APP_NAME = "Chatrix";
+export const APP_NAME = "Zenchat";
 
 // Backend service
-export const BACKEND_URL = process.env["CHATRIX_BACKEND_URL"] ?? "http://localhost:3000";
-export const BACKEND_WS_URL = process.env["CHATRIX_BACKEND_WS_URL"] ?? "ws://localhost:3000/ws";
+export const BACKEND_URL =
+  process.env["CHATRIX_BACKEND_URL"] ?? "http://localhost:3000";
+export const BACKEND_WS_URL =
+  process.env["CHATRIX_BACKEND_WS_URL"] ?? "ws://localhost:3000/ws";
 
 // Twitch IRC anonymous credentials
 export const TWITCH_ANON_PREFIX = "justinfan";
 
 // Kick Pusher (анонимный WebSocket)
-export const KICK_PUSHER_WS = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679";
+export const KICK_PUSHER_WS =
+  "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679";
 export const KICK_PUSHER_APP_KEY = "32cbd69e4b950bf97679";
 
 // Kick API

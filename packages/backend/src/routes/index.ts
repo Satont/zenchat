@@ -2,16 +2,26 @@ import type { WsData } from "../ws/connection-manager.ts";
 import { ClientStore, AccountStore } from "../db/index.ts";
 import { startKickOAuth } from "../auth/kick.ts";
 import { handleKickWebhook } from "../auth/kick-webhook.ts";
-import type { AuthStartRequest, AuthStartResponse, AccountsResponse, Platform } from "@chatrix/shared";
+import type {
+  AuthStartRequest,
+  AuthStartResponse,
+  AccountsResponse,
+  Platform,
+} from "@zenchat/shared";
 
 /** Middleware: validate X-Client-Secret header and ensure client exists in DB */
-async function requireClient(req: Request): Promise<{ clientSecret: string } | Response> {
+async function requireClient(
+  req: Request,
+): Promise<{ clientSecret: string } | Response> {
   const secret = req.headers.get("X-Client-Secret");
   if (!secret) {
-    return new Response(JSON.stringify({ error: "Missing X-Client-Secret header" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Missing X-Client-Secret header" }),
+      {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 
   // Auto-register new clients (first connection)
@@ -65,13 +75,13 @@ export async function handleRequest(req: Request): Promise<Response> {
       await handleKickCallback(code, state);
       return new Response(
         "<html><body><h2>Kick connected! You can close this tab.</h2></body></html>",
-        { headers: { "Content-Type": "text/html" } }
+        { headers: { "Content-Type": "text/html" } },
       );
     } catch (err) {
       console.error("[auth/kick/callback]", err);
       return new Response(
         `<html><body><h2>OAuth failed: ${String(err)}</h2></body></html>`,
-        { status: 500, headers: { "Content-Type": "text/html" } }
+        { status: 500, headers: { "Content-Type": "text/html" } },
       );
     }
   }

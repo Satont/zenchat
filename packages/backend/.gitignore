@@ -1,1 +1,6 @@
 .out
+
+# Local env — never commit real credentials
+.env
+.env.*
+!.env.example

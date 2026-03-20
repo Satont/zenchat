@@ -1,7 +1,7 @@
 import { test, expect, describe } from "bun:test";
 import { ChatAggregator } from "@desktop/chat/aggregator";
 import { BasePlatformAdapter } from "@desktop/platforms/base-adapter";
-import type { NormalizedChatMessage, NormalizedEvent } from "@chatrix/shared/types";
+import type { NormalizedChatMessage, NormalizedEvent } from "@zenchat/shared/types";
 
 class MockAdapter extends BasePlatformAdapter {
   readonly platform = "kick" as const;

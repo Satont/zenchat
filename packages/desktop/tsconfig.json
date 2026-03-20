@@ -20,17 +20,10 @@
     "types": ["bun", "node"],
     "paths": {
       "@desktop/*": ["./src/*"],
-      "@chatrix/shared": ["../shared/index.ts"],
-      "@chatrix/shared/*": ["../shared/*"],
+      "@zenchat/shared": ["../shared/index.ts"],
+      "@zenchat/shared/*": ["../shared/*"],
     },
   },
-  "include": [
-    "src/**/*",
-    "index.ts",
-    "electrobun.config.ts",
-  ],
-  "exclude": [
-    "overlay",
-    "node_modules",
-  ],
+  "include": ["src/**/*", "index.ts", "electrobun.config.ts"],
+  "exclude": ["overlay", "node_modules"],
 }

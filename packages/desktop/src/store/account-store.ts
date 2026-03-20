@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { encrypt, decrypt } from "./crypto";
-import type { Account, Platform } from "@chatrix/shared/types";
+import type { Account, Platform } from "@zenchat/shared/types";
 
 interface DbAccount {
   id: string;

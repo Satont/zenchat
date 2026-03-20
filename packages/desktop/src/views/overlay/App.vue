@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from "vue";
-import type { NormalizedChatMessage, NormalizedEvent } from "@chatrix/shared/types";
+import type { NormalizedChatMessage, NormalizedEvent } from "@zenchat/shared/types";
 
 // ----------------------------------------------------------------
 // Config from URL query params

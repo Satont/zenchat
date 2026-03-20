@@ -1,5 +1,5 @@
 /**
- * Chatrix — main process entry point
+ * Zenchat — main process entry point
  *
  * Спринт 2: monorepo, UUID client identity, BackendConnection WS, Kick via backend.
  */
@@ -8,21 +8,25 @@ import { initDb } from "./store/db";
 import { getClientSecret } from "./store/client-secret";
 import { BackendConnection } from "./backend-connection";
 import { ChatAggregator } from "./chat/aggregator";
-import { startOverlayServer, pushOverlayMessage, pushOverlayEvent } from "./overlay-server";
+import {
+  startOverlayServer,
+  pushOverlayMessage,
+  pushOverlayEvent,
+} from "./overlay-server";
 
 // ============================================================
 // Инициализация
 // ============================================================
 
-console.log("[Chatrix] Starting...");
+console.log("[Zenchat] Starting...");
 
 // 1. База данных — должна быть первой, генерирует/читает секрет
 initDb();
-console.log("[Chatrix] Database ready");
+console.log("[Zenchat] Database ready");
 
 // 2. Читаем/генерируем UUID-секрет
 const clientSecret = getClientSecret();
-console.log(`[Chatrix] Client secret: ${clientSecret.slice(0, 8)}...`);
+console.log(`[Zenchat] Client secret: ${clientSecret.slice(0, 8)}...`);
 
 // 3. Подключаемся к backend
 const backendConn = new BackendConnection(clientSecret);
@@ -80,11 +84,15 @@ backendConn.onMessage((msg) => {
 
 // Логируем все входящие сообщения (для разработки)
 aggregator.onMessage((msg) => {
-  console.log(`[Chat] [${msg.platform}] ${msg.author.displayName}: ${msg.text}`);
+  console.log(
+    `[Chat] [${msg.platform}] ${msg.author.displayName}: ${msg.text}`,
+  );
 });
 
 aggregator.onEvent((event) => {
-  console.log(`[Event] [${event.platform}] ${event.type}: ${event.user.displayName}`);
+  console.log(
+    `[Event] [${event.platform}] ${event.type}: ${event.user.displayName}`,
+  );
 });
 
 aggregator.onStatus((status) => {
@@ -119,5 +127,4 @@ async function openBrowser(url: string): Promise<void> {
 
 export { aggregator, backendConn, clientSecret, overlayServer };
 
-console.log("[Chatrix] Ready.");
-
+console.log("[Zenchat] Ready.");

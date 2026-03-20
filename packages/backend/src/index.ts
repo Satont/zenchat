@@ -4,8 +4,9 @@ import { connectionManager } from "./ws/connection-manager.ts";
 import { handleWsOpen, handleWsClose, handleWsMessage } from "./ws/handlers.ts";
 import { handleRequest } from "./routes/index.ts";
 import type { WsData } from "./ws/connection-manager.ts";
+import { config } from "./config.ts";
 
-const PORT = Number(process.env["PORT"] ?? 3000);
+const PORT = config.PORT;
 
 // Run DB migrations on startup
 await runMigrations();
@@ -20,10 +21,13 @@ const server = Bun.serve<WsData>({
     if (url.pathname === "/ws") {
       const secret = req.headers.get("X-Client-Secret");
       if (!secret) {
-        return new Response(JSON.stringify({ error: "Missing X-Client-Secret" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Missing X-Client-Secret" }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       // Ensure client exists
@@ -52,5 +56,7 @@ const server = Bun.serve<WsData>({
   },
 });
 
-console.log(`[Backend] Chatrix backend running on http://localhost:${server.port}`);
+console.log(
+  `[Backend] Zenchat backend running on http://localhost:${server.port}`,
+);
 console.log(`[Backend] WebSocket endpoint: ws://localhost:${server.port}/ws`);

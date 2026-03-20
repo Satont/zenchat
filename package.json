@@ -1,5 +1,5 @@
 {
-  "name": "chatrix-monorepo",
+  "name": "zenchat-monorepo",
   "private": true,
   "scripts": {
     "dev:desktop": "bun run --cwd packages/desktop dev",

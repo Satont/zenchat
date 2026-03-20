@@ -1,5 +1,8 @@
-import type { BackendToDesktopMessage, DesktopToBackendMessage } from "@chatrix/shared";
-import { BACKEND_WS_URL } from "@chatrix/shared/constants";
+import type {
+  BackendToDesktopMessage,
+  DesktopToBackendMessage,
+} from "@zenchat/shared";
+import { BACKEND_WS_URL } from "@zenchat/shared/constants";
 
 type MessageHandler = (msg: BackendToDesktopMessage) => void;
 
@@ -79,9 +82,14 @@ export class BackendConnection {
     ws.addEventListener("close", () => {
       this.ws = null;
       if (!this.stopped) {
-        console.log(`[BackendConnection] Disconnected. Reconnecting in ${this.reconnectDelay}ms...`);
+        console.log(
+          `[BackendConnection] Disconnected. Reconnecting in ${this.reconnectDelay}ms...`,
+        );
         this.reconnectTimer = setTimeout(() => {
-          this.reconnectDelay = Math.min(this.reconnectDelay * 2, MAX_RECONNECT_DELAY_MS);
+          this.reconnectDelay = Math.min(
+            this.reconnectDelay * 2,
+            MAX_RECONNECT_DELAY_MS,
+          );
           this._connect();
         }, this.reconnectDelay);
       }

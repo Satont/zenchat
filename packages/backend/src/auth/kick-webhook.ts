@@ -1,9 +1,12 @@
 import { createHmac } from "node:crypto";
-import type { NormalizedChatMessage, NormalizedEvent, Badge } from "@chatrix/shared";
+import type {
+  NormalizedChatMessage,
+  NormalizedEvent,
+  Badge,
+} from "@zenchat/shared";
 import { connectionManager } from "../ws/connection-manager.ts";
 import { AccountStore } from "../db/index.ts";
-
-const KICK_WEBHOOK_SECRET = process.env["KICK_WEBHOOK_SECRET"] ?? "";
+import { config } from "../config.ts";
 
 // ============================================================
 // Kick webhook payload types (v1)
@@ -60,17 +63,19 @@ interface ChannelSubscriptionGiftsPayload {
 
 export async function verifyKickSignature(
   req: Request,
-  body: string
+  body: string,
 ): Promise<boolean> {
-  if (!KICK_WEBHOOK_SECRET) {
-    console.warn("[Kick webhook] KICK_WEBHOOK_SECRET not set — skipping verification");
+  if (!config.KICK_WEBHOOK_SECRET) {
+    console.warn(
+      "[Kick webhook] KICK_WEBHOOK_SECRET not set — skipping verification",
+    );
     return true;
   }
 
   const signature = req.headers.get("Kick-Event-Signature");
   if (!signature) return false;
 
-  const expected = createHmac("sha256", KICK_WEBHOOK_SECRET)
+  const expected = createHmac("sha256", config.KICK_WEBHOOK_SECRET)
     .update(body)
     .digest("hex");
 
@@ -82,19 +87,25 @@ export async function verifyKickSignature(
 // Normalization helpers
 // ============================================================
 
-function normalizeBadges(badges: Array<{ text: string; type: string; count?: number }> | undefined): Badge[] {
+function normalizeBadges(
+  badges: Array<{ text: string; type: string; count?: number }> | undefined,
+): Badge[] {
   if (!badges) return [];
   return badges.map((b) => ({ id: b.type, type: b.type, text: b.text }));
 }
 
-function normalizeChatMessage(payload: ChatMessagePayload): NormalizedChatMessage {
+function normalizeChatMessage(
+  payload: ChatMessagePayload,
+): NormalizedChatMessage {
   const sender = payload.sender;
   const badges = normalizeBadges(sender.identity?.badges);
 
   return {
     id: payload.message_id,
     platform: "kick",
-    channelId: String(payload.broadcaster.user_id ?? payload.broadcaster.channel_slug ?? ""),
+    channelId: String(
+      payload.broadcaster.user_id ?? payload.broadcaster.channel_slug ?? "",
+    ),
     author: {
       id: String(sender.user_id ?? "anon"),
       displayName: sender.username ?? "anonymous",
@@ -143,12 +154,18 @@ export async function handleKickWebhook(req: Request): Promise<Response> {
   return new Response("OK", { status: 200 });
 }
 
-async function dispatchKickEvent(eventType: string, payload: unknown): Promise<void> {
+async function dispatchKickEvent(
+  eventType: string,
+  payload: unknown,
+): Promise<void> {
   switch (eventType) {
     case "chat.message.sent": {
       const msg = normalizeChatMessage(payload as ChatMessagePayload);
       // Find the client that owns this broadcaster's channel and push the message
-      await pushToChannelOwner(payload as ChatMessagePayload, { type: "chat_message", data: msg });
+      await pushToChannelOwner(payload as ChatMessagePayload, {
+        type: "chat_message",
+        data: msg,
+      });
       break;
     }
 
@@ -223,7 +240,7 @@ async function dispatchKickEvent(eventType: string, payload: unknown): Promise<v
 // We look up the platform_account whose platform_user_id matches the broadcaster's user_id.
 async function pushToChannelOwner(
   payload: { broadcaster: KickUser },
-  message: Parameters<typeof connectionManager.send>[1]
+  message: Parameters<typeof connectionManager.send>[1],
 ): Promise<void> {
   const broadcasterId = payload.broadcaster.user_id;
   if (!broadcasterId) {
@@ -239,7 +256,9 @@ async function pushToChannelOwner(
   `;
 
   if (rows.length === 0) {
-    console.warn(`[Kick webhook] No client found for broadcaster ${broadcasterId}`);
+    console.warn(
+      `[Kick webhook] No client found for broadcaster ${broadcasterId}`,
+    );
     return;
   }
 

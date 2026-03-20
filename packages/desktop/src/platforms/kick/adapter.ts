@@ -1,9 +1,9 @@
 import { BasePlatformAdapter } from "../base-adapter";
-import type { NormalizedChatMessage, NormalizedEvent, Badge } from "@chatrix/shared/types";
+import type { NormalizedChatMessage, NormalizedEvent, Badge } from "@zenchat/shared/types";
 import {
   KICK_PUSHER_WS,
   KICK_API_BASE,
-} from "@chatrix/shared/constants";
+} from "@zenchat/shared/constants";
 
 // ============================================================
 // Типы Kick Pusher events
