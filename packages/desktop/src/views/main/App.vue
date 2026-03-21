@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import PlatformsPanel from "./components/PlatformsPanel.vue";
 import ChatList from "./components/ChatList.vue";
 import EventsFeed from "./components/EventsFeed.vue";
@@ -24,6 +24,8 @@ const accounts = ref<Account[]>([]);
 const settings = ref<AppSettings | null>(null);
 const activeTab = ref<"chat" | "events" | "platforms" | "settings">("chat");
 const unreadEvents = ref(0);
+
+const connectedAccountsCount = computed(() => accounts.value.length);
 
 // ----------------------------------------------------------------
 // Load initial data
@@ -161,22 +163,27 @@ function onSettingsSaved(s: AppSettings) {
           title="Platforms"
           @click="switchTab('platforms')"
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <path
-              d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-            />
-          </svg>
+          <div class="nav-item-inner">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path
+                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+              />
+            </svg>
+            <span v-if="connectedAccountsCount > 0" class="badge badge-green">
+              {{ connectedAccountsCount }}
+            </span>
+          </div>
           <span class="nav-label">Platforms</span>
         </button>
 
@@ -214,6 +221,7 @@ function onSettingsSaved(s: AppSettings) {
         :settings="settings"
         :accounts="accounts"
         :statuses="statuses"
+        @go-to-platforms="switchTab('platforms')"
       />
 
       <EventsFeed v-show="activeTab === 'events'" :events="events" />
@@ -390,6 +398,10 @@ body {
   min-width: 16px;
   text-align: center;
   line-height: 14px;
+}
+
+.badge-green {
+  background: #22c55e;
 }
 
 /* ---- Content area ---- */

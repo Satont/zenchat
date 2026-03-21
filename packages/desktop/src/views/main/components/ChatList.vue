@@ -15,6 +15,10 @@ const props = defineProps<{
   statuses: Map<string, PlatformStatusInfo>;
 }>();
 
+const emit = defineEmits<{
+  "go-to-platforms": [];
+}>();
+
 const listEl = ref<HTMLElement | null>(null);
 const isAtBottom = ref(true);
 
@@ -49,6 +53,15 @@ function scrollToBottom() {
     behavior: "smooth",
   });
   isAtBottom.value = true;
+}
+
+function platformColor(platform: string): string {
+  switch (platform) {
+    case "twitch": return "#9146ff";
+    case "youtube": return "#ff0000";
+    case "kick": return "#53fc18";
+    default: return "#a78bfa";
+  }
 }
 </script>
 
@@ -95,13 +108,36 @@ function scrollToBottom() {
             />
           </svg>
         </div>
-        <template v-if="!hasAnyConnection">
-          <p class="empty-title">No channels joined yet</p>
-          <p class="empty-hint">
-            Go to <strong>Platforms</strong> to connect your accounts and join
-            channels.
-          </p>
+
+        <!-- No accounts at all -->
+        <template v-if="accounts.length === 0">
+          <p class="empty-title">No accounts connected</p>
+          <p class="empty-hint">Connect your streaming accounts to start reading chat.</p>
+          <button class="empty-action" @click="emit('go-to-platforms')">
+            Go to Platforms →
+          </button>
         </template>
+
+        <!-- Accounts exist, but no active connection yet -->
+        <template v-else-if="!hasAnyConnection">
+          <p class="empty-title">Waiting for connection…</p>
+          <div class="empty-accounts">
+            <div
+              v-for="acc in accounts"
+              :key="acc.id"
+              class="empty-account-chip"
+              :style="{ '--chip-color': platformColor(acc.platform) }"
+            >
+              <img v-if="acc.avatarUrl" :src="acc.avatarUrl" class="chip-avatar" />
+              <span v-else class="chip-avatar-fallback">{{ acc.displayName.charAt(0).toUpperCase() }}</span>
+              <span class="chip-name">{{ acc.displayName }}</span>
+              <span class="chip-platform">{{ acc.platform }}</span>
+            </div>
+          </div>
+          <p class="empty-hint">Join a channel in <strong>Platforms</strong> to see chat.</p>
+        </template>
+
+        <!-- Connected, just no messages yet -->
         <template v-else>
           <p class="empty-title">Waiting for messages…</p>
           <p class="empty-hint">Chat messages will appear here in real time.</p>
@@ -206,6 +242,76 @@ function scrollToBottom() {
 .empty-hint strong {
   color: #a78bfa;
   font-weight: 600;
+}
+
+.empty-action {
+  margin-top: 4px;
+  background: rgba(167, 139, 250, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.empty-action:hover {
+  background: rgba(167, 139, 250, 0.25);
+}
+
+.empty-accounts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.empty-account-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 4px 10px 4px 4px;
+  font-size: 12px;
+}
+
+.chip-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--chip-color, #a78bfa);
+}
+
+.chip-avatar-fallback {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--chip-color, #a78bfa);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.chip-name {
+  font-weight: 600;
+  color: var(--c-text, #e2e2e8);
+}
+
+.chip-platform {
+  font-size: 10px;
+  color: var(--chip-color, #a78bfa);
+  text-transform: capitalize;
+  font-weight: 500;
 }
 
 /* Scroll pill */
