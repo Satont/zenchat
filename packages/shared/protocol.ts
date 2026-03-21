@@ -1,4 +1,4 @@
-import type { NormalizedChatMessage, NormalizedEvent, Platform, PlatformStatusInfo } from "./types";
+import type { Platform } from "./types";
 
 /**
  * Протокол WebSocket между backend и desktop-приложением.
@@ -8,6 +8,10 @@ import type { NormalizedChatMessage, NormalizedEvent, Platform, PlatformStatusIn
  *
  * Backend пушит сообщения в desktop в виде JSON-объектов BackendToDesktopMessage.
  * Desktop отправляет команды в виде DesktopToBackendMessage.
+ *
+ * NOTE: chat_message / chat_event / platform_status are no longer forwarded
+ * through the backend — platform adapters run directly in the Bun process.
+ * channel_join / channel_leave / send_message are handled locally by adapters.
  */
 
 // ============================================================
@@ -15,9 +19,6 @@ import type { NormalizedChatMessage, NormalizedEvent, Platform, PlatformStatusIn
 // ============================================================
 
 export type BackendToDesktopMessage =
-  | { type: "chat_message"; data: NormalizedChatMessage }
-  | { type: "chat_event"; data: NormalizedEvent }
-  | { type: "platform_status"; data: PlatformStatusInfo }
   | { type: "auth_url"; platform: Platform; url: string }
   | { type: "auth_success"; platform: Platform; username: string; displayName: string }
   | { type: "auth_error"; platform: Platform; error: string }
@@ -32,10 +33,7 @@ export type DesktopToBackendMessage =
   | { type: "ping" }
   | { type: "auth_start"; platform: Exclude<Platform, "twitch"> }
   | { type: "auth_start_twitch"; codeChallenge: string; state: string }
-  | { type: "auth_logout"; platform: Platform }
-  | { type: "channel_join"; platform: Platform; channelSlug: string }
-  | { type: "channel_leave"; platform: Platform; channelSlug: string }
-  | { type: "send_message"; platform: Platform; channelId: string; text: string };
+  | { type: "auth_logout"; platform: Platform };
 
 // ============================================================
 // HTTP API — запросы от desktop к backend

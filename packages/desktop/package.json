@@ -4,22 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "vite --config vite.main.config.ts build && electrobun dev",
-    "dev": "electrobun dev --watch",
-    "dev:hmr": "concurrently \"bun run hmr\" \"bun run start\"",
+    "start": "electrobun dev",
+    "dev": "concurrently \"bun run hmr\" \"bun run start\"",
     "hmr": "vite --config vite.main.config.ts --port 5173",
+    "build:views": "vite build --config vite.main.config.ts && vite build --config vite.overlay.config.ts",
     "typecheck": "tsgo --noEmit",
     "test": "bun test tests/",
-    "build:prod": "vite --config vite.main.config.ts build && electrobun build --env=canary"
+    "build:prod": "bun run build:views && electrobun build --env=canary"
   },
   "dependencies": {
-    "@twirchat/shared": "workspace:*",
     "@grpc/grpc-js": "1.14.3",
     "@grpc/proto-loader": "0.8.0",
+    "@twirchat/shared": "workspace:*",
     "@twurple/api": "8.0.3",
     "@twurple/auth": "8.0.3",
     "@twurple/chat": "8.0.3",
-    "bun-plugin-vue": "1.0.0",
     "electrobun": "1.16.0",
     "vue": "3.5.30"
   },

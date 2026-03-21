@@ -3,15 +3,16 @@
  *
  * Responsibilities:
  *  - Initialise SQLite DB and client secret
- *  - Connect to the backend service via WebSocket
- *  - Aggregate incoming chat messages / events
+ *  - Connect to the backend service via WebSocket (auth flows only)
+ *  - Instantiate and register platform adapters (Twitch, Kick, YouTube)
+ *  - Aggregate incoming chat messages / events via ChatAggregator
  *  - Run the OBS overlay HTTP+WS server
  *  - Create the main BrowserWindow with the Vue UI
- *  - Bridge backend messages into the webview via Electrobun RPC
+ *  - Bridge adapter events into the webview via Electrobun RPC
  *  - Handle RPC requests coming from the webview (accounts, settings, auth…)
  */
 
-import { BrowserWindow, defineElectrobunRPC } from "electrobun/bun";
+import { BrowserWindow, defineElectrobunRPC, Updater } from "electrobun/bun";
 
 import { initDb } from "../store/db";
 import { getClientSecret } from "../store/client-secret";
@@ -24,6 +25,9 @@ import {
   pushOverlayEvent,
 } from "../overlay-server";
 import { prepareTwitchAuth } from "../auth/twitch";
+import { TwitchAdapter } from "../platforms/twitch/adapter";
+import { KickAdapter } from "../platforms/kick/adapter";
+import { YouTubeAdapter } from "../platforms/youtube/adapter";
 import { BACKEND_URL } from "@twirchat/shared/constants";
 
 import type { TwirChatRPCSchema, WebviewSender } from "../shared/rpc";
@@ -48,6 +52,15 @@ console.log(`[TwirChat] Client secret: ${clientSecret.slice(0, 8)}...`);
 
 const backendConn = new BackendConnection(clientSecret);
 const aggregator = new ChatAggregator(500);
+
+// Register platform adapters — these run entirely in the Bun process.
+// YouTube uses gRPC (cannot run in webview/browser context).
+const twitchAdapter = new TwitchAdapter();
+const kickAdapter = new KickAdapter();
+const youtubeAdapter = new YouTubeAdapter();
+aggregator.registerAdapter(twitchAdapter);
+aggregator.registerAdapter(kickAdapter);
+aggregator.registerAdapter(youtubeAdapter);
 
 startOverlayServer();
 
@@ -82,15 +95,48 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
       },
 
       joinChannel: ({ platform, channelSlug }) => {
-        backendConn.send({ type: "channel_join", platform, channelSlug });
+        const adapter = aggregator.getAdapter(platform);
+        if (!adapter) {
+          console.warn(
+            `[joinChannel] No adapter registered for platform: ${platform}`,
+          );
+          return;
+        }
+        adapter.connect(channelSlug).catch((err) => {
+          console.error(
+            `[joinChannel] Failed to connect ${platform} to "${channelSlug}":`,
+            err,
+          );
+        });
       },
 
-      leaveChannel: ({ platform, channelSlug }) => {
-        backendConn.send({ type: "channel_leave", platform, channelSlug });
+      leaveChannel: ({ platform, channelSlug: _channelSlug }) => {
+        const adapter = aggregator.getAdapter(platform);
+        if (!adapter) {
+          console.warn(
+            `[leaveChannel] No adapter registered for platform: ${platform}`,
+          );
+          return;
+        }
+        adapter.disconnect().catch((err) => {
+          console.error(
+            `[leaveChannel] Failed to disconnect ${platform}:`,
+            err,
+          );
+        });
       },
 
       sendMessage: ({ platform, channelId, text }) => {
-        backendConn.send({ type: "send_message", platform, channelId, text });
+        const adapter = aggregator.getAdapter(platform);
+        if (!adapter) {
+          console.warn(
+            `[sendMessage] No adapter registered for platform: ${platform}`,
+          );
+          return;
+        }
+        adapter.sendMessage(channelId, text).catch((err) => {
+          console.error(`[sendMessage] Failed to send on ${platform}:`, err);
+        });
       },
 
       getStreamStatus: async ({ platform, channelId }) => {
@@ -152,16 +198,14 @@ const sendToView = rpc.send as unknown as WebviewSender;
  * In production (or when vite is not running), fall back to views://.
  */
 async function resolveWindowUrl(): Promise<string> {
-  const viteUrl = "http://localhost:5173";
-  try {
-    const res = await fetch(viteUrl, { signal: AbortSignal.timeout(500) });
-    if (res.ok || res.status < 500) {
-      console.log("[TwirChat] Vite dev server detected — using HMR URL");
-      return viteUrl;
-    }
-  } catch {
-    // Vite not running — use built assets
+  const channel = await Updater.localInfo.channel();
+  if (channel === "dev") {
+    console.log(
+      "[TwirChat] Running in dev channel — skipping Vite server check",
+    );
+    return "http://localhost:5173";
   }
+
   return "views://main/index.html";
 }
 
@@ -175,29 +219,34 @@ const win = new BrowserWindow({
 });
 
 // ============================================================
-// 4. Route backend messages → webview
+// 4. Route adapter events → webview + overlay
+// ============================================================
+
+aggregator.onMessage((msg) => {
+  pushOverlayMessage(msg);
+  sendToView.chat_message(msg);
+  console.log(
+    `[Chat] [${msg.platform}] ${msg.author.displayName}: ${msg.text}`,
+  );
+});
+
+aggregator.onEvent((ev) => {
+  pushOverlayEvent(ev);
+  sendToView.chat_event(ev);
+  console.log(`[Event] [${ev.platform}] ${ev.type}: ${ev.user.displayName}`);
+});
+
+aggregator.onStatus((s) => {
+  sendToView.platform_status(s);
+  console.log(`[Status] ${s.platform}: ${s.status} (${s.mode})`);
+});
+
+// ============================================================
+// 5. Route backend messages → webview (auth flows only)
 // ============================================================
 
 backendConn.onMessage((msg) => {
   switch (msg.type) {
-    case "chat_message":
-      aggregator.injectMessage(msg.data);
-      pushOverlayMessage(msg.data);
-      // Push to the Vue UI
-      sendToView.chat_message(msg.data);
-      break;
-
-    case "chat_event":
-      aggregator.injectEvent(msg.data);
-      pushOverlayEvent(msg.data);
-      sendToView.chat_event(msg.data);
-      break;
-
-    case "platform_status":
-      aggregator.injectStatus(msg.data);
-      sendToView.platform_status(msg.data);
-      break;
-
     case "auth_url":
       sendToView.auth_url({ platform: msg.platform, url: msg.url });
       void openBrowser(msg.url);
@@ -228,7 +277,7 @@ backendConn.onMessage((msg) => {
 });
 
 // ============================================================
-// 5. Backend connection
+// 6. Backend connection
 // ============================================================
 
 backendConn.connect();
@@ -237,19 +286,6 @@ backendConn.connect();
 setInterval(() => {
   backendConn.send({ type: "ping" });
 }, 30_000);
-
-// Dev logging
-aggregator.onMessage((msg) => {
-  console.log(
-    `[Chat] [${msg.platform}] ${msg.author.displayName}: ${msg.text}`,
-  );
-});
-aggregator.onEvent((ev) => {
-  console.log(`[Event] [${ev.platform}] ${ev.type}: ${ev.user.displayName}`);
-});
-aggregator.onStatus((s) => {
-  console.log(`[Status] ${s.platform}: ${s.status} (${s.mode})`);
-});
 
 console.log("[TwirChat] Ready.");
 

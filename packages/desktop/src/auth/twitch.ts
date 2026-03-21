@@ -117,7 +117,9 @@ export async function handleTwitchCallback(url: URL): Promise<Response> {
 
   if (!exchangeRes.ok) {
     const body = await exchangeRes.text();
-    throw new Error(`Twitch token exchange failed: ${exchangeRes.status} ${body}`);
+    throw new Error(
+      `Twitch token exchange failed: ${exchangeRes.status} ${body}`,
+    );
   }
 
   const tokens = (await exchangeRes.json()) as TwitchExchangeResponse;

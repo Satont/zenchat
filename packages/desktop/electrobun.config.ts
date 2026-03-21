@@ -22,8 +22,6 @@ const config: ElectrobunConfig = {
     copy: {
       "dist/main/index.html": "views/main/index.html",
       "dist/main/assets": "views/main/assets",
-      "dist/overlay/index.html": "views/overlay/index.html",
-      "dist/overlay/assets": "views/overlay/assets",
     },
 
     watchIgnore: ["dist/**"],
