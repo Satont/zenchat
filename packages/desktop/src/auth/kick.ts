@@ -14,6 +14,7 @@ import { successPage } from "./server";
 const KICK_SCOPES = [
   "user:read",
   "channel:read",
+  "channel:write",
   "chat:write",
   "events:subscribe",
 ];

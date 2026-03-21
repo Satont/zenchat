@@ -21,6 +21,12 @@ import type {
   AppSettings,
   Platform,
 } from "@twirchat/shared/types";
+import type {
+  StreamStatusResponse,
+  UpdateStreamRequest,
+  UpdateStreamResponse,
+  SearchCategoriesResponse,
+} from "@twirchat/shared/protocol";
 
 // ----------------------------------------------------------------
 // Bun-side schema (what the webview calls into)
@@ -51,6 +57,21 @@ type BunRequests = {
   sendMessage: {
     params: { platform: Platform; channelId: string; text: string };
     response: void;
+  };
+  /** Get current stream status (title, category, viewers, isLive) */
+  getStreamStatus: {
+    params: { platform: "twitch" | "kick"; channelId: string };
+    response: StreamStatusResponse;
+  };
+  /** Update stream title and/or category */
+  updateStream: {
+    params: Omit<UpdateStreamRequest, never>;
+    response: UpdateStreamResponse;
+  };
+  /** Search for game/category suggestions */
+  searchCategories: {
+    params: { platform: "twitch" | "kick"; query: string };
+    response: SearchCategoriesResponse;
   };
 };
 

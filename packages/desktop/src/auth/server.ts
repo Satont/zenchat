@@ -1,7 +1,7 @@
 import { AUTH_SERVER_PORT } from "@twirchat/shared/constants";
-import { handleTwitchCallback } from "./twitch";
 import { handleYouTubeCallback } from "./youtube";
 import { handleKickCallback } from "./kick";
+import { handleTwitchCallback } from "./twitch";
 
 let server: ReturnType<typeof Bun.serve> | null = null;
 

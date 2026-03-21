@@ -1,38 +1,36 @@
 import { runMigrations } from "./db/migrations.ts";
 import { ClientStore } from "./db/index.ts";
-import { connectionManager } from "./ws/connection-manager.ts";
 import { handleWsOpen, handleWsClose, handleWsMessage } from "./ws/handlers.ts";
-import { handleRequest } from "./routes/index.ts";
+import { authRoutes } from "./routes/auth.ts";
+import { accountRoutes } from "./routes/accounts.ts";
+import { streamRoutes } from "./routes/stream.ts";
+import { webhookRoutes } from "./routes/webhooks.ts";
+import { json } from "./routes/utils.ts";
 import type { WsData } from "./ws/connection-manager.ts";
 import { config } from "./config.ts";
 
-const PORT = config.PORT;
-
-// Run DB migrations on startup
 await runMigrations();
 
 const server = Bun.serve<WsData>({
-  port: PORT,
+  port: config.PORT,
+
+  routes: {
+    ...authRoutes,
+    ...accountRoutes,
+    ...streamRoutes,
+    ...webhookRoutes,
+    "/health": () => json({ ok: true }),
+  },
 
   async fetch(req, server) {
     const url = new URL(req.url);
 
-    // WebSocket upgrade at /ws
     if (url.pathname === "/ws") {
       const secret = req.headers.get("X-Client-Secret");
       if (!secret) {
-        return new Response(
-          JSON.stringify({ error: "Missing X-Client-Secret" }),
-          {
-            status: 401,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
+        return json({ error: "Missing X-Client-Secret" }, 401);
       }
-
-      // Ensure client exists
       await ClientStore.upsert(secret);
-
       const upgraded = server.upgrade(req, { data: { clientSecret: secret } });
       if (!upgraded) {
         return new Response("WebSocket upgrade failed", { status: 500 });
@@ -40,7 +38,7 @@ const server = Bun.serve<WsData>({
       return undefined;
     }
 
-    return handleRequest(req);
+    return json({ error: "Not found" }, 404);
   },
 
   websocket: {
@@ -56,7 +54,5 @@ const server = Bun.serve<WsData>({
   },
 });
 
-console.log(
-  `[Backend] TwirChat backend running on http://localhost:${server.port}`,
-);
+console.log(`[Backend] TwirChat backend running on http://localhost:${server.port}`);
 console.log(`[Backend] WebSocket endpoint: ws://localhost:${server.port}/ws`);

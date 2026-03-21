@@ -23,8 +23,16 @@ import {
   pushOverlayMessage,
   pushOverlayEvent,
 } from "../overlay-server";
+import { prepareTwitchAuth } from "../auth/twitch";
+import { BACKEND_URL } from "@twirchat/shared/constants";
 
 import type { TwirChatRPCSchema, WebviewSender } from "../shared/rpc";
+import type {
+  StreamStatusResponse,
+  UpdateStreamRequest,
+  UpdateStreamResponse,
+  SearchCategoriesResponse,
+} from "@twirchat/shared/protocol";
 
 // ============================================================
 // 1. Initialisation
@@ -60,7 +68,12 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
       },
 
       authStart: ({ platform }) => {
-        backendConn.send({ type: "auth_start", platform });
+        if (platform === "twitch") {
+          const { codeChallenge, state } = prepareTwitchAuth();
+          backendConn.send({ type: "auth_start_twitch", codeChallenge, state });
+        } else {
+          backendConn.send({ type: "auth_start", platform });
+        }
       },
 
       authLogout: ({ platform }) => {
@@ -78,6 +91,48 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
 
       sendMessage: ({ platform, channelId, text }) => {
         backendConn.send({ type: "send_message", platform, channelId, text });
+      },
+
+      getStreamStatus: async ({ platform, channelId }) => {
+        const res = await fetch(
+          `${BACKEND_URL}/api/stream-status?platform=${platform}&channelId=${encodeURIComponent(channelId)}`,
+          { headers: { "X-Client-Secret": clientSecret } },
+        );
+        if (!res.ok) throw new Error(`stream-status: ${res.status}`);
+        return (await res.json()) as StreamStatusResponse;
+      },
+
+      updateStream: async (params) => {
+        const account = AccountStore.findByPlatform(params.platform);
+        if (!account) throw new Error(`No ${params.platform} account found`);
+        const tokens = AccountStore.getTokens(account.id);
+        if (!tokens?.accessToken)
+          throw new Error(`No access token for ${params.platform}`);
+
+        const body: UpdateStreamRequest = {
+          ...params,
+          userAccessToken: tokens.accessToken,
+        };
+
+        const res = await fetch(`${BACKEND_URL}/api/update-stream`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Client-Secret": clientSecret,
+          },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error(`update-stream: ${res.status}`);
+        return (await res.json()) as UpdateStreamResponse;
+      },
+
+      searchCategories: async ({ platform, query }) => {
+        const res = await fetch(
+          `${BACKEND_URL}/api/search-categories?platform=${platform}&query=${encodeURIComponent(query)}`,
+          { headers: { "X-Client-Secret": clientSecret } },
+        );
+        if (!res.ok) throw new Error(`search-categories: ${res.status}`);
+        return (await res.json()) as SearchCategoriesResponse;
       },
     },
   },

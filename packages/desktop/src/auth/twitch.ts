@@ -1,67 +1,95 @@
+/**
+ * Twitch OAuth — desktop side (new PKCE flow).
+ *
+ * Flow:
+ *  1. Desktop generates PKCE (codeVerifier, codeChallenge, state) — stored in-memory
+ *  2. Desktop sends `auth_start_twitch { codeChallenge, state }` over WS to backend
+ *  3. Backend builds the Twitch authUrl and returns it via `auth_url` WS message
+ *  4. Desktop opens the URL in the browser
+ *  5. Twitch redirects to http://localhost:45821/auth/twitch/callback?code=...&state=...
+ *  6. Desktop validates state, grabs codeVerifier from memory
+ *  7. Desktop calls POST /api/auth/twitch/exchange on backend → receives tokens
+ *  8. Desktop fetches user info from Twitch, saves account to SQLite
+ *
+ * Refresh:
+ *  - Desktop calls POST /api/auth/twitch/refresh on backend → receives new tokens
+ *  - Desktop updates the account record in SQLite
+ */
+
 import {
-  TWITCH_AUTH_URL,
-  TWITCH_TOKEN_URL,
-  TWITCH_REDIRECT_URI,
-} from "@twirchat/shared/constants";
-import { generateCodeVerifier, generateCodeChallenge, generateState } from "./pkce";
+  generateCodeVerifier,
+  generateCodeChallenge,
+  generateState,
+} from "./pkce";
 import { AccountStore } from "@desktop/store/account-store";
 import { successPage } from "./server";
+import { BACKEND_URL, TWITCH_REDIRECT_URI } from "@twirchat/shared/constants";
+import type {
+  TwitchExchangeRequest,
+  TwitchExchangeResponse,
+  TwitchRefreshRequest,
+  TwitchRefreshResponse,
+} from "@twirchat/shared";
 
-const TWITCH_SCOPES = [
-  "chat:read",
-  "chat:edit",
-  "channel:read:subscriptions",
-  "channel:read:redemptions",
-  "moderator:read:followers",
-  "bits:read",
-];
+// ----------------------------------------------------------------
+// In-memory PKCE session store (state → { codeVerifier, expiresAt })
+// ----------------------------------------------------------------
 
-const pendingSessions = new Map<string, { verifier: string; expiresAt: number }>();
+const pendingSessions = new Map<
+  string,
+  { codeVerifier: string; expiresAt: number }
+>();
 
-export interface TwitchAuthConfig {
-  clientId: string;
-  clientSecret: string;
+const SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+/** Clean up expired sessions periodically */
+function cleanupSessions(): void {
+  const now = Date.now();
+  for (const [state, session] of pendingSessions) {
+    if (now > session.expiresAt) {
+      pendingSessions.delete(state);
+    }
+  }
 }
 
-let _config: TwitchAuthConfig | null = null;
+// ----------------------------------------------------------------
+// Public API
+// ----------------------------------------------------------------
 
-export function configureTwitchAuth(config: TwitchAuthConfig): void {
-  _config = config;
-}
+/**
+ * Generates PKCE params, stores the session in memory, and returns
+ * { codeChallenge, state } so the caller can send `auth_start_twitch`
+ * over the backend WS connection.
+ */
+export function prepareTwitchAuth(): { codeChallenge: string; state: string } {
+  cleanupSessions();
 
-export function getTwitchAuthConfig(): TwitchAuthConfig | null {
-  return _config;
-}
-
-export function buildTwitchAuthUrl(): { url: string; state: string } {
-  if (!_config) throw new Error("Twitch auth not configured");
-
-  const verifier = generateCodeVerifier();
-  const challenge = generateCodeChallenge(verifier);
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = generateCodeChallenge(codeVerifier);
   const state = generateState();
 
-  pendingSessions.set(state, { verifier, expiresAt: Date.now() + 10 * 60 * 1000 });
-
-  const params = new URLSearchParams({
-    client_id: _config.clientId,
-    redirect_uri: TWITCH_REDIRECT_URI,
-    response_type: "code",
-    scope: TWITCH_SCOPES.join(" "),
-    state,
-    code_challenge: challenge,
-    code_challenge_method: "S256",
+  pendingSessions.set(state, {
+    codeVerifier,
+    expiresAt: Date.now() + SESSION_TTL_MS,
   });
 
-  return { url: `${TWITCH_AUTH_URL}?${params.toString()}`, state };
+  return { codeChallenge, state };
 }
 
+/**
+ * Handles GET /auth/twitch/callback from the local auth server.
+ * Validates state, exchanges code for tokens via the backend, fetches
+ * user info from Twitch, and persists the account in SQLite.
+ */
 export async function handleTwitchCallback(url: URL): Promise<Response> {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
 
   if (error) {
-    throw new Error(`Twitch OAuth error: ${error}`);
+    throw new Error(
+      `Twitch OAuth error: ${error} — ${url.searchParams.get("error_description") ?? ""}`,
+    );
   }
 
   if (!code || !state) {
@@ -76,108 +104,100 @@ export async function handleTwitchCallback(url: URL): Promise<Response> {
   }
   pendingSessions.delete(state);
 
-  if (!_config) throw new Error("Twitch auth not configured");
-
-  const tokenRes = await fetch(TWITCH_TOKEN_URL, {
+  // Exchange code for tokens via backend proxy
+  const exchangeRes = await fetch(`${BACKEND_URL}/api/auth/twitch/exchange`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      client_id: _config.clientId,
-      client_secret: _config.clientSecret,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
       code,
-      redirect_uri: TWITCH_REDIRECT_URI,
-      code_verifier: session.verifier,
-    }),
+      codeVerifier: session.codeVerifier,
+      redirectUri: TWITCH_REDIRECT_URI,
+    } satisfies TwitchExchangeRequest),
   });
 
-  if (!tokenRes.ok) {
-    const body = await tokenRes.text();
-    throw new Error(`Twitch token exchange failed: ${tokenRes.status} ${body}`);
+  if (!exchangeRes.ok) {
+    const body = await exchangeRes.text();
+    throw new Error(`Twitch token exchange failed: ${exchangeRes.status} ${body}`);
   }
 
-  const tokens = (await tokenRes.json()) as {
-    access_token: string;
-    refresh_token?: string;
-    expires_in?: number;
-    scope?: string[];
-  };
+  const tokens = (await exchangeRes.json()) as TwitchExchangeResponse;
 
-  // Получаем информацию о пользователе через Twitch API
-  const userRes = await fetch("https://api.twitch.tv/helix/users", {
-    headers: {
-      Authorization: `Bearer ${tokens.access_token}`,
-      "Client-Id": _config.clientId,
-    },
+  // Validate the token and get user info — the /oauth2/validate endpoint only
+  // requires the Bearer token, no client credentials needed on the desktop side.
+  const validateRes = await fetch("https://id.twitch.tv/oauth2/validate", {
+    headers: { Authorization: `OAuth ${tokens.accessToken}` },
   });
 
-  if (!userRes.ok) {
-    throw new Error(`Twitch user fetch failed: ${userRes.status}`);
+  if (!validateRes.ok) {
+    throw new Error(`Twitch token validation failed: ${validateRes.status}`);
   }
 
-  const userData = (await userRes.json()) as {
-    data: Array<{
-      id: string;
-      login: string;
-      display_name: string;
-      profile_image_url: string;
-    }>;
+  const validateData = (await validateRes.json()) as {
+    user_id: string;
+    login: string;
+    client_id: string;
+    expires_in: number;
+    scopes: string[];
   };
 
-  const user = userData.data[0];
-  if (!user) throw new Error("Twitch user data missing");
-
-  const expiresAt = tokens.expires_in ? Math.floor(Date.now() / 1000) + tokens.expires_in : undefined;
+  const expiresAt = tokens.expiresIn
+    ? Math.floor(Date.now() / 1000) + tokens.expiresIn
+    : undefined;
 
   AccountStore.upsert({
-    id: `twitch:${user.id}`,
+    id: `twitch:${validateData.user_id}`,
     platform: "twitch",
-    platformUserId: user.id,
-    username: user.login,
-    displayName: user.display_name,
-    avatarUrl: user.profile_image_url,
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token,
+    platformUserId: validateData.user_id,
+    username: validateData.login,
+    displayName: validateData.login, // Twitch validate endpoint doesn't return display name; good enough for now
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
     expiresAt,
-    scopes: tokens.scope,
+    scopes: validateData.scopes,
   });
 
-  console.log(`[Twitch Auth] Logged in as ${user.display_name} (@${user.login})`);
+  console.log(`[Twitch Auth] Logged in as @${validateData.login}`);
 
   return new Response(successPage("Twitch"), {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
 }
 
+/**
+ * Refreshes the Twitch access token for the given accountId via the backend proxy.
+ * Updates the stored tokens in SQLite and returns the new access token.
+ */
 export async function refreshTwitchToken(accountId: string): Promise<string> {
-  if (!_config) throw new Error("Twitch auth not configured");
+  const stored = AccountStore.getTokens(accountId);
+  if (!stored?.refreshToken) {
+    throw new Error("No refresh token for Twitch account");
+  }
 
-  const tokens = AccountStore.getTokens(accountId);
-  if (!tokens?.refreshToken) throw new Error("No refresh token for Twitch account");
-
-  const res = await fetch(TWITCH_TOKEN_URL, {
+  const res = await fetch(`${BACKEND_URL}/api/auth/twitch/refresh`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      client_id: _config.clientId,
-      client_secret: _config.clientSecret,
-      refresh_token: tokens.refreshToken,
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      refreshToken: stored.refreshToken,
+    } satisfies TwitchRefreshRequest),
   });
 
   if (!res.ok) {
-    throw new Error(`Twitch token refresh failed: ${res.status}`);
+    const body = await res.text();
+    throw new Error(`Twitch token refresh failed: ${res.status} ${body}`);
   }
 
-  const data = (await res.json()) as {
-    access_token: string;
-    refresh_token?: string;
-    expires_in?: number;
-  };
+  const data = (await res.json()) as TwitchRefreshResponse;
 
-  const expiresAt = data.expires_in ? Math.floor(Date.now() / 1000) + data.expires_in : undefined;
-  AccountStore.updateTokens(accountId, data.access_token, data.refresh_token, expiresAt);
+  const expiresAt = data.expiresIn
+    ? Math.floor(Date.now() / 1000) + data.expiresIn
+    : undefined;
 
-  return data.access_token;
+  AccountStore.updateTokens(
+    accountId,
+    data.accessToken,
+    data.refreshToken,
+    expiresAt,
+  );
+
+  return data.accessToken;
 }

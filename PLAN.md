@@ -80,7 +80,7 @@ Desktop                        Backend                     Kick/Twitch/YT
 - **Backend** — Managed SaaS (публичный URL), принимает вебхуки Kick/YouTube, хранит в **Postgres** через `Bun.sql`
 - **Desktop → Backend**: идентификация через UUID-секрет (`X-Client-Secret`), генерируется при первом старте, хранится в SQLite
 - **Backend → Desktop**: WebSocket — backend держит WS-сервер, desktop подключается и получает события
-- **Twitch остаётся в desktop** — EventSub WS transport, не требует публичного URL
+- **Twitch остаётся в desktop** — EventSub WS transport, не требует публичного URL; **OAuth перенесён на backend**
 - **Анонимное слушание**: Kick → Pusher WebSocket, Twitch → IRC justinfan
 
 ---
@@ -150,7 +150,15 @@ Desktop                        Backend                     Kick/Twitch/YT
 - [x] Полный IRC-парсер с тегами
 - [x] `PRIVMSG` → `NormalizedChatMessage` (бейджики, эмоуты из IRC-тегов)
 - [x] `USERNOTICE` → sub/resub/subgift/raid → `NormalizedEvent`
-- [x] Twitch OAuth: Authorization Code + PKCE (`src/auth/twitch.ts`)
+- [x] Twitch OAuth: перенесён на **backend** (по аналогии с Kick — clientId/secret не хранятся в desktop)
+
+### Backend — Twitch OAuth
+
+- [x] `POST /api/auth/twitch/start` — генерирует PKCE, сохраняет сессию в Postgres, возвращает URL
+- [x] `GET /auth/twitch/callback` — обменивает code на токены, сохраняет аккаунт, пушит `auth_success` в desktop
+- [x] `TwitchOAuthSessionStore` в Postgres (`twitch_oauth_sessions` таблица)
+- [x] `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_REDIRECT_URI` — env vars на backend
+- [x] `auth_start { platform: "twitch" }` обрабатывается в WS handler на backend
 
 ---
 

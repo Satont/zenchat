@@ -6,6 +6,7 @@ import type {
   Platform,
 } from "@twirchat/shared/types";
 import { rpc } from "../main";
+import StreamEditor from "./StreamEditor.vue";
 
 const props = defineProps<{
   accounts: Account[];
@@ -283,6 +284,13 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
             </div>
           </div>
         </div>
+
+        <!-- Stream editor: shown for Twitch/Kick when account is connected -->
+        <StreamEditor
+          v-if="account(platform) && (platform === 'twitch' || platform === 'kick')"
+          :platform="platform"
+          :channel-id="account(platform)!.platformUserId"
+        />
       </div>
     </div>
   </div>

@@ -3,6 +3,7 @@ import type { DesktopToBackendMessage } from "@twirchat/shared";
 import { connectionManager, type WsData } from "./connection-manager.ts";
 import { ClientStore } from "../db/index.ts";
 import { startKickOAuth } from "../auth/kick.ts";
+import { buildTwitchAuthUrl } from "../auth/twitch.ts";
 import { AccountStore } from "../db/index.ts";
 
 export async function handleWsOpen(ws: ServerWebSocket<WsData>): Promise<void> {
@@ -53,6 +54,22 @@ export async function handleWsMessage(
           JSON.stringify({
             type: "error",
             message: `auth_start: unsupported platform ${msg.platform}`,
+          }),
+        );
+      }
+      break;
+    }
+
+    case "auth_start_twitch": {
+      try {
+        const { url } = buildTwitchAuthUrl(msg.codeChallenge, msg.state);
+        ws.send(JSON.stringify({ type: "auth_url", platform: "twitch", url }));
+      } catch (err) {
+        ws.send(
+          JSON.stringify({
+            type: "auth_error",
+            platform: "twitch",
+            error: String(err),
           }),
         );
       }

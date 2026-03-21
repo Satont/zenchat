@@ -11,6 +11,12 @@ const envSchema = z.object({
     .default("http://localhost:3000/auth/kick/callback"),
   KICK_WEBHOOK_URL: z.string().url("KICK_WEBHOOK_URL must be a valid URL"),
   KICK_WEBHOOK_SECRET: z.string().min(1, "KICK_WEBHOOK_SECRET is required"),
+  TWITCH_CLIENT_ID: z.string().min(1, "TWITCH_CLIENT_ID is required"),
+  TWITCH_CLIENT_SECRET: z.string().min(1, "TWITCH_CLIENT_SECRET is required"),
+  TWITCH_REDIRECT_URI: z
+    .string()
+    .url()
+    .default("http://localhost:3000/auth/twitch/callback"),
 });
 
 const result = envSchema.safeParse(process.env);
