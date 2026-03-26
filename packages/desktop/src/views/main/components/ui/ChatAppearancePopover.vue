@@ -66,6 +66,34 @@ const fontSize = computed({
         </div>
       </div>
 
+      <!-- Chat display toggles -->
+      <div class="ap-section">
+        <div class="ap-label"><span>Display</span></div>
+        <div class="ap-toggles">
+          <label class="ap-toggle-row">
+            <span class="ap-toggle-name">Platform icon</span>
+            <span class="ap-switch">
+              <input type="checkbox" :checked="settings.showPlatformIcon" @change="patch({ showPlatformIcon: ($event.target as HTMLInputElement).checked })" />
+              <span class="ap-switch-thumb" />
+            </span>
+          </label>
+          <label class="ap-toggle-row">
+            <span class="ap-toggle-name">Avatars</span>
+            <span class="ap-switch">
+              <input type="checkbox" :checked="settings.showAvatars" @change="patch({ showAvatars: ($event.target as HTMLInputElement).checked })" />
+              <span class="ap-switch-thumb" />
+            </span>
+          </label>
+          <label class="ap-toggle-row">
+            <span class="ap-toggle-name">Badges</span>
+            <span class="ap-switch">
+              <input type="checkbox" :checked="settings.showBadges" @change="patch({ showBadges: ($event.target as HTMLInputElement).checked })" />
+              <span class="ap-switch-thumb" />
+            </span>
+          </label>
+        </div>
+      </div>
+
       <!-- Chat layout -->
       <div class="ap-section">
         <div class="ap-label"><span>Layout</span></div>
@@ -200,6 +228,80 @@ const fontSize = computed({
   font-size: 10px;
   color: #555566;
   margin-top: 4px;
+}
+
+/* Display toggles */
+.ap-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ap-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+}
+
+.ap-toggle-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ap-toggle-row:first-child {
+  padding-top: 0;
+}
+
+.ap-toggle-name {
+  font-size: 13px;
+  color: #d0d0da;
+  font-weight: 400;
+}
+
+.ap-switch {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.ap-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ap-switch-thumb {
+  width: 34px;
+  height: 19px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 10px;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.ap-switch-thumb::after {
+  content: '';
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  width: 14px;
+  height: 14px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.ap-switch input:checked ~ .ap-switch-thumb {
+  background: #a78bfa;
+}
+
+.ap-switch input:checked ~ .ap-switch-thumb::after {
+  transform: translateX(15px);
+  background: #fff;
 }
 
 /* Theme buttons */

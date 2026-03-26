@@ -322,17 +322,38 @@ body {
 
 /* Light theme overrides */
 .app.light {
-  --c-bg: #f4f4f7;
-  --c-surface: #ffffff;
-  --c-surface-2: #ebebef;
-  --c-border: #dddde3;
-  --c-text: #18181b;
-  --c-text-2: #71717a;
-  --c-nav-bg: #18181b;
-  --c-nav-text: rgba(255, 255, 255, 0.6);
-  --c-nav-active: #fff;
+  --c-bg: #f0eff4;
+  --c-surface: #faf9fc;
+  --c-surface-2: #e8e7ed;
+  --c-border: #d8d6e0;
+  --c-text: #1c1b22;
+  --c-text-2: #6b6878;
+  --c-nav-bg: #faf9fc;
+  --c-nav-text: rgba(28, 27, 34, 0.45);
+  --c-nav-active: #1c1b22;
   background: var(--c-bg);
   color: var(--c-text);
+}
+
+.app.light .nav-rail {
+  border-right: 1px solid var(--c-border);
+}
+
+.app.light .nav-item:hover {
+  background: rgba(28, 27, 34, 0.06);
+  color: rgba(28, 27, 34, 0.75);
+}
+
+.app.light .nav-item.active {
+  background: rgba(124, 90, 234, 0.12);
+  color: #7c5aea;
+}
+
+.app.light ::-webkit-scrollbar-thumb {
+  background: rgba(28, 27, 34, 0.14);
+}
+.app.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(28, 27, 34, 0.24);
 }
 
 .app.dark {

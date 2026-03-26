@@ -109,44 +109,6 @@ function copyOverlayUrl() {
         </div>
       </section>
 
-      <!-- Chat display -->
-      <section class="settings-section">
-        <h3 class="section-title">Chat display</h3>
-
-        <div class="form-row">
-          <div class="form-label">
-            <span>Platform icon</span>
-            <span class="form-hint">Coloured stripe per platform</span>
-          </div>
-          <label class="switch">
-            <input v-model="local.showPlatformIcon" type="checkbox" />
-            <span class="switch-thumb" />
-          </label>
-        </div>
-
-        <div class="form-row">
-          <div class="form-label">
-            <span>Avatars</span>
-            <span class="form-hint">Show user profile pictures</span>
-          </div>
-          <label class="switch">
-            <input v-model="local.showAvatars" type="checkbox" />
-            <span class="switch-thumb" />
-          </label>
-        </div>
-
-        <div class="form-row">
-          <div class="form-label">
-            <span>Badges</span>
-            <span class="form-hint">Moderator, subscriber, etc.</span>
-          </div>
-          <label class="switch">
-            <input v-model="local.showBadges" type="checkbox" />
-            <span class="switch-thumb" />
-          </label>
-        </div>
-      </section>
-
       <!-- OBS Overlay -->
       <section class="settings-section">
         <h3 class="section-title">OBS Overlay</h3>
