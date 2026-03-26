@@ -21,14 +21,15 @@ const c = {
   bold: "\x1b[1m",
   dim: "\x1b[2m",
   // levels
-  debug: "\x1b[36m",   // cyan
-  info:  "\x1b[32m",   // green
-  warn:  "\x1b[33m",   // yellow
-  error: "\x1b[31m",   // red
+  debug: "\x1b[36m", // cyan
+  cyan: "\x1b[36m", // cyan
+  info: "\x1b[32m", // green
+  warn: "\x1b[33m", // yellow
+  error: "\x1b[31m", // red
   // misc
-  gray:  "\x1b[90m",
+  gray: "\x1b[90m",
   white: "\x1b[97m",
-  module: "\x1b[35m",  // magenta
+  module: "\x1b[35m", // magenta
 } as const;
 
 type Level = "debug" | "info" | "warn" | "error";
@@ -40,13 +41,19 @@ const LEVEL_ORDER: Record<Level, number> = {
   error: 3,
 };
 
-const MIN_LEVEL: Level = (process.env.LOG_LEVEL as Level | undefined) ?? (isProd ? "info" : "debug");
+const MIN_LEVEL: Level =
+  (process.env.LOG_LEVEL as Level | undefined) ?? (isProd ? "info" : "debug");
 
 function shouldLog(level: Level): boolean {
   return LEVEL_ORDER[level] >= LEVEL_ORDER[MIN_LEVEL];
 }
 
-function formatDevLine(module: string, level: Level, msg: string, meta?: Record<string, unknown>): string {
+function formatDevLine(
+  module: string,
+  level: Level,
+  msg: string,
+  meta?: Record<string, unknown>,
+): string {
   const now = new Date();
   const time = now.toTimeString().slice(0, 8); // HH:MM:SS
 
@@ -54,11 +61,12 @@ function formatDevLine(module: string, level: Level, msg: string, meta?: Record<
   const levelTag = `${levelColor}${c.bold}${level.toUpperCase().padEnd(5)}${c.reset}`;
   const timeStr = `${c.gray}${time}${c.reset}`;
   const moduleStr = `${c.module}[${module}]${c.reset}`;
-  const msgStr = level === "error"
-    ? `${c.error}${msg}${c.reset}`
-    : level === "warn"
-    ? `${c.warn}${msg}${c.reset}`
-    : `${c.white}${msg}${c.reset}`;
+  const msgStr =
+    level === "error"
+      ? `${c.error}${msg}${c.reset}`
+      : level === "warn"
+        ? `${c.warn}${msg}${c.reset}`
+        : `${c.white}${msg}${c.reset}`;
 
   let line = `${timeStr} ${levelTag} ${moduleStr} ${msgStr}`;
 
@@ -75,7 +83,12 @@ function formatDevLine(module: string, level: Level, msg: string, meta?: Record<
   return line;
 }
 
-function formatProdLine(module: string, level: Level, msg: string, meta?: Record<string, unknown>): string {
+function formatProdLine(
+  module: string,
+  level: Level,
+  msg: string,
+  meta?: Record<string, unknown>,
+): string {
   return JSON.stringify({
     ts: new Date().toISOString(),
     level,
@@ -85,7 +98,12 @@ function formatProdLine(module: string, level: Level, msg: string, meta?: Record
   });
 }
 
-function emit(module: string, level: Level, msg: string, meta?: Record<string, unknown>): void {
+function emit(
+  module: string,
+  level: Level,
+  msg: string,
+  meta?: Record<string, unknown>,
+): void {
   if (!shouldLog(level)) return;
 
   const line = isProd
@@ -109,8 +127,8 @@ export interface Logger {
 export function logger(module: string): Logger {
   return {
     debug: (msg, meta) => emit(module, "debug", msg, meta),
-    info:  (msg, meta) => emit(module, "info",  msg, meta),
-    warn:  (msg, meta) => emit(module, "warn",  msg, meta),
+    info: (msg, meta) => emit(module, "info", msg, meta),
+    warn: (msg, meta) => emit(module, "warn", msg, meta),
     error: (msg, meta) => emit(module, "error", msg, meta),
   };
 }
