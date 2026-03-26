@@ -265,7 +265,6 @@ export class TwitchAdapter extends BasePlatformAdapter {
         break;
 
       case "PRIVMSG":
-        console.log(`[Twitch] PRIVMSG received in ${msg.params[0]}`);
         this.handlePrivMsg(msg);
         break;
 

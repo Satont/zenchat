@@ -3,6 +3,7 @@ import { handleUpdateStream } from "../api/update-stream.ts";
 import { handleSearchCategories } from "../api/search-categories.ts";
 import { handleTwitchBadges } from "../api/twitch-badges.ts";
 import { handleChannelsStatus } from "../api/channels-status.ts";
+import { handleKickChatroom } from "../api/kick-chatroom.ts";
 import { requireClient, json } from "./utils.ts";
 import { logger } from "../logger.ts";
 
@@ -72,6 +73,17 @@ export const streamRoutes = {
         return json(result);
       } catch (err) {
         log.error("channels-status failed", { err: String(err) });
+        return json({ error: String(err) }, 500);
+      }
+    },
+  },
+  "/api/kick/chatroom": {
+    async GET(req: Request) {
+      try {
+        const result = await handleKickChatroom(new URL(req.url));
+        return json(result);
+      } catch (err) {
+        log.error("kick/chatroom failed", { err: String(err) });
         return json({ error: String(err) }, 500);
       }
     },

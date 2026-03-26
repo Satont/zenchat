@@ -1,6 +1,5 @@
 import { AUTH_SERVER_PORT } from "@twirchat/shared/constants";
 import { handleYouTubeCallback } from "./youtube";
-import { handleKickCallback } from "./kick";
 import { handleTwitchCallback } from "./twitch";
 
 let server: ReturnType<typeof Bun.serve> | null = null;
@@ -19,9 +18,6 @@ export function startAuthServer(): void {
         }
         if (url.pathname === "/auth/youtube/callback") {
           return await handleYouTubeCallback(url);
-        }
-        if (url.pathname === "/auth/kick/callback") {
-          return await handleKickCallback(url);
         }
       } catch (err) {
         console.error("[Auth] Callback error:", err);

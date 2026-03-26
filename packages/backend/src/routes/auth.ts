@@ -1,11 +1,13 @@
 import { ClientStore } from "../db/index.ts";
-import { startKickOAuth, handleKickCallback } from "../auth/kick.ts";
+import { startKickOAuth, handleKickCallback, refreshKickToken } from "../auth/kick.ts";
 import { exchangeTwitchCode, refreshTwitchToken } from "../auth/twitch.ts";
 import { json } from "./utils.ts";
 import { logger } from "../logger.ts";
 import type {
   AuthStartRequest,
   AuthStartResponse,
+  KickRefreshRequest,
+  KickRefreshResponse,
   TwitchExchangeRequest,
   TwitchExchangeResponse,
   TwitchRefreshRequest,
@@ -53,6 +55,22 @@ export const authRoutes = {
           `<html><body><h2>OAuth failed: ${String(err)}</h2></body></html>`,
           { status: 500, headers: { "Content-Type": "text/html" } },
         );
+      }
+    },
+  },
+
+  "/api/auth/kick/refresh": {
+    async POST(req: Request) {
+      const body = (await req.json()) as KickRefreshRequest;
+      if (!body.refreshToken) {
+        return json({ error: "refreshToken is required" }, 400);
+      }
+      try {
+        const tokens = await refreshKickToken(body.refreshToken);
+        return json(tokens satisfies KickRefreshResponse);
+      } catch (err) {
+        log.error("kick/refresh failed", { err: String(err) });
+        return json({ error: String(err) }, 500);
       }
     },
   },

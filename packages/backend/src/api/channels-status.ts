@@ -17,7 +17,7 @@
  */
 
 import { config } from "../config.ts";
-import { getTwitchAppToken } from "./stream-status.ts";
+import { getTwitchAppToken, getKickAppToken } from "./stream-status.ts";
 import { logger } from "../logger.ts";
 import type {
   ChannelStatusRequest,
@@ -142,9 +142,16 @@ async function fetchTwitchChannelsStatus(
 async function fetchKickChannelStatus(
   channel: ChannelStatusRequest,
 ): Promise<ChannelStatus> {
-  // Kick public channel info doesn't require auth
+  const token = await getKickAppToken();
+
   const res = await fetch(
     `https://api.kick.com/public/v1/channels?slug=${encodeURIComponent(channel.channelLogin)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Client-ID": config.KICK_CLIENT_ID,
+      },
+    },
   );
 
   if (!res.ok) {

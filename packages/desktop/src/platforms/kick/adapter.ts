@@ -1,9 +1,10 @@
 import { BasePlatformAdapter } from "../base-adapter";
-import type { NormalizedChatMessage, NormalizedEvent, Badge } from "@twirchat/shared/types";
-import {
-  KICK_PUSHER_WS,
-  KICK_API_BASE,
-} from "@twirchat/shared/constants";
+import type {
+  NormalizedChatMessage,
+  NormalizedEvent,
+  Badge,
+} from "@twirchat/shared/types";
+import { KICK_PUSHER_WS, BACKEND_URL } from "@twirchat/shared/constants";
 
 // ============================================================
 // Типы Kick Pusher events
@@ -85,6 +86,7 @@ export class KickAdapter extends BasePlatformAdapter {
       platform: "kick",
       status: "connecting",
       mode: "anonymous",
+      channelLogin: channelSlug,
     });
 
     this.chatroomId = await this.fetchChatroomId(channelSlug);
@@ -102,6 +104,7 @@ export class KickAdapter extends BasePlatformAdapter {
       platform: "kick",
       status: "disconnected",
       mode: "anonymous",
+      channelLogin: this.channelSlug,
     });
   }
 
@@ -111,7 +114,7 @@ export class KickAdapter extends BasePlatformAdapter {
    */
   async sendMessage(_channelId: string, _text: string): Promise<void> {
     throw new Error(
-      "KickAdapter.sendMessage: use BackendConnection.send({ type: 'send_message', ... }) instead"
+      "KickAdapter.sendMessage: use BackendConnection.send({ type: 'send_message', ... }) instead",
     );
   }
 
@@ -120,17 +123,26 @@ export class KickAdapter extends BasePlatformAdapter {
   // ============================================================
 
   private async fetchChatroomId(channelSlug: string): Promise<number> {
-    const res = await fetch(`${KICK_API_BASE}/channels/${channelSlug}`);
+    const url = `${BACKEND_URL}/api/kick/chatroom?slug=${encodeURIComponent(channelSlug)}`;
+    const res = await fetch(url);
     if (!res.ok) {
-      throw new Error(`Cannot fetch Kick channel info for "${channelSlug}": ${res.status}`);
+      const body = await res.text().catch(() => "");
+      throw new Error(
+        `Cannot fetch Kick chatroom for "${channelSlug}": ${res.status} ${body}`,
+      );
     }
 
-    const body = (await res.json()) as {
-      data?: { chatroom?: { id: number } };
-    };
+    const data = (await res.json()) as { chatroomId?: number; error?: string };
+    if (data.error)
+      throw new Error(
+        `Kick chatroom error for "${channelSlug}": ${data.error}`,
+      );
 
-    const id = body.data?.chatroom?.id;
-    if (!id) throw new Error(`Kick chatroom ID not found for channel "${channelSlug}"`);
+    const id = data.chatroomId;
+    if (!id)
+      throw new Error(
+        `Kick chatroom ID not found for channel "${channelSlug}"`,
+      );
 
     console.log(`[Kick] Channel "${channelSlug}" → chatroom_id=${id}`);
     return id;
@@ -165,11 +177,15 @@ export class KickAdapter extends BasePlatformAdapter {
         platform: "kick",
         status: "disconnected",
         mode: "anonymous",
+        channelLogin: this.channelSlug,
       });
 
       if (this.shouldReconnect) {
         console.log("[Kick] Reconnecting in 5s...");
-        this.reconnectTimeout = setTimeout(() => void this.connectPusher(), 5000);
+        this.reconnectTimeout = setTimeout(
+          () => void this.connectPusher(),
+          5000,
+        );
       }
     });
 
@@ -197,6 +213,7 @@ export class KickAdapter extends BasePlatformAdapter {
           platform: "kick",
           status: "connected",
           mode: "anonymous",
+          channelLogin: this.channelSlug,
         });
         break;
       }
@@ -227,6 +244,13 @@ export class KickAdapter extends BasePlatformAdapter {
         this.handleSubscriptionEvent(data);
         break;
       }
+
+      default: {
+        if (!event.event.startsWith("pusher")) {
+          console.log(`[Kick] Unhandled Pusher event: ${event.event}`);
+        }
+        break;
+      }
     }
   }
 
@@ -240,7 +264,7 @@ export class KickAdapter extends BasePlatformAdapter {
           auth: "",
           channel: `chatrooms.${this.chatroomId}.v2`,
         },
-      })
+      }),
     );
   }
 

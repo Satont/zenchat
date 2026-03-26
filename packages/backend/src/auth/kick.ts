@@ -47,6 +47,38 @@ export async function startKickOAuth(clientSecret: string): Promise<string> {
   return `${KICK_AUTH_URL}?${params.toString()}`;
 }
 
+export async function refreshKickToken(
+  refreshToken: string,
+): Promise<{ accessToken: string; refreshToken?: string; expiresIn?: number }> {
+  const res = await fetch(KICK_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: config.KICK_CLIENT_ID,
+      client_secret: config.KICK_CLIENT_SECRET,
+      refresh_token: refreshToken,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Kick token refresh failed: ${res.status} ${body}`);
+  }
+
+  const data = (await res.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+  };
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresIn: data.expires_in,
+  };
+}
+
 export async function handleKickCallback(
   code: string,
   state: string
