@@ -388,6 +388,37 @@ export class KickAdapter extends BasePlatformAdapter {
       imageUrl: getKickBadgeSvg(b.type) || undefined,
     }));
 
+    // Parse Kick emotes from content
+    // Format: [emote:37232:PeepoClap]
+    const emotes: import("@twirchat/shared/types").Emote[] = [];
+    const emoteRegex = /\[emote:(\d+):([^\]]+)\]/g;
+    let match;
+    let cleanText = msg.content;
+    let offsetDelta = 0;
+
+    while ((match = emoteRegex.exec(msg.content)) !== null) {
+      const [fullMatch, emoteId, emoteName] = match;
+      const originalStart = match.index;
+      const originalEnd = originalStart + fullMatch.length - 1;
+
+      // Calculate position in clean text (after removing emote tags)
+      const cleanStart = originalStart - offsetDelta;
+      const cleanEnd = cleanStart + emoteName.length - 1;
+
+      emotes.push({
+        id: emoteId,
+        name: emoteName,
+        imageUrl: `https://files.kick.com/emotes/${emoteId}/fullsize`,
+        positions: [{ start: cleanStart, end: cleanEnd }],
+      });
+
+      // Update offset for next matches
+      offsetDelta += fullMatch.length - emoteName.length;
+    }
+
+    // Remove emote tags from text, leaving just the name
+    cleanText = msg.content.replace(/\[emote:\d+:([^\]]+)\]/g, "$1");
+
     const normalized: NormalizedChatMessage = {
       id: msg.id,
       platform: "kick",
@@ -400,8 +431,8 @@ export class KickAdapter extends BasePlatformAdapter {
         avatarUrl: msg.sender.profile_picture ?? undefined,
         badges,
       },
-      text: msg.content,
-      emotes: [],
+      text: cleanText,
+      emotes,
       timestamp: new Date(msg.created_at),
       type: "message",
     };
