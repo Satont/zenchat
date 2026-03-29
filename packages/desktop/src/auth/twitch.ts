@@ -1,10 +1,10 @@
 /**
- * Twitch OAuth — desktop side (new PKCE flow).
+ * Twitch OAuth — desktop side (PKCE flow).
  *
  * Flow:
  *  1. Desktop generates PKCE (codeVerifier, codeChallenge, state) — stored in-memory
- *  2. Desktop sends `auth_start_twitch { codeChallenge, state }` over WS to backend
- *  3. Backend builds the Twitch authUrl and returns it via `auth_url` WS message
+ *  2. Desktop sends POST /api/auth/twitch/start { codeChallenge, state, redirectUri } to backend
+ *  3. Backend builds the Twitch authUrl and returns it
  *  4. Desktop opens the URL in the browser
  *  5. Twitch redirects to http://localhost:45821/auth/twitch/callback?code=...&state=...
  *  6. Desktop validates state, grabs codeVerifier from memory
@@ -25,6 +25,8 @@ import { AccountStore } from "../store/account-store";
 import { successPage } from "./server";
 import { BACKEND_URL, TWITCH_REDIRECT_URI } from "@twirchat/shared/constants";
 import type {
+  TwitchBuildUrlRequest,
+  TwitchBuildUrlResponse,
   TwitchExchangeRequest,
   TwitchExchangeResponse,
   TwitchRefreshRequest,
@@ -58,8 +60,8 @@ function cleanupSessions(): void {
 
 /**
  * Generates PKCE params, stores the session in memory, and returns
- * { codeChallenge, state } so the caller can send `auth_start_twitch`
- * over the backend WS connection.
+ * { codeChallenge, state } so the caller can send request to backend
+ * to build the Twitch auth URL.
  */
 export function prepareTwitchAuth(): { codeChallenge: string; state: string } {
   cleanupSessions();
@@ -74,6 +76,33 @@ export function prepareTwitchAuth(): { codeChallenge: string; state: string } {
   });
 
   return { codeChallenge, state };
+}
+
+/**
+ * Requests the auth URL from backend by sending PKCE params.
+ * Returns the URL to open in browser.
+ */
+export async function getTwitchAuthUrl(
+  codeChallenge: string,
+  state: string,
+): Promise<string> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/twitch/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      codeChallenge,
+      state,
+      redirectUri: TWITCH_REDIRECT_URI,
+    } satisfies TwitchBuildUrlRequest),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Twitch auth URL request failed: ${res.status} ${body}`);
+  }
+
+  const data = (await res.json()) as TwitchBuildUrlResponse;
+  return data.url;
 }
 
 /**

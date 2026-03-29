@@ -1,8 +1,21 @@
 import { AUTH_SERVER_PORT } from "@twirchat/shared/constants";
 import { handleYouTubeCallback } from "./youtube";
 import { handleTwitchCallback } from "./twitch";
+import { handleKickCallback } from "./kick";
+import type { WebviewSender } from "../shared/rpc";
+import type { Platform } from "@twirchat/shared/types";
 
 let server: ReturnType<typeof Bun.serve> | null = null;
+let sendToView: WebviewSender | null = null;
+let onAuthSuccessCallback: ((platform: Platform) => void) | null = null;
+
+export function setAuthServerRpcSender(sender: WebviewSender): void {
+  sendToView = sender;
+}
+
+export function setOnAuthSuccessCallback(callback: (platform: Platform) => void): void {
+  onAuthSuccessCallback = callback;
+}
 
 export function startAuthServer(): void {
   if (server) return;
@@ -18,6 +31,21 @@ export function startAuthServer(): void {
         }
         if (url.pathname === "/auth/youtube/callback") {
           return await handleYouTubeCallback(url);
+        }
+        if (url.pathname === "/auth/kick/callback") {
+          const result = await handleKickCallback(url);
+
+          // Notify the webview of successful authentication
+          if (sendToView) {
+            sendToView.auth_success(result.user);
+          }
+
+          // Trigger reconnection to switch from anonymous to authenticated mode
+          if (onAuthSuccessCallback) {
+            onAuthSuccessCallback("kick");
+          }
+
+          return result.response;
         }
       } catch (err) {
         console.error("[Auth] Callback error:", err);

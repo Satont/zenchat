@@ -6,6 +6,7 @@ import { startKickOAuth } from "../auth/kick.ts";
 import { buildTwitchAuthUrl } from "../auth/twitch.ts";
 import { AccountStore } from "../db/index.ts";
 import { logger } from "../logger.ts";
+import { config } from "../config.ts";
 
 const log = logger("ws");
 
@@ -66,7 +67,8 @@ export async function handleWsMessage(
 
     case "auth_start_twitch": {
       try {
-        const { url } = buildTwitchAuthUrl(msg.codeChallenge, msg.state);
+        // Legacy WS-based flow - uses backend redirect URI
+        const { url } = buildTwitchAuthUrl(msg.codeChallenge, msg.state, config.TWITCH_REDIRECT_URI);
         ws.send(JSON.stringify({ type: "auth_url", platform: "twitch", url }));
       } catch (err) {
         ws.send(

@@ -16,7 +16,13 @@ import { BrowserWindow, defineElectrobunRPC, Updater } from "electrobun/bun";
 
 import { initDb } from "../store/db";
 import { getClientSecret } from "../store/client-secret";
-import { AccountStore, SettingsStore, ChannelStore, MessageStore, UsernameColorCache } from "../store";
+import {
+  AccountStore,
+  SettingsStore,
+  ChannelStore,
+  MessageStore,
+  UsernameColorCache,
+} from "../store";
 import { BackendConnection } from "../backend-connection";
 import { ChatAggregator } from "../chat/aggregator";
 import {
@@ -24,7 +30,8 @@ import {
   pushOverlayMessage,
   pushOverlayEvent,
 } from "../overlay-server";
-import { prepareTwitchAuth } from "../auth/twitch";
+import { prepareTwitchAuth, getTwitchAuthUrl } from "../auth/twitch";
+import { prepareKickAuth, getKickAuthUrl } from "../auth/kick";
 import { TwitchAdapter } from "../platforms/twitch/adapter";
 import { KickAdapter } from "../platforms/kick/adapter";
 import { YouTubeAdapter } from "../platforms/youtube/adapter";
@@ -38,6 +45,7 @@ import type {
   SearchCategoriesResponse,
 } from "@twirchat/shared/protocol";
 import type { PlatformStatusInfo } from "@twirchat/shared/types";
+import { startAuthServer, setAuthServerRpcSender, setOnAuthSuccessCallback } from "../auth";
 
 // ============================================================
 // 1. Initialisation
@@ -64,6 +72,7 @@ aggregator.registerAdapter(kickAdapter);
 aggregator.registerAdapter(youtubeAdapter);
 
 startOverlayServer();
+startAuthServer();
 
 // ============================================================
 // 1b. Track latest adapter status per platform
@@ -90,10 +99,15 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
 
       getChannels: () => ChannelStore.findAll(),
 
-      authStart: ({ platform }) => {
+      authStart: async ({ platform }) => {
         if (platform === "twitch") {
           const { codeChallenge, state } = prepareTwitchAuth();
-          backendConn.send({ type: "auth_start_twitch", codeChallenge, state });
+          const url = await getTwitchAuthUrl(codeChallenge, state);
+          void openBrowser(url);
+        } else if (platform === "kick") {
+          const { codeChallenge, state } = prepareKickAuth();
+          const url = await getKickAuthUrl(codeChallenge, state);
+          void openBrowser(url);
         } else {
           backendConn.send({ type: "auth_start", platform });
         }
@@ -113,15 +127,22 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
           return;
         }
         ChannelStore.save(platform, channelSlug);
-        console.log(`[joinChannel] Connecting ${platform} to "${channelSlug}"...`);
-        adapter.connect(channelSlug).then(() => {
-          console.log(`[joinChannel] adapter.connect() resolved for ${platform}:"${channelSlug}"`);
-        }).catch((err) => {
-          console.error(
-            `[joinChannel] Failed to connect ${platform} to "${channelSlug}":`,
-            err,
-          );
-        });
+        console.log(
+          `[joinChannel] Connecting ${platform} to "${channelSlug}"...`,
+        );
+        adapter
+          .connect(channelSlug)
+          .then(() => {
+            console.log(
+              `[joinChannel] adapter.connect() resolved for ${platform}:"${channelSlug}"`,
+            );
+          })
+          .catch((err) => {
+            console.error(
+              `[joinChannel] Failed to connect ${platform} to "${channelSlug}":`,
+              err,
+            );
+          });
       },
 
       leaveChannel: ({ platform, channelSlug }) => {
@@ -199,7 +220,9 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
       getChannelsStatus: async ({ channels }) => {
         // Attach user access tokens for platforms where the user is authenticated
         const enriched = channels.map((ch) => {
-          const account = AccountStore.findByPlatform(ch.platform as import("@twirchat/shared/types").Platform);
+          const account = AccountStore.findByPlatform(
+            ch.platform as import("@twirchat/shared/types").Platform,
+          );
           if (account) {
             const tokens = AccountStore.getTokens(account.id);
             if (tokens?.accessToken) {
@@ -238,6 +261,40 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
 // Typed sender: cast rpc.send to the explicit WebviewSender type so TypeScript
 // can resolve the message names without fighting complex generic inference.
 const sendToView = rpc.send as unknown as WebviewSender;
+
+// Pass the RPC sender to the auth server so it can notify the webview of auth events
+setAuthServerRpcSender(sendToView);
+
+// Set up auth success callback to reconnect adapters when auth completes
+setOnAuthSuccessCallback(async (platform) => {
+  console.log(`[Auth] ${platform} authentication successful, reconnecting adapter...`);
+
+  const adapter = aggregator.getAdapter(platform);
+  if (!adapter) {
+    console.warn(`[Auth] No adapter found for ${platform}`);
+    return;
+  }
+
+  // Get saved channels for this platform
+  const savedChannels = ChannelStore.findByPlatform(platform);
+  if (savedChannels.length === 0) {
+    console.log(`[Auth] No saved channels for ${platform}, skipping reconnection`);
+    return;
+  }
+
+  // Disconnect and reconnect to switch to authenticated mode
+  try {
+    await adapter.disconnect();
+    console.log(`[Auth] ${platform} adapter disconnected`);
+
+    // Reconnect to the first saved channel
+    const channelSlug = savedChannels[0]!;
+    await adapter.connect(channelSlug);
+    console.log(`[Auth] ${platform} adapter reconnected to ${channelSlug} in authenticated mode`);
+  } catch (err) {
+    console.error(`[Auth] Failed to reconnect ${platform} adapter:`, err);
+  }
+});
 
 // ============================================================
 // 3. Main window
@@ -294,7 +351,9 @@ aggregator.onEvent((ev) => {
 aggregator.onStatus((s) => {
   currentStatuses.set(s.platform, s);
   sendToView.platform_status(s);
-  console.log(`[Status] ${s.platform}: ${s.status} (${s.mode})${s.channelLogin ? ` channel=${s.channelLogin}` : ""}`);
+  console.log(
+    `[Status] ${s.platform}: ${s.status} (${s.mode})${s.channelLogin ? ` channel=${s.channelLogin}` : ""}`,
+  );
 });
 
 // ============================================================
@@ -350,17 +409,22 @@ setInterval(() => {
 const savedChannels = ChannelStore.findAll();
 for (const [platform, slugs] of Object.entries(savedChannels)) {
   for (const slug of slugs ?? []) {
-    const adapter = aggregator.getAdapter(platform as import("@twirchat/shared/types").Platform);
+    const adapter = aggregator.getAdapter(
+      platform as import("@twirchat/shared/types").Platform,
+    );
     if (!adapter) {
       console.warn(`[AutoConnect] No adapter for platform: ${platform}`);
       continue;
     }
     console.log(`[AutoConnect] Connecting ${platform} to "${slug}"...`);
-    adapter.connect(slug).then(() => {
-      console.log(`[AutoConnect] Connected ${platform}:"${slug}"`);
-    }).catch((err) => {
-      console.error(`[AutoConnect] Failed ${platform}:"${slug}":`, err);
-    });
+    adapter
+      .connect(slug)
+      .then(() => {
+        console.log(`[AutoConnect] Connected ${platform}:"${slug}"`);
+      })
+      .catch((err) => {
+        console.error(`[AutoConnect] Failed ${platform}:"${slug}":`, err);
+      });
   }
 }
 

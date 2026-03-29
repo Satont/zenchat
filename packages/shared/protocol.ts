@@ -49,12 +49,13 @@ export interface AuthStartResponse {
 }
 
 /**
- * POST /api/auth/twitch/build-url
- * Desktop отправляет PKCE codeChallenge + state, backend формирует authUrl
+ * POST /api/auth/twitch/start
+ * Desktop отправляет PKCE codeChallenge + state + redirectUri, backend формирует authUrl
  */
 export interface TwitchBuildUrlRequest {
   codeChallenge: string;
   state: string;
+  redirectUri: string;
 }
 
 export interface TwitchBuildUrlResponse {
@@ -72,6 +73,37 @@ export interface TwitchExchangeRequest {
 }
 
 export interface TwitchExchangeResponse {
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  scope?: string[];
+}
+
+/**
+ * POST /api/auth/kick/start
+ * Desktop отправляет PKCE codeChallenge + state, backend формирует authUrl
+ */
+export interface KickBuildUrlRequest {
+  codeChallenge: string;
+  state: string;
+  redirectUri: string;
+}
+
+export interface KickBuildUrlResponse {
+  url: string;
+}
+
+/**
+ * POST /api/auth/kick/exchange
+ * Desktop получил code из callback, просит backend обменять на токены
+ */
+export interface KickExchangeRequest {
+  code: string;
+  codeVerifier: string;
+  redirectUri: string;
+}
+
+export interface KickExchangeResponse {
   accessToken: string;
   refreshToken?: string;
   expiresIn?: number;

@@ -34,10 +34,11 @@ const TWITCH_SCOPES = [
 export function buildTwitchAuthUrl(
   codeChallenge: string,
   state: string,
+  redirectUri: string,
 ): TwitchBuildUrlResponse {
   const params = new URLSearchParams({
     client_id: config.TWITCH_CLIENT_ID,
-    redirect_uri: config.TWITCH_REDIRECT_URI,
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: TWITCH_SCOPES.join(" "),
     state,

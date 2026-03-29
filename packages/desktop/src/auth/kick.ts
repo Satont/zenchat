@@ -1,19 +1,216 @@
 /**
- * Kick OAuth — desktop side.
+ * Kick OAuth — desktop side (PKCE flow).
  *
- * Auth flow (initiation + callback) is handled entirely by the backend:
- *  1. Desktop sends `auth_start` { platform: "kick" } over WS → backend builds OAuth URL
- *  2. Backend returns `auth_url` over WS → desktop opens browser
- *  3. Kick redirects to backend callback URL (http://localhost:3000/auth/kick/callback)
- *  4. Backend exchanges code, stores account in Postgres, pushes `auth_success` over WS
- *  5. Desktop receives `auth_success` → App.vue updates UI
+ * Flow:
+ *  1. Desktop generates PKCE (codeVerifier, codeChallenge, state) — stored in-memory
+ *  2. Desktop sends POST /api/auth/kick/start { codeChallenge, state, redirectUri } to backend
+ *  3. Backend builds the Kick authUrl and returns it
+ *  4. Desktop opens the URL in the browser
+ *  5. Kick redirects to http://localhost:45821/auth/kick/callback?code=...&state=...
+ *  6. Desktop validates state, grabs codeVerifier from memory
+ *  7. Desktop calls POST /api/auth/kick/exchange on backend → receives tokens
+ *  8. Desktop fetches user info from Kick API, saves account to SQLite
  *
- * Token refresh is delegated to the backend via POST /api/auth/kick/refresh.
+ * Refresh:
+ *  - Desktop calls POST /api/auth/kick/refresh on backend → receives new tokens
+ *  - Desktop updates the account record in SQLite
  */
 
+import {
+  generateCodeVerifier,
+  generateCodeChallenge,
+  generateState,
+} from "./pkce";
 import { AccountStore } from "../store/account-store";
-import { BACKEND_URL } from "@twirchat/shared/constants";
-import type { KickRefreshRequest, KickRefreshResponse } from "@twirchat/shared";
+import { successPage } from "./server";
+import { BACKEND_URL, KICK_REDIRECT_URI } from "@twirchat/shared/constants";
+import type {
+  KickBuildUrlRequest,
+  KickBuildUrlResponse,
+  KickExchangeRequest,
+  KickExchangeResponse,
+  KickRefreshRequest,
+  KickRefreshResponse,
+} from "@twirchat/shared";
+
+// ----------------------------------------------------------------
+// In-memory PKCE session store (state → { codeVerifier, expiresAt })
+// ----------------------------------------------------------------
+
+const pendingSessions = new Map<
+  string,
+  { codeVerifier: string; expiresAt: number }
+>();
+
+const SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+/** Clean up expired sessions periodically */
+function cleanupSessions(): void {
+  const now = Date.now();
+  for (const [state, session] of pendingSessions) {
+    if (now > session.expiresAt) {
+      pendingSessions.delete(state);
+    }
+  }
+}
+
+// ----------------------------------------------------------------
+// Public API
+// ----------------------------------------------------------------
+
+/**
+ * Generates PKCE params, stores the session in memory, and returns
+ * { codeChallenge, state } so the caller can send request to backend
+ * to build the Kick auth URL.
+ */
+export function prepareKickAuth(): { codeChallenge: string; state: string } {
+  cleanupSessions();
+
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = generateCodeChallenge(codeVerifier);
+  const state = generateState();
+
+  pendingSessions.set(state, {
+    codeVerifier,
+    expiresAt: Date.now() + SESSION_TTL_MS,
+  });
+
+  return { codeChallenge, state };
+}
+
+/**
+ * Requests the auth URL from backend by sending PKCE params.
+ * Returns the URL to open in browser.
+ */
+export async function getKickAuthUrl(
+  codeChallenge: string,
+  state: string,
+): Promise<string> {
+  const res = await fetch(`${BACKEND_URL}/api/auth/kick/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      codeChallenge,
+      state,
+      redirectUri: KICK_REDIRECT_URI,
+    } satisfies KickBuildUrlRequest),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Kick auth URL request failed: ${res.status} ${body}`);
+  }
+
+  const data = (await res.json()) as KickBuildUrlResponse;
+  return data.url;
+}
+
+/**
+ * Handles GET /auth/kick/callback from the local auth server.
+ * Validates state, exchanges code for tokens via the backend, fetches
+ * user info from Kick API, and persists the account in SQLite.
+ */
+export async function handleKickCallback(url: URL): Promise<{
+  response: Response;
+  user: { platform: "kick"; username: string; displayName: string };
+}> {
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const error = url.searchParams.get("error");
+
+  if (error) {
+    throw new Error(
+      `Kick OAuth error: ${error} — ${url.searchParams.get("error_description") ?? ""}`,
+    );
+  }
+
+  if (!code || !state) {
+    throw new Error("Missing code or state in Kick callback");
+  }
+
+  const session = pendingSessions.get(state);
+  if (!session) throw new Error("Unknown or expired OAuth state");
+  if (Date.now() > session.expiresAt) {
+    pendingSessions.delete(state);
+    throw new Error("OAuth session expired");
+  }
+  pendingSessions.delete(state);
+
+  // Exchange code for tokens via backend proxy
+  const exchangeRes = await fetch(`${BACKEND_URL}/api/auth/kick/exchange`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      code,
+      codeVerifier: session.codeVerifier,
+      redirectUri: KICK_REDIRECT_URI,
+    } satisfies KickExchangeRequest),
+  });
+
+  if (!exchangeRes.ok) {
+    const body = await exchangeRes.text();
+    throw new Error(
+      `Kick token exchange failed: ${exchangeRes.status} ${body}`,
+    );
+  }
+
+  const tokens = (await exchangeRes.json()) as KickExchangeResponse;
+
+  // Fetch user info from Kick API
+  const userRes = await fetch("https://api.kick.com/public/v1/users", {
+    headers: { Authorization: `Bearer ${tokens.accessToken}` },
+  });
+
+  if (!userRes.ok) {
+    throw new Error(`Kick user info request failed: ${userRes.status}`);
+  }
+
+  const userData = (await userRes.json()) as {
+    data: Array<{
+      user_id: number;
+      name: string;
+      email?: string;
+      profile_picture?: string;
+    }>;
+    message: string;
+  };
+
+  if (!userData.data || userData.data.length === 0) {
+    throw new Error("Kick user info response empty");
+  }
+
+  const user = userData.data[0]!;
+
+  const expiresAt = tokens.expiresIn
+    ? Math.floor(Date.now() / 1000) + tokens.expiresIn
+    : undefined;
+
+  AccountStore.upsert({
+    id: `kick:${user.user_id}`,
+    platform: "kick",
+    platformUserId: String(user.user_id),
+    username: user.name,
+    displayName: user.name,
+    avatarUrl: user.profile_picture,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresAt,
+    scopes: tokens.scope,
+  });
+
+  console.log(`[Kick Auth] Logged in as @${user.name}`);
+
+  return {
+    response: new Response(successPage("Kick"), {
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    }),
+    user: {
+      platform: "kick" as const,
+      username: user.name,
+      displayName: user.name,
+    },
+  };
+}
 
 /**
  * Refreshes the Kick access token for the given accountId via the backend proxy.

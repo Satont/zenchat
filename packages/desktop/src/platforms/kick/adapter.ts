@@ -4,7 +4,12 @@ import type {
   NormalizedEvent,
   Badge,
 } from "@twirchat/shared/types";
-import { KICK_PUSHER_WS, BACKEND_URL } from "@twirchat/shared/constants";
+import {
+  KICK_PUSHER_WS,
+  KICK_API_BASE,
+  BACKEND_URL,
+} from "@twirchat/shared/constants";
+import { AccountStore } from "../../store/account-store";
 import { getKickBadgeSvg } from "./badges";
 
 // ============================================================
@@ -79,14 +84,35 @@ export class KickAdapter extends BasePlatformAdapter {
   private isConnected = false;
   private shouldReconnect = true;
 
+  private anonymous = true;
+  private accessToken: string | null = null;
+  private accountId: string | null = null;
+  private platformUserId: string | null = null;
+
   async connect(channelSlug: string): Promise<void> {
     this.channelSlug = channelSlug;
     this.shouldReconnect = true;
 
+    // Check for stored account
+    const account = AccountStore.findByPlatform("kick");
+    if (account) {
+      const tokens = AccountStore.getTokens(account.id);
+      if (tokens) {
+        this.anonymous = false;
+        this.accessToken = tokens.accessToken;
+        this.accountId = account.id;
+        this.platformUserId = account.platformUserId;
+      }
+    }
+
+    if (this.anonymous) {
+      this.accessToken = null;
+    }
+
     this.emit("status", {
       platform: "kick",
       status: "connecting",
-      mode: "anonymous",
+      mode: this.anonymous ? "anonymous" : "authenticated",
       channelLogin: channelSlug,
     });
 
@@ -104,19 +130,46 @@ export class KickAdapter extends BasePlatformAdapter {
     this.emit("status", {
       platform: "kick",
       status: "disconnected",
-      mode: "anonymous",
+      mode: this.anonymous ? "anonymous" : "authenticated",
       channelLogin: this.channelSlug,
     });
   }
 
-  /**
-   * Sending messages is handled externally via the backend WS
-   * (send_message message type). Calling this directly is not supported.
-   */
-  async sendMessage(_channelId: string, _text: string): Promise<void> {
-    throw new Error(
-      "KickAdapter.sendMessage: use BackendConnection.send({ type: 'send_message', ... }) instead",
-    );
+  async sendMessage(_channelId: string, text: string): Promise<void> {
+    if (this.anonymous) {
+      throw new Error(
+        "Cannot send messages in anonymous mode. Please log in to Kick.",
+      );
+    }
+    if (!this.accessToken) {
+      throw new Error("Kick access token not available");
+    }
+    if (!this.accountId) {
+      throw new Error("Kick account ID not available");
+    }
+
+    const body = {
+      broadcaster_user_id: Number(this.platformUserId),
+      content: text,
+      type: "user",
+    };
+
+    const url = `${KICK_API_BASE}/chat`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const responseBody = await res.text().catch(() => "");
+      throw new Error(
+        `Failed to send Kick message ${JSON.stringify(body)}: ${res.status} ${responseBody}`,
+      );
+    }
   }
 
   // ============================================================
@@ -157,7 +210,9 @@ export class KickAdapter extends BasePlatformAdapter {
     this.ws = ws;
 
     ws.addEventListener("open", () => {
-      console.log("[Kick] Pusher connected (anonymous)");
+      console.log(
+        `[Kick] Pusher connected (${this.anonymous ? "anonymous" : "authenticated"})`,
+      );
     });
 
     ws.addEventListener("message", (event) => {
@@ -177,7 +232,7 @@ export class KickAdapter extends BasePlatformAdapter {
       this.emit("status", {
         platform: "kick",
         status: "disconnected",
-        mode: "anonymous",
+        mode: this.anonymous ? "anonymous" : "authenticated",
         channelLogin: this.channelSlug,
       });
 
@@ -196,7 +251,6 @@ export class KickAdapter extends BasePlatformAdapter {
   }
 
   private handlePusherEvent(event: PusherEvent): void {
-    console.log(event);
     switch (event.event) {
       case "pusher:connection_established": {
         this.subscribeToChatroom();
@@ -214,7 +268,7 @@ export class KickAdapter extends BasePlatformAdapter {
         this.emit("status", {
           platform: "kick",
           status: "connected",
-          mode: "anonymous",
+          mode: this.anonymous ? "anonymous" : "authenticated",
           channelLogin: this.channelSlug,
         });
         break;

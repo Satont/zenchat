@@ -1,13 +1,19 @@
 import { ClientStore } from "../db/index.ts";
-import { startKickOAuth, handleKickCallback, refreshKickToken } from "../auth/kick.ts";
-import { exchangeTwitchCode, refreshTwitchToken } from "../auth/twitch.ts";
+import { startKickOAuth, handleKickCallback, refreshKickToken, buildKickAuthUrl, exchangeKickCode } from "../auth/kick.ts";
+import { exchangeTwitchCode, refreshTwitchToken, buildTwitchAuthUrl } from "../auth/twitch.ts";
 import { json } from "./utils.ts";
 import { logger } from "../logger.ts";
 import type {
   AuthStartRequest,
   AuthStartResponse,
+  KickBuildUrlRequest,
+  KickBuildUrlResponse,
+  KickExchangeRequest,
+  KickExchangeResponse,
   KickRefreshRequest,
   KickRefreshResponse,
+  TwitchBuildUrlRequest,
+  TwitchBuildUrlResponse,
   TwitchExchangeRequest,
   TwitchExchangeResponse,
   TwitchRefreshRequest,
@@ -18,7 +24,63 @@ import type {
 const log = logger("auth");
 
 export const authRoutes = {
+  // ============================================================
+  // Kick OAuth — HTTP-based flow (new)
+  // ============================================================
+
   "/api/auth/kick/start": {
+    async POST(req: Request) {
+      const body = (await req.json()) as KickBuildUrlRequest;
+      if (!body.codeChallenge || !body.state || !body.redirectUri) {
+        return json({ error: "codeChallenge, state, and redirectUri are required" }, 400);
+      }
+      try {
+        const { url } = buildKickAuthUrl(body.codeChallenge, body.state, body.redirectUri);
+        return json({ url } satisfies KickBuildUrlResponse);
+      } catch (err) {
+        log.error("kick/start failed", { err: String(err) });
+        return json({ error: "Failed to build auth URL" }, 500);
+      }
+    },
+  },
+
+  "/api/auth/kick/exchange": {
+    async POST(req: Request) {
+      const body = (await req.json()) as KickExchangeRequest;
+      if (!body.code || !body.codeVerifier || !body.redirectUri) {
+        return json({ error: "code, codeVerifier, and redirectUri are required" }, 400);
+      }
+      try {
+        const tokens = await exchangeKickCode(body.code, body.codeVerifier, body.redirectUri);
+        return json(tokens satisfies KickExchangeResponse);
+      } catch (err) {
+        log.error("kick/exchange failed", { err: String(err) });
+        return json({ error: String(err) }, 500);
+      }
+    },
+  },
+
+  "/api/auth/kick/refresh": {
+    async POST(req: Request) {
+      const body = (await req.json()) as KickRefreshRequest;
+      if (!body.refreshToken) {
+        return json({ error: "refreshToken is required" }, 400);
+      }
+      try {
+        const tokens = await refreshKickToken(body.refreshToken);
+        return json(tokens satisfies KickRefreshResponse);
+      } catch (err) {
+        log.error("kick/refresh failed", { err: String(err) });
+        return json({ error: String(err) }, 500);
+      }
+    },
+  },
+
+  // ============================================================
+  // Kick OAuth — Legacy WebSocket-based flow
+  // ============================================================
+
+  "/api/auth/kick/legacy-start": {
     async POST(req: Request) {
       const body = (await req.json()) as AuthStartRequest;
       if (!body.clientSecret) {
@@ -29,7 +91,7 @@ export const authRoutes = {
         const url = await startKickOAuth(body.clientSecret);
         return json({ url } satisfies AuthStartResponse);
       } catch (err) {
-        log.error("kick/start failed", { err: String(err) });
+        log.error("kick/legacy-start failed", { err: String(err) });
         return json({ error: "Failed to start OAuth" }, 500);
       }
     },
@@ -59,18 +121,22 @@ export const authRoutes = {
     },
   },
 
-  "/api/auth/kick/refresh": {
+  // ============================================================
+  // Twitch OAuth — HTTP-based flow
+  // ============================================================
+
+  "/api/auth/twitch/start": {
     async POST(req: Request) {
-      const body = (await req.json()) as KickRefreshRequest;
-      if (!body.refreshToken) {
-        return json({ error: "refreshToken is required" }, 400);
+      const body = (await req.json()) as TwitchBuildUrlRequest;
+      if (!body.codeChallenge || !body.state || !body.redirectUri) {
+        return json({ error: "codeChallenge, state, and redirectUri are required" }, 400);
       }
       try {
-        const tokens = await refreshKickToken(body.refreshToken);
-        return json(tokens satisfies KickRefreshResponse);
+        const { url } = buildTwitchAuthUrl(body.codeChallenge, body.state, body.redirectUri);
+        return json({ url } satisfies TwitchBuildUrlResponse);
       } catch (err) {
-        log.error("kick/refresh failed", { err: String(err) });
-        return json({ error: String(err) }, 500);
+        log.error("twitch/start failed", { err: String(err) });
+        return json({ error: "Failed to build auth URL" }, 500);
       }
     },
   },
