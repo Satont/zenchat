@@ -5,7 +5,7 @@ import { handleTwitchBadges } from "../api/twitch-badges.ts";
 import { handleChannelsStatus } from "../api/channels-status.ts";
 import { handleKickChatroom } from "../api/kick-chatroom.ts";
 import { requireClient, json } from "./utils.ts";
-import { logger } from "../logger.ts";
+import { logger } from "@twirchat/shared/logger";
 
 const log = logger("routes");
 

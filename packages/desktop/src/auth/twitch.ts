@@ -24,6 +24,7 @@ import {
 import { AccountStore } from "../store/account-store";
 import { successPage } from "./server";
 import { BACKEND_URL, TWITCH_REDIRECT_URI } from "@twirchat/shared/constants";
+import { logger } from "@twirchat/shared/logger";
 import type {
   TwitchBuildUrlRequest,
   TwitchBuildUrlResponse,
@@ -32,6 +33,8 @@ import type {
   TwitchRefreshRequest,
   TwitchRefreshResponse,
 } from "@twirchat/shared";
+
+const log = logger("auth-twitch");
 
 // ----------------------------------------------------------------
 // In-memory PKCE session store (state → { codeVerifier, expiresAt })
@@ -187,7 +190,7 @@ export async function handleTwitchCallback(url: URL): Promise<Response> {
     scopes: validateData.scopes,
   });
 
-  console.log(`[Twitch Auth] Logged in as @${validateData.login}`);
+  log.info(`Logged in as @${validateData.login}`);
 
   return new Response(successPage("Twitch"), {
     headers: { "Content-Type": "text/html; charset=utf-8" },

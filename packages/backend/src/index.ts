@@ -8,7 +8,7 @@ import { webhookRoutes } from "./routes/webhooks.ts";
 import { json } from "./routes/utils.ts";
 import type { WsData } from "./ws/connection-manager.ts";
 import { config } from "./config.ts";
-import { logger } from "./logger.ts";
+import { logger } from "@twirchat/shared/logger";
 import { handleTwitchBadges } from "./api/twitch-badges.ts";
 
 const log = logger("backend");

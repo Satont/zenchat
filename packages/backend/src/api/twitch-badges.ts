@@ -11,7 +11,7 @@
 
 import { config } from "../config.ts";
 import { getTwitchAppToken } from "./stream-status.ts";
-import { logger } from "../logger.ts";
+import { logger } from "@twirchat/shared/logger";
 import type { TwitchBadgesResponse } from "@twirchat/shared";
 
 const log = logger("twitch-badges");

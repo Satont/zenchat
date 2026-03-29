@@ -3,7 +3,7 @@ import { startKickOAuth, handleKickCallback, refreshKickToken, buildKickAuthUrl,
 import { exchangeTwitchCode, refreshTwitchToken, buildTwitchAuthUrl } from "../auth/twitch.ts";
 import { buildYouTubeAuthUrl, exchangeYouTubeCode, refreshYouTubeToken } from "../auth/youtube.ts";
 import { json } from "./utils.ts";
-import { logger } from "../logger.ts";
+import { logger } from "@twirchat/shared/logger";
 import type {
   AuthStartRequest,
   AuthStartResponse,

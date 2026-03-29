@@ -4,6 +4,9 @@ import type {
   Platform,
 } from "@twirchat/shared/types";
 import type { PlatformStatusInfo } from "@twirchat/shared/types";
+import { logger } from "@twirchat/shared/logger";
+
+const log = logger("base-adapter");
 
 export type PlatformEventMap = {
   message: NormalizedChatMessage;
@@ -74,7 +77,7 @@ export abstract class BasePlatformAdapter implements IPlatformAdapter {
       try {
         (handler as PlatformEventHandler<K>)(data);
       } catch (err) {
-        console.error(
+        log.error(
           `[${this.platform}] Event handler error (${event}):`,
           err,
         );

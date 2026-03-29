@@ -1,10 +1,13 @@
 import { AUTH_SERVER_PORT } from "@twirchat/shared/constants";
+import { logger } from "@twirchat/shared/logger";
 import { handleYouTubeCallback } from "./youtube";
 import { handleTwitchCallback } from "./twitch";
 import { handleKickCallback } from "./kick";
 import { ChannelStore } from "../store/channel-store";
 import type { WebviewSender } from "../shared/rpc";
 import type { Platform } from "@twirchat/shared/types";
+
+const log = logger("auth-server");
 
 let server: ReturnType<typeof Bun.serve> | null = null;
 let sendToView: WebviewSender | null = null;
@@ -72,7 +75,7 @@ export function startAuthServer(): void {
           return result.response;
         }
       } catch (err) {
-        console.error("[Auth] Callback error:", err);
+        log.error("Callback error:", err);
         return new Response(errorPage(String(err)), {
           status: 500,
           headers: { "Content-Type": "text/html; charset=utf-8" },
@@ -83,7 +86,7 @@ export function startAuthServer(): void {
     },
   });
 
-  console.log(`[Auth] OAuth server listening on port ${AUTH_SERVER_PORT}`);
+  log.info(`OAuth server listening on port ${AUTH_SERVER_PORT}`);
 }
 
 export function stopAuthServer(): void {

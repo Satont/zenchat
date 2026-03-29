@@ -37,6 +37,7 @@ import { TwitchAdapter } from "../platforms/twitch/adapter";
 import { KickAdapter } from "../platforms/kick/adapter";
 import { YouTubeAdapter } from "../platforms/youtube/adapter";
 import { BACKEND_URL } from "@twirchat/shared/constants";
+import { logger } from "@twirchat/shared/logger";
 
 import type { TwirChatRPCSchema, WebviewSender } from "../shared/rpc";
 import type {
@@ -52,13 +53,15 @@ import { startAuthServer, setAuthServerRpcSender, setOnAuthSuccessCallback } fro
 // 1. Initialisation
 // ============================================================
 
-console.log("[TwirChat] Starting...");
+const log = logger("main");
+
+log.info("Starting...");
 
 initDb();
-console.log("[TwirChat] Database ready");
+log.info("Database ready");
 
 const clientSecret = getClientSecret();
-console.log(`[TwirChat] Client secret: ${clientSecret.slice(0, 8)}...`);
+log.info("Client secret", { secret: `${clientSecret.slice(0, 8)}...` });
 
 const backendConn = new BackendConnection(clientSecret);
 const aggregator = new ChatAggregator(500);
@@ -126,57 +129,41 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
       joinChannel: ({ platform, channelSlug }) => {
         const adapter = aggregator.getAdapter(platform);
         if (!adapter) {
-          console.warn(
-            `[joinChannel] No adapter registered for platform: ${platform}`,
-          );
+          log.warn("No adapter registered for platform", { platform, action: "joinChannel" });
           return;
         }
         ChannelStore.save(platform, channelSlug);
-        console.log(
-          `[joinChannel] Connecting ${platform} to "${channelSlug}"...`,
-        );
+        log.info("Connecting to channel", { platform, channelSlug, action: "joinChannel" });
         adapter
           .connect(channelSlug)
           .then(() => {
-            console.log(
-              `[joinChannel] adapter.connect() resolved for ${platform}:"${channelSlug}"`,
-            );
+            log.info("adapter.connect() resolved", { platform, channelSlug, action: "joinChannel" });
           })
           .catch((err) => {
-            console.error(
-              `[joinChannel] Failed to connect ${platform} to "${channelSlug}":`,
-              err,
-            );
+            log.error("Failed to connect", { platform, channelSlug, error: String(err), action: "joinChannel" });
           });
       },
 
       leaveChannel: ({ platform, channelSlug }) => {
         const adapter = aggregator.getAdapter(platform);
         if (!adapter) {
-          console.warn(
-            `[leaveChannel] No adapter registered for platform: ${platform}`,
-          );
+          log.warn("No adapter registered for platform", { platform, action: "leaveChannel" });
           return;
         }
         ChannelStore.remove(platform, channelSlug);
         adapter.disconnect().catch((err) => {
-          console.error(
-            `[leaveChannel] Failed to disconnect ${platform}:`,
-            err,
-          );
+          log.error("Failed to disconnect", { platform, error: String(err), action: "leaveChannel" });
         });
       },
 
       sendMessage: ({ platform, channelId, text }) => {
         const adapter = aggregator.getAdapter(platform);
         if (!adapter) {
-          console.warn(
-            `[sendMessage] No adapter registered for platform: ${platform}`,
-          );
+          log.warn("No adapter registered for platform", { platform, action: "sendMessage" });
           return;
         }
         adapter.sendMessage(channelId, text).catch((err) => {
-          console.error(`[sendMessage] Failed to send on ${platform}:`, err);
+          log.error("Failed to send message", { platform, error: String(err), action: "sendMessage" });
         });
       },
 
@@ -272,31 +259,31 @@ setAuthServerRpcSender(sendToView);
 
 // Set up auth success callback to reconnect adapters when auth completes
 setOnAuthSuccessCallback(async (platform, channelSlug) => {
-  console.log(`[Auth] ${platform} authentication successful, reconnecting adapter...`);
+  log.info("Authentication successful, reconnecting adapter", { platform, action: "auth" });
 
   const adapter = aggregator.getAdapter(platform);
   if (!adapter) {
-    console.warn(`[Auth] No adapter found for ${platform}`);
+    log.warn("No adapter found for platform", { platform, action: "auth" });
     return;
   }
 
   // Use provided channelSlug or get from saved channels
   const targetChannel = channelSlug || ChannelStore.findByPlatform(platform)[0];
   if (!targetChannel) {
-    console.log(`[Auth] No channel specified for ${platform}, skipping reconnection`);
+    log.info("No channel specified, skipping reconnection", { platform, action: "auth" });
     return;
   }
 
   // Disconnect and reconnect to switch to authenticated mode
   try {
     await adapter.disconnect();
-    console.log(`[Auth] ${platform} adapter disconnected`);
+    log.info("Adapter disconnected", { platform, action: "auth" });
 
     // Reconnect to the channel
     await adapter.connect(targetChannel);
-    console.log(`[Auth] ${platform} adapter reconnected to ${targetChannel} in authenticated mode`);
+    log.info("Adapter reconnected in authenticated mode", { platform, channel: targetChannel, action: "auth" });
   } catch (err) {
-    console.error(`[Auth] Failed to reconnect ${platform} adapter:`, err);
+    log.error("Failed to reconnect adapter", { platform, error: String(err), action: "auth" });
   }
 });
 
@@ -312,9 +299,7 @@ setOnAuthSuccessCallback(async (platform, channelSlug) => {
 async function resolveWindowUrl(): Promise<string> {
   const channel = await Updater.localInfo.channel();
   if (channel === "dev") {
-    console.log(
-      "[TwirChat] Running in dev channel — skipping Vite server check",
-    );
+    log.info("Running in dev channel — skipping Vite server check");
     return "http://localhost:5173";
   }
 
@@ -341,23 +326,19 @@ aggregator.onMessage((msg) => {
   UsernameColorCache.addMessage(msg);
   pushOverlayMessage(msg);
   sendToView.chat_message(msg);
-  console.log(
-    `[Chat] [${msg.platform}] ${msg.author.displayName}: ${msg.text}`,
-  );
+  log.info("Chat message", { platform: msg.platform, author: msg.author.displayName, text: msg.text });
 });
 
 aggregator.onEvent((ev) => {
   pushOverlayEvent(ev);
   sendToView.chat_event(ev);
-  console.log(`[Event] [${ev.platform}] ${ev.type}: ${ev.user.displayName}`);
+  log.info("Event", { platform: ev.platform, type: ev.type, user: ev.user.displayName });
 });
 
 aggregator.onStatus((s) => {
   currentStatuses.set(s.platform, s);
   sendToView.platform_status(s);
-  console.log(
-    `[Status] ${s.platform}: ${s.status} (${s.mode})${s.channelLogin ? ` channel=${s.channelLogin}` : ""}`,
-  );
+  log.info("Status", { platform: s.platform, status: s.status, mode: s.mode, channel: s.channelLogin });
 });
 
 // ============================================================
@@ -387,7 +368,7 @@ backendConn.onMessage((msg) => {
       break;
 
     case "error":
-      console.error(`[Backend] ${msg.message}`);
+      log.error("Backend error", { message: msg.message });
       break;
 
     default:
@@ -417,22 +398,22 @@ for (const [platform, slugs] of Object.entries(savedChannels)) {
       platform as import("@twirchat/shared/types").Platform,
     );
     if (!adapter) {
-      console.warn(`[AutoConnect] No adapter for platform: ${platform}`);
+      log.warn("No adapter for platform", { platform, action: "AutoConnect" });
       continue;
     }
-    console.log(`[AutoConnect] Connecting ${platform} to "${slug}"...`);
+    log.info("Connecting to channel", { platform, slug, action: "AutoConnect" });
     adapter
       .connect(slug)
       .then(() => {
-        console.log(`[AutoConnect] Connected ${platform}:"${slug}"`);
+        log.info("Connected", { platform, slug, action: "AutoConnect" });
       })
       .catch((err) => {
-        console.error(`[AutoConnect] Failed ${platform}:"${slug}":`, err);
+        log.error("Failed to connect", { platform, slug, error: String(err), action: "AutoConnect" });
       });
   }
 }
 
-console.log("[TwirChat] Ready.");
+log.info("Ready");
 
 // ============================================================
 // Helpers
@@ -448,8 +429,8 @@ async function openBrowser(url: string): Promise<void> {
       await Bun.$`xdg-open ${url}`;
     }
   } catch (err) {
-    console.error(`[Auth] Failed to open browser: ${err}`);
-    console.log(`[Auth] Please open manually: ${url}`);
+    log.error("Failed to open browser", { error: String(err), action: "auth" });
+    log.info("Please open manually", { url, action: "auth" });
   }
 }
 

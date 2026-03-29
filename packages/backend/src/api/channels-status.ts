@@ -18,7 +18,7 @@
 
 import { config } from "../config.ts";
 import { getTwitchAppToken, getKickAppToken } from "./stream-status.ts";
-import { logger } from "../logger.ts";
+import { logger } from "@twirchat/shared/logger";
 import type {
   ChannelStatusRequest,
   ChannelStatus,

@@ -24,6 +24,7 @@ import {
 import { AccountStore } from "../store/account-store";
 import { successPage } from "./server";
 import { BACKEND_URL, KICK_REDIRECT_URI } from "@twirchat/shared/constants";
+import { logger } from "@twirchat/shared/logger";
 import type {
   KickBuildUrlRequest,
   KickBuildUrlResponse,
@@ -32,6 +33,8 @@ import type {
   KickRefreshRequest,
   KickRefreshResponse,
 } from "@twirchat/shared";
+
+const log = logger("auth-kick");
 
 // ----------------------------------------------------------------
 // In-memory PKCE session store (state → { codeVerifier, expiresAt })
@@ -199,7 +202,7 @@ export async function handleKickCallback(url: URL): Promise<{
     scopes: tokens.scope,
   });
 
-  console.log(`[Kick Auth] Logged in as @${user.name}`);
+  log.info(`Logged in as @${user.name}`);
 
   return {
     response: new Response(successPage("Kick"), {

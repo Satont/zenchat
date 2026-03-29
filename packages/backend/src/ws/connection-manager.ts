@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import type { BackendToDesktopMessage } from "@twirchat/shared";
-import { logger } from "../logger.ts";
+import { logger } from "@twirchat/shared/logger";
 
 const log = logger("ws");
 

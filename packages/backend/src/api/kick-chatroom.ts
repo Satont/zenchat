@@ -6,7 +6,7 @@
  * The public/v1 API does NOT expose chatroom.id; v2 does.
  */
 
-import { logger } from "../logger.ts";
+import { logger } from "@twirchat/shared/logger";
 
 const log = logger("kick-chatroom");
 

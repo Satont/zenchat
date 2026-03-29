@@ -24,6 +24,7 @@ import {
 import { AccountStore } from "../store/account-store";
 import { successPage } from "./server";
 import { BACKEND_URL, YOUTUBE_REDIRECT_URI } from "@twirchat/shared/constants";
+import { logger } from "@twirchat/shared/logger";
 import type {
   YouTubeBuildUrlRequest,
   YouTubeBuildUrlResponse,
@@ -32,6 +33,8 @@ import type {
   YouTubeRefreshRequest,
   YouTubeRefreshResponse,
 } from "@twirchat/shared";
+
+const log = logger("auth-youtube");
 
 // ----------------------------------------------------------------
 // In-memory PKCE session store (state → { codeVerifier, expiresAt })
@@ -203,7 +206,7 @@ export async function handleYouTubeCallback(url: URL): Promise<{
     scopes: tokens.scope,
   });
 
-  console.log(`[YouTube Auth] Logged in as ${channel.snippet.title}`);
+  log.info(`Logged in as ${channel.snippet.title}`);
 
   const username = channel.snippet.customUrl ?? channel.id;
 

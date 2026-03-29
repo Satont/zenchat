@@ -5,7 +5,7 @@ import { ClientStore } from "../db/index.ts";
 import { startKickOAuth } from "../auth/kick.ts";
 import { buildTwitchAuthUrl } from "../auth/twitch.ts";
 import { AccountStore } from "../db/index.ts";
-import { logger } from "../logger.ts";
+import { logger } from "@twirchat/shared/logger";
 import { config } from "../config.ts";
 
 const log = logger("ws");

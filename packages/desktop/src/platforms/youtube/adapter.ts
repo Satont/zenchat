@@ -1,20 +1,19 @@
 /**
  * YouTube Platform Adapter
  *
- * Connects to YouTube Live Chat using the official gRPC streaming API via ConnectRPC:
+ * Connects to YouTube Live Chat using the official gRPC streaming API via @grpc/grpc-js:
  *   youtube.googleapis.com:443
  *   Service: V3DataLiveChatMessageService.StreamList
  *
  * Flow:
  *   1. Get the active liveChatId via REST (videos.list?part=liveStreamingDetails)
- *   2. Open a server-streaming call with the liveChatId + OAuth token via ConnectRPC
+ *   2. Open a server-streaming call with the liveChatId + OAuth token via gRPC
  *   3. Normalize incoming messages and emit them
  *
  * Auth: OAuth 2.0 access token stored in local AccountStore.
  */
 
-import { createClient } from "@connectrpc/connect";
-import { createGrpcTransport } from "@connectrpc/connect-node";
+import * as grpc from "@grpc/grpc-js";
 
 import { BasePlatformAdapter } from "../base-adapter.js";
 import type {
@@ -23,14 +22,19 @@ import type {
   Badge,
 } from "@twirchat/shared/types";
 import { AccountStore } from "../../store/account-store.js";
+import { logger } from "@twirchat/shared/logger";
 
 import {
-  V3DataLiveChatMessageService,
+  V3DataLiveChatMessageServiceClient,
+  LiveChatMessageListRequest,
   LiveChatMessageSnippet_TypeWrapper_Type,
   type LiveChatMessage,
-} from "./gen/stream_list_pb.js";
+  type LiveChatMessageListResponse,
+} from "./gen/stream_list.js";
 
-const YOUTUBE_GRPC_ENDPOINT = "https://youtube.googleapis.com";
+const log = logger("youtube");
+
+const YOUTUBE_GRPC_ENDPOINT = "dns:///youtube.googleapis.com:443";
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
 export class YouTubeAdapter extends BasePlatformAdapter {
@@ -40,10 +44,14 @@ export class YouTubeAdapter extends BasePlatformAdapter {
   private liveChatId: string | null = null;
   private shouldReconnect = true;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-  private abortController: AbortController | null = null;
+  private reconnectAttempts = 0;
+  private readonly MAX_RECONNECT_DELAY = 60000; // Max 60 seconds
+  private readonly BASE_RECONNECT_DELAY = 5000; // Start with 5 seconds
 
   private accessToken: string | null = null;
   private accountId: string | null = null;
+  private grpcClient: V3DataLiveChatMessageServiceClient | null = null;
+  private activeStream: grpc.ClientReadableStream<LiveChatMessageListResponse> | null = null;
 
   async connect(channelIdOrHandle: string): Promise<void> {
     this.channelId = channelIdOrHandle;
@@ -85,7 +93,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       this.liveChatId = await this.fetchLiveChatId(channelIdOrHandle);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error(`[YouTube] Failed to get live chat ID:`, err);
+      log.error(`[YouTube] Failed to get live chat ID:`, err);
       this.emit("status", {
         platform: "youtube",
         status: "error",
@@ -102,8 +110,18 @@ export class YouTubeAdapter extends BasePlatformAdapter {
   async disconnect(): Promise<void> {
     this.shouldReconnect = false;
     this.clearTimers();
-    this.abortController?.abort();
-    this.abortController = null;
+
+    // Cancel active stream
+    if (this.activeStream) {
+      this.activeStream.cancel();
+      this.activeStream = null;
+    }
+
+    // Close gRPC client
+    if (this.grpcClient) {
+      this.grpcClient.close();
+      this.grpcClient = null;
+    }
 
     this.emit("status", {
       platform: "youtube",
@@ -142,7 +160,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       throw new Error(`YouTube sendMessage failed: ${res.status} ${body}`);
     }
 
-    console.log(`[YouTube] Message sent: ${text.slice(0, 50)}...`);
+    log.info(`[YouTube] Message sent: ${text.slice(0, 50)}...`);
   }
 
   // ============================================================
@@ -154,13 +172,13 @@ export class YouTubeAdapter extends BasePlatformAdapter {
 
     // Clean up the input - remove @ prefix if present
     const cleanInput = channelOrVideoId.replace(/^@/, "");
-    console.log(
+    log.info(
       `[YouTube] Looking for live chat, input="${channelOrVideoId}", clean="${cleanInput}"`,
     );
 
     // Try as a video ID first (starts with characters other than UC)
     if (!cleanInput.startsWith("UC")) {
-      console.log(`[YouTube] Trying as video ID: ${cleanInput}`);
+      log.info(`[YouTube] Trying as video ID: ${cleanInput}`);
       const videoRes = await fetch(
         `${YOUTUBE_API_BASE}/videos?part=liveStreamingDetails&id=${encodeURIComponent(cleanInput)}`,
         { headers: { Authorization: `Bearer ${this.accessToken}` } },
@@ -174,19 +192,19 @@ export class YouTubeAdapter extends BasePlatformAdapter {
         };
         const chatId = body.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
         if (chatId) {
-          console.log(`[YouTube] Found liveChatId via video ID: ${chatId}`);
+          log.info(`[YouTube] Found liveChatId via video ID: ${chatId}`);
           return chatId;
         }
-        console.log(`[YouTube] Video found but no active live chat`);
+        log.info(`[YouTube] Video found but no active live chat`);
       } else {
-        console.log(`[YouTube] Video lookup failed: ${videoRes.status}`);
+        log.info(`[YouTube] Video lookup failed: ${videoRes.status}`);
       }
     }
 
     // Try to resolve handle/username to channel ID
     let channelId = cleanInput;
     if (!cleanInput.startsWith("UC")) {
-      console.log(`[YouTube] Resolving handle/username: ${cleanInput}`);
+      log.info(`[YouTube] Resolving handle/username: ${cleanInput}`);
       // Try as a handle (custom URL) - search for the channel
       const searchRes = await fetch(
         `${YOUTUBE_API_BASE}/search?part=snippet&q=${encodeURIComponent(cleanInput)}&type=channel&maxResults=1`,
@@ -194,7 +212,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       );
 
       if (!searchRes.ok) {
-        console.log(`[YouTube] Channel search failed: ${searchRes.status}`);
+        log.info(`[YouTube] Channel search failed: ${searchRes.status}`);
         throw new Error(`YouTube channel search failed: ${searchRes.status}`);
       }
 
@@ -213,13 +231,13 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       }
 
       channelId = foundChannelId;
-      console.log(
+      log.info(
         `[YouTube] Resolved to channel: ${channelId} (${channelTitle})`,
       );
     }
 
     // Search for active live broadcast on the channel
-    console.log(
+    log.info(
       `[YouTube] Searching for live broadcast on channel: ${channelId}`,
     );
     const searchRes = await fetch(
@@ -246,7 +264,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       );
     }
 
-    console.log(`[YouTube] Found live video: ${videoId} (${videoTitle})`);
+    log.info(`[YouTube] Found live video: ${videoId} (${videoTitle})`);
 
     const liveRes = await fetch(
       `${YOUTUBE_API_BASE}/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`,
@@ -265,33 +283,44 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       throw new Error(`No active live chat found for video "${videoId}"`);
     }
 
-    console.log(`[YouTube] Found liveChatId: ${chatId}`);
+    log.info(`[YouTube] Found liveChatId: ${chatId}`);
     return chatId;
   }
 
-  private async startGrpcStream(): Promise<void> {
+  private startGrpcStream(): void {
     if (!this.liveChatId || !this.accessToken) return;
 
-    const transport = createGrpcTransport({
-      baseUrl: YOUTUBE_GRPC_ENDPOINT,
-      interceptors: [
-        (next) => (req) => {
-          req.header.set("authorization", `Bearer ${this.accessToken}`);
-          req.header.set("x-goog-api-client", "twirchat/1.0.0");
-          return next(req);
-        },
-      ],
-      httpVersion: "2",
-    });
-
-    const client = createClient(V3DataLiveChatMessageService, transport);
-
-    this.abortController = new AbortController();
-    const signal = this.abortController.signal;
-
-    console.log(
+    log.info(
       `[YouTube] Starting gRPC stream for liveChatId=${this.liveChatId}`,
     );
+
+    // Create gRPC client with SSL credentials
+    const sslCreds = grpc.credentials.createSsl();
+
+    // Create metadata with authorization
+    const metadata = new grpc.Metadata();
+    metadata.add("authorization", `Bearer ${this.accessToken}`);
+    metadata.add("x-goog-api-client", "twirchat/1.0.0");
+
+    this.grpcClient = new V3DataLiveChatMessageServiceClient(
+      YOUTUBE_GRPC_ENDPOINT,
+      sslCreds,
+      {
+        "grpc.max_receive_message_length": 16 * 1024 * 1024, // 16MB
+        "grpc.max_send_message_length": 16 * 1024 * 1024,
+        "grpc.keepalive_time_ms": 30000, // Send keepalive ping every 30 seconds
+        "grpc.keepalive_timeout_ms": 10000, // Wait 10 seconds for keepalive response
+        "grpc.keepalive_permit_without_calls": 1, // Allow keepalive even without active calls
+        "grpc.http2.max_pings_without_data": 0, // Allow unlimited pings without data
+      },
+    );
+
+    // Create request
+    const request: LiveChatMessageListRequest = {
+      liveChatId: this.liveChatId,
+      part: ["snippet", "authorDetails"],
+      maxResults: 200,
+    };
 
     this.emit("status", {
       platform: "youtube",
@@ -300,42 +329,40 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       channelLogin: this.channelId,
     });
 
-    try {
-      const stream = client.streamList(
-        {
-          liveChatId: this.liveChatId,
-          part: ["snippet", "authorDetails"],
-          maxResults: 200,
-        },
-        { signal },
-      );
+    // Start streaming
+    this.activeStream = this.grpcClient.streamList(request, metadata);
 
-      for await (const response of stream) {
-        if (response.offlineAt) {
-          console.log(
-            `[YouTube] Stream ended — channel went offline at ${response.offlineAt}`,
-          );
-          break;
-        }
-        for (const item of response.items ?? []) {
-          this.handleMessage(item);
-        }
+    this.activeStream.on("data", (response: LiveChatMessageListResponse) => {
+      // Reset reconnect attempts on successful data
+      this.reconnectAttempts = 0;
+      
+      if (response.offlineAt) {
+        log.info(
+          `[YouTube] Stream ended — channel went offline at ${response.offlineAt}`,
+        );
+        this.activeStream?.cancel();
+        return;
       }
+      for (const item of response.items ?? []) {
+        this.handleMessage(item);
+      }
+    });
 
-      // Stream ended cleanly
-      this.scheduleReconnect();
-    } catch (err: unknown) {
-      if (signal.aborted) {
+    this.activeStream.on("error", (err: grpc.ServiceError) => {
+      if (err.code === grpc.status.CANCELLED) {
         // Manual disconnect — do not reconnect
         return;
       }
-      console.error("[YouTube] gRPC stream error:", err);
-      if (err instanceof Error) {
-        console.error("[YouTube] Error details:", err.message);
-        console.error("[YouTube] Error stack:", err.stack);
-      }
+      log.error("[YouTube] gRPC stream error:", err);
+      log.error("[YouTube] Error details:", err.message);
+      log.error("[YouTube] Error code:", err.code);
       this.scheduleReconnect();
-    }
+    });
+
+    this.activeStream.on("end", () => {
+      log.info("[YouTube] gRPC stream ended");
+      this.scheduleReconnect();
+    });
   }
 
   private handleMessage(item: LiveChatMessage): void {
@@ -363,13 +390,8 @@ export class YouTubeAdapter extends BasePlatformAdapter {
 
     switch (type) {
       case LiveChatMessageSnippet_TypeWrapper_Type.TEXT_MESSAGE_EVENT: {
-        const content = snippet.displayedContent;
         const text =
-          (content?.case === "textMessageDetails"
-            ? (content.value as { messageText?: string }).messageText
-            : undefined) ??
-          snippet.displayMessage ??
-          "";
+          snippet.textMessageDetails?.messageText ?? snippet.displayMessage ?? "";
         if (!text) return;
 
         const normalized: NormalizedChatMessage = {
@@ -387,17 +409,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       }
 
       case LiveChatMessageSnippet_TypeWrapper_Type.SUPER_CHAT_EVENT: {
-        const content = snippet.displayedContent;
-        const sc =
-          content?.case === "superChatDetails"
-            ? (content.value as {
-                amountMicros?: bigint;
-                currency?: string;
-                amountDisplayString?: string;
-                userComment?: string;
-                tier?: number;
-              })
-            : undefined;
+        const sc = snippet.superChatDetails;
 
         const event: NormalizedEvent = {
           id: item.id ?? `yt:sc:${Date.now()}`,
@@ -418,14 +430,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       }
 
       case LiveChatMessageSnippet_TypeWrapper_Type.NEW_SPONSOR_EVENT: {
-        const content = snippet.displayedContent;
-        const ns =
-          content?.case === "newSponsorDetails"
-            ? (content.value as {
-                memberLevelName?: string;
-                isUpgrade?: boolean;
-              })
-            : undefined;
+        const ns = snippet.newSponsorDetails;
 
         const event: NormalizedEvent = {
           id: item.id ?? `yt:member:${Date.now()}`,
@@ -440,15 +445,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       }
 
       case LiveChatMessageSnippet_TypeWrapper_Type.MEMBER_MILESTONE_CHAT_EVENT: {
-        const content = snippet.displayedContent;
-        const mm =
-          content?.case === "memberMilestoneChatDetails"
-            ? (content.value as {
-                memberLevelName?: string;
-                memberMonth?: number;
-                userComment?: string;
-              })
-            : undefined;
+        const mm = snippet.memberMilestoneChatDetails;
 
         const event: NormalizedEvent = {
           id: item.id ?? `yt:milestone:${Date.now()}`,
@@ -467,14 +464,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       }
 
       case LiveChatMessageSnippet_TypeWrapper_Type.MEMBERSHIP_GIFTING_EVENT: {
-        const content = snippet.displayedContent;
-        const mg =
-          content?.case === "membershipGiftingDetails"
-            ? (content.value as {
-                giftMembershipsCount?: number;
-                giftMembershipsLevelName?: string;
-              })
-            : undefined;
+        const mg = snippet.membershipGiftingDetails;
 
         const event: NormalizedEvent = {
           id: item.id ?? `yt:giftmember:${Date.now()}`,
@@ -507,12 +497,34 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       channelLogin: this.channelId,
     });
 
-    console.log("[YouTube] Reconnecting in 10s...");
+    // Clean up current client
+    if (this.activeStream) {
+      this.activeStream.cancel();
+      this.activeStream = null;
+    }
+    if (this.grpcClient) {
+      this.grpcClient.close();
+      this.grpcClient = null;
+    }
+
+    // Calculate exponential backoff with jitter
+    const baseDelay = Math.min(
+      this.BASE_RECONNECT_DELAY * Math.pow(2, this.reconnectAttempts),
+      this.MAX_RECONNECT_DELAY,
+    );
+    const jitter = Math.random() * 1000; // Add up to 1 second of random jitter
+    const delay = baseDelay + jitter;
+
+    this.reconnectAttempts++;
+    log.info(
+      `[YouTube] Reconnecting in ${Math.round(delay / 1000)}s... (attempt ${this.reconnectAttempts})`,
+    );
+
     this.reconnectTimeout = setTimeout(() => {
       if (this.liveChatId && this.accessToken) {
         this.startGrpcStream();
       }
-    }, 10_000);
+    }, delay);
   }
 
   private clearTimers(): void {

@@ -3,7 +3,7 @@ import { KickOAuthSessionStore, AccountStore } from "../db/index.ts";
 import { connectionManager } from "../ws/connection-manager.ts";
 import { subscribeKickEvents } from "./kick-subscriptions.ts";
 import { config } from "../config.ts";
-import { logger } from "../logger.ts";
+import { logger } from "@twirchat/shared/logger";
 import type { KickBuildUrlResponse, KickExchangeResponse } from "@twirchat/shared";
 
 const log = logger("kick-auth");

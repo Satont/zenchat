@@ -11,6 +11,9 @@ import {
 } from "@twirchat/shared/constants";
 import { AccountStore } from "../../store/account-store";
 import { getKickBadgeSvg } from "./badges";
+import { logger } from "@twirchat/shared/logger";
+
+const log = logger("kick");
 
 // ============================================================
 // Типы Kick Pusher events
@@ -198,7 +201,7 @@ export class KickAdapter extends BasePlatformAdapter {
         `Kick chatroom ID not found for channel "${channelSlug}"`,
       );
 
-    console.log(`[Kick] Channel "${channelSlug}" → chatroom_id=${id}`);
+    log.info(`[Kick] Channel "${channelSlug}" → chatroom_id=${id}`);
     return id;
   }
 
@@ -210,7 +213,7 @@ export class KickAdapter extends BasePlatformAdapter {
     this.ws = ws;
 
     ws.addEventListener("open", () => {
-      console.log(
+      log.info(
         `[Kick] Pusher connected (${this.anonymous ? "anonymous" : "authenticated"})`,
       );
     });
@@ -220,12 +223,12 @@ export class KickAdapter extends BasePlatformAdapter {
         const msg = JSON.parse(event.data as string) as PusherEvent;
         this.handlePusherEvent(msg);
       } catch (err) {
-        console.error("[Kick] Failed to parse Pusher event:", err);
+        log.error("[Kick] Failed to parse Pusher event:", err);
       }
     });
 
     ws.addEventListener("close", (event) => {
-      console.warn(`[Kick] Pusher disconnected: ${event.code} ${event.reason}`);
+      log.warn(`[Kick] Pusher disconnected: ${event.code} ${event.reason}`);
       this.isConnected = false;
       this.clearTimers();
 
@@ -237,7 +240,7 @@ export class KickAdapter extends BasePlatformAdapter {
       });
 
       if (this.shouldReconnect) {
-        console.log("[Kick] Reconnecting in 5s...");
+        log.info("[Kick] Reconnecting in 5s...");
         this.reconnectTimeout = setTimeout(
           () => void this.connectPusher(),
           5000,
@@ -246,7 +249,7 @@ export class KickAdapter extends BasePlatformAdapter {
     });
 
     ws.addEventListener("error", (err) => {
-      console.error("[Kick] Pusher WebSocket error:", err);
+      log.error("[Kick] Pusher WebSocket error:", err);
     });
   }
 
@@ -263,7 +266,7 @@ export class KickAdapter extends BasePlatformAdapter {
       }
 
       case "pusher_internal:subscription_succeeded": {
-        console.log(`[Kick] Subscribed to chatroom ${this.chatroomId}`);
+        log.info(`[Kick] Subscribed to chatroom ${this.chatroomId}`);
         this.isConnected = true;
         this.emit("status", {
           platform: "kick",
@@ -303,7 +306,7 @@ export class KickAdapter extends BasePlatformAdapter {
 
       default: {
         if (!event.event.startsWith("pusher")) {
-          console.log(`[Kick] Unhandled Pusher event: ${event.event}`);
+          log.info(`[Kick] Unhandled Pusher event: ${event.event}`);
         }
         break;
       }

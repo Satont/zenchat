@@ -23,5 +23,10 @@
     "@types/bun": "catalog:",
     "@typescript/native-preview": "catalog:",
     "@types/node": "catalog:"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "1.14.3",
+    "@grpc/proto-loader": "0.8.0",
+    "ts-proto": "2.11.6"
   }
 }

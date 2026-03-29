@@ -1,12 +1,11 @@
 version: v2
 plugins:
-  - local: protoc-gen-es
+  - local: protoc-gen-ts_proto
     out: gen
     opt:
-      - target=ts
-      - import_extension=js
-  - local: protoc-gen-connect-es
-    out: gen
-    opt:
-      - target=ts
-      - import_extension=js
+      - outputServices=grpc-js
+      - esModuleInterop=true
+      - env=node
+      - importSuffix=.js
+      - useOptionals=messages
+      - exportCommonSymbols=false

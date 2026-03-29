@@ -22,6 +22,9 @@ import type {
 import { TWITCH_ANON_PREFIX, BACKEND_URL } from "@twirchat/shared/constants";
 import { AccountStore } from "../../store/account-store";
 import type { TwitchBadgesResponse } from "@twirchat/shared/types";
+import { logger } from "@twirchat/shared/logger";
+
+const log = logger("twitch");
 
 const TWITCH_IRC_WS = "wss://irc-ws.chat.twitch.tv:443";
 
@@ -186,7 +189,7 @@ export class TwitchAdapter extends BasePlatformAdapter {
     this.ws = ws;
 
     ws.addEventListener("open", () => {
-      console.log(
+      log.info(
         `[Twitch] IRC WebSocket opened (${this.anonymous ? "anonymous" : "authenticated"})`,
       );
 
@@ -197,7 +200,7 @@ export class TwitchAdapter extends BasePlatformAdapter {
 
       if (this.anonymous) {
         const username = `${TWITCH_ANON_PREFIX}${Math.floor(Math.random() * 900000 + 100000)}`;
-        console.log(`[Twitch] Logging in anonymously as ${username}`);
+        log.info(`[Twitch] Logging in anonymously as ${username}`);
         ws.send(`NICK ${username}`);
       } else {
         ws.send(`PASS oauth:${this.accessToken}`);
@@ -215,7 +218,7 @@ export class TwitchAdapter extends BasePlatformAdapter {
     });
 
     ws.addEventListener("close", (evt) => {
-      console.warn(`[Twitch] IRC disconnected: ${evt.code} ${evt.reason}`);
+      log.warn(`[Twitch] IRC disconnected: ${evt.code} ${evt.reason}`);
       this.ws = null;
       this.joined = false;
 
@@ -227,13 +230,13 @@ export class TwitchAdapter extends BasePlatformAdapter {
       });
 
       if (this.shouldReconnect) {
-        console.log("[Twitch] Reconnecting in 5s...");
+        log.info("[Twitch] Reconnecting in 5s...");
         this.reconnectTimeout = setTimeout(() => this.connectWs(), 5000);
       }
     });
 
     ws.addEventListener("error", (err) => {
-      console.error("[Twitch] IRC WebSocket error:", err);
+      log.error("[Twitch] IRC WebSocket error:", err);
     });
   }
 
@@ -254,7 +257,7 @@ export class TwitchAdapter extends BasePlatformAdapter {
 
       case "JOIN":
         if (msg.params[0] === `#${this.channelName}`) {
-          console.log(`[Twitch] Joined #${this.channelName}`);
+          log.info(`[Twitch] Joined #${this.channelName}`);
           this.emit("status", {
             platform: "twitch",
             status: "connected",
@@ -273,11 +276,11 @@ export class TwitchAdapter extends BasePlatformAdapter {
         break;
 
       case "NOTICE":
-        console.log(`[Twitch] NOTICE: ${msg.params.join(" ")}`);
+        log.info(`[Twitch] NOTICE: ${msg.params.join(" ")}`);
         break;
 
       case "RECONNECT":
-        console.log("[Twitch] Server requested RECONNECT");
+        log.info("[Twitch] Server requested RECONNECT");
         this.ws?.close();
         break;
     }
@@ -438,15 +441,15 @@ export class TwitchAdapter extends BasePlatformAdapter {
     try {
       const res = await fetch(url.toString());
       if (!res.ok) {
-        console.warn(`[Twitch] Badge fetch failed: ${res.status}`);
+        log.warn(`[Twitch] Badge fetch failed: ${res.status}`);
         return;
       }
       const data = (await res.json()) as TwitchBadgesResponse;
       this.badgeCache = new Map(Object.entries(data.badges));
       this.badgeCacheChannel = this.channelName;
-      console.log(`[Twitch] Badge cache updated: ${this.badgeCache.size} entries`);
+      log.info(`[Twitch] Badge cache updated: ${this.badgeCache.size} entries`);
     } catch (err) {
-      console.warn("[Twitch] Badge fetch error:", err);
+      log.warn("[Twitch] Badge fetch error:", err);
     }
   }
 

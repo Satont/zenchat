@@ -3,6 +3,9 @@ import type {
   DesktopToBackendMessage,
 } from "@twirchat/shared";
 import { BACKEND_WS_URL } from "@twirchat/shared/constants";
+import { logger } from "@twirchat/shared/logger";
+
+const log = logger("backend-connection");
 
 type MessageHandler = (msg: BackendToDesktopMessage) => void;
 
@@ -41,7 +44,7 @@ export class BackendConnection {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));
     } else {
-      console.warn("[BackendConnection] Cannot send — not connected");
+      log.warn("Cannot send — not connected");
     }
   }
 
@@ -57,7 +60,7 @@ export class BackendConnection {
   }
 
   private _connect(): void {
-    console.log(`[BackendConnection] Connecting to ${BACKEND_WS_URL}...`);
+    log.info(`Connecting to ${BACKEND_WS_URL}...`);
 
     const ws = new WebSocket(BACKEND_WS_URL, {
       headers: {
@@ -65,7 +68,7 @@ export class BackendConnection {
       },
     } as unknown as string[]);
     ws.addEventListener("open", () => {
-      console.log("[BackendConnection] Connected");
+      log.info("Connected");
       this.reconnectDelay = RECONNECT_DELAY_MS;
       // Send client secret as first message (some implementations prefer headers, but
       // browsers don't support custom WS headers — we'll upgrade when running in Bun)
@@ -78,7 +81,7 @@ export class BackendConnection {
           handler(msg);
         }
       } catch (err) {
-        console.error("[BackendConnection] Failed to parse message", err);
+        log.error("Failed to parse message", err);
       }
     });
 
