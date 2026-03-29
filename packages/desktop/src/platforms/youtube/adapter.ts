@@ -52,6 +52,8 @@ export class YouTubeAdapter extends BasePlatformAdapter {
   private accountId: string | null = null;
   private grpcClient: V3DataLiveChatMessageServiceClient | null = null;
   private activeStream: grpc.ClientReadableStream<LiveChatMessageListResponse> | null = null;
+  private nextPageToken: string | undefined = undefined;
+  private isPolling = false;
 
   async connect(channelIdOrHandle: string): Promise<void> {
     this.channelId = channelIdOrHandle;
@@ -93,7 +95,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       this.liveChatId = await this.fetchLiveChatId(channelIdOrHandle);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      log.error(`[YouTube] Failed to get live chat ID:`, err);
+      log.error(`Failed to get live chat ID`, { error: errorMessage });
       this.emit("status", {
         platform: "youtube",
         status: "error",
@@ -103,6 +105,17 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       });
       return;
     }
+
+    // Reset polling state
+    this.nextPageToken = undefined;
+    this.isPolling = false;
+    
+    this.emit("status", {
+      platform: "youtube",
+      status: "connected",
+      mode: "authenticated",
+      channelLogin: this.channelId,
+    });
 
     this.startGrpcStream();
   }
@@ -288,81 +301,99 @@ export class YouTubeAdapter extends BasePlatformAdapter {
   }
 
   private startGrpcStream(): void {
-    if (!this.liveChatId || !this.accessToken) return;
+    if (!this.liveChatId || !this.accessToken || this.isPolling) return;
 
-    log.info(
-      `[YouTube] Starting gRPC stream for liveChatId=${this.liveChatId}`,
-    );
+    this.isPolling = true;
+    this.pollMessages();
+  }
 
-    // Create gRPC client with SSL credentials
-    const sslCreds = grpc.credentials.createSsl();
+  private async pollMessages(): Promise<void> {
+    if (!this.liveChatId || !this.accessToken || !this.shouldReconnect) {
+      this.isPolling = false;
+      return;
+    }
 
-    // Create metadata with authorization
+    // Create gRPC client if not exists
+    if (!this.grpcClient) {
+      const sslCreds = grpc.credentials.createSsl();
+      this.grpcClient = new V3DataLiveChatMessageServiceClient(
+        YOUTUBE_GRPC_ENDPOINT,
+        sslCreds,
+        {
+          "grpc.max_receive_message_length": 16 * 1024 * 1024,
+          "grpc.max_send_message_length": 16 * 1024 * 1024,
+        },
+      );
+    }
+
     const metadata = new grpc.Metadata();
     metadata.add("authorization", `Bearer ${this.accessToken}`);
     metadata.add("x-goog-api-client", "twirchat/1.0.0");
 
-    this.grpcClient = new V3DataLiveChatMessageServiceClient(
-      YOUTUBE_GRPC_ENDPOINT,
-      sslCreds,
-      {
-        "grpc.max_receive_message_length": 16 * 1024 * 1024, // 16MB
-        "grpc.max_send_message_length": 16 * 1024 * 1024,
-        "grpc.keepalive_time_ms": 30000, // Send keepalive ping every 30 seconds
-        "grpc.keepalive_timeout_ms": 10000, // Wait 10 seconds for keepalive response
-        "grpc.keepalive_permit_without_calls": 1, // Allow keepalive even without active calls
-        "grpc.http2.max_pings_without_data": 0, // Allow unlimited pings without data
-      },
-    );
-
-    // Create request
     const request: LiveChatMessageListRequest = {
       liveChatId: this.liveChatId,
       part: ["snippet", "authorDetails"],
       maxResults: 200,
+      pageToken: this.nextPageToken,
     };
 
-    this.emit("status", {
-      platform: "youtube",
-      status: "connected",
-      mode: "authenticated",
-      channelLogin: this.channelId,
-    });
+    try {
+      const nextToken = await new Promise<string | undefined>((resolve, reject) => {
+        let lastToken: string | undefined = undefined;
+        
+        this.activeStream = this.grpcClient!.streamList(request, metadata);
 
-    // Start streaming
-    this.activeStream = this.grpcClient.streamList(request, metadata);
+        this.activeStream!.on("data", (response: LiveChatMessageListResponse) => {
+          this.reconnectAttempts = 0;
+          
+          if (response.offlineAt) {
+            log.info(`[YouTube] Stream went offline at ${response.offlineAt}`);
+            this.activeStream?.cancel();
+            resolve(undefined);
+            return;
+          }
 
-    this.activeStream.on("data", (response: LiveChatMessageListResponse) => {
-      // Reset reconnect attempts on successful data
-      this.reconnectAttempts = 0;
-      
-      if (response.offlineAt) {
-        log.info(
-          `[YouTube] Stream ended — channel went offline at ${response.offlineAt}`,
-        );
-        this.activeStream?.cancel();
-        return;
-      }
-      for (const item of response.items ?? []) {
-        this.handleMessage(item);
-      }
-    });
+          for (const item of response.items ?? []) {
+            this.handleMessage(item);
+          }
 
-    this.activeStream.on("error", (err: grpc.ServiceError) => {
-      if (err.code === grpc.status.CANCELLED) {
-        // Manual disconnect — do not reconnect
-        return;
+          // Save the next page token from the response
+          if (response.nextPageToken) {
+            lastToken = response.nextPageToken;
+          }
+        });
+
+        this.activeStream!.on("error", (err: grpc.ServiceError) => {
+          if (err.code === grpc.status.CANCELLED) {
+            resolve(lastToken);
+            return;
+          }
+          reject(err);
+        });
+
+        this.activeStream!.on("end", () => {
+          resolve(lastToken);
+        });
+      });
+
+      this.nextPageToken = nextToken;
+
+      // If we got a next page token, immediately poll again
+      // Otherwise, wait a bit before polling
+      if (this.nextPageToken && this.shouldReconnect) {
+        // Small delay to prevent hammering the API
+        await new Promise(resolve => setTimeout(resolve, 100));
+        this.pollMessages();
+      } else if (this.shouldReconnect) {
+        // No more messages, wait before polling again
+        log.debug("[YouTube] No more messages, waiting before next poll");
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        this.pollMessages();
       }
-      log.error("[YouTube] gRPC stream error:", err);
-      log.error("[YouTube] Error details:", err.message);
-      log.error("[YouTube] Error code:", err.code);
+    } catch (err) {
+      log.error("[YouTube] gRPC stream error", { error: err instanceof Error ? err.message : String(err) });
       this.scheduleReconnect();
-    });
-
-    this.activeStream.on("end", () => {
-      log.info("[YouTube] gRPC stream ended");
-      this.scheduleReconnect();
-    });
+    }
   }
 
   private handleMessage(item: LiveChatMessage): void {
@@ -488,7 +519,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
   }
 
   private scheduleReconnect(): void {
-    if (!this.shouldReconnect) return;
+    if (!this.shouldReconnect || this.isPolling) return;
 
     this.emit("status", {
       platform: "youtube",
@@ -506,6 +537,8 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       this.grpcClient.close();
       this.grpcClient = null;
     }
+
+    this.isPolling = false;
 
     // Calculate exponential backoff with jitter
     const baseDelay = Math.min(

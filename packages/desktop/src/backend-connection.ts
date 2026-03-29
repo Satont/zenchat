@@ -88,8 +88,8 @@ export class BackendConnection {
     ws.addEventListener("close", () => {
       this.ws = null;
       if (!this.stopped) {
-        console.log(
-          `[BackendConnection] Disconnected. Reconnecting in ${this.reconnectDelay}ms...`,
+        log.info(
+          `Disconnected. Reconnecting in ${this.reconnectDelay}ms...`,
         );
         this.reconnectTimer = setTimeout(() => {
           this.reconnectDelay = Math.min(
@@ -102,7 +102,7 @@ export class BackendConnection {
     });
 
     ws.addEventListener("error", (evt) => {
-      console.error("[BackendConnection] WebSocket error", evt);
+      log.error("WebSocket error", evt);
     });
 
     this.ws = ws;

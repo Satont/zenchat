@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "./db";
+import { logger } from "@twirchat/shared/logger";
+
+const log = logger("client-secret");
 
 const SECRET_KEY = "client_secret";
 
@@ -17,6 +20,6 @@ export function getClientSecret(): string {
 
   const secret = randomUUID();
   db.run("INSERT INTO client_identity (key, value) VALUES (?, ?)", [SECRET_KEY, secret]);
-  console.log(`[Identity] Generated new client secret: ${secret.slice(0, 8)}...`);
+  log.info(`Generated new client secret: ${secret.slice(0, 8)}...`);
   return secret;
 }

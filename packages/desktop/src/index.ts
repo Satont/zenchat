@@ -13,20 +13,23 @@ import {
   pushOverlayMessage,
   pushOverlayEvent,
 } from "./overlay-server";
+import { logger } from "@twirchat/shared/logger";
+
+const log = logger("main");
 
 // ============================================================
 // Инициализация
 // ============================================================
 
-console.log("[TwirChat] Starting...");
+log.info("Starting...");
 
 // 1. База данных — должна быть первой, генерирует/читает секрет
 initDb();
-console.log("[TwirChat] Database ready");
+log.info("Database ready");
 
 // 2. Читаем/генерируем UUID-секрет
 const clientSecret = getClientSecret();
-console.log(`[TwirChat] Client secret: ${clientSecret.slice(0, 8)}...`);
+log.info(`Client secret: ${clientSecret.slice(0, 8)}...`);
 
 // 3. Подключаемся к backend
 const backendConn = new BackendConnection(clientSecret);
@@ -57,20 +60,20 @@ backendConn.onMessage((msg) => {
 
     case "auth_url":
       // Open the OAuth URL in the system browser
-      console.log(`[Auth] Opening ${msg.platform} OAuth URL...`);
+      log.info(`[Auth] Opening ${msg.platform} OAuth URL...`);
       void openBrowser(msg.url);
       break;
 
     case "auth_success":
-      console.log(`[Auth] ${msg.platform} connected as ${msg.username}`);
+      log.info(`[Auth] ${msg.platform} connected as ${msg.username}`);
       break;
 
     case "auth_error":
-      console.error(`[Auth] ${msg.platform} error: ${msg.error}`);
+      log.error(`[Auth] ${msg.platform} error: ${msg.error}`);
       break;
 
     case "error":
-      console.error(`[Backend] Error: ${msg.message}`);
+      log.error(`[Backend] Error: ${msg.message}`);
       break;
 
     case "pong":
@@ -84,19 +87,19 @@ backendConn.onMessage((msg) => {
 
 // Логируем все входящие сообщения (для разработки)
 aggregator.onMessage((msg) => {
-  console.log(
+  log.info(
     `[Chat] [${msg.platform}] ${msg.author.displayName}: ${msg.text}`,
   );
 });
 
 aggregator.onEvent((event) => {
-  console.log(
+  log.info(
     `[Event] [${event.platform}] ${event.type}: ${event.user.displayName}`,
   );
 });
 
 aggregator.onStatus((status) => {
-  console.log(`[Status] ${status.platform}: ${status.status} (${status.mode})`);
+  log.info(`[Status] ${status.platform}: ${status.status} (${status.mode})`);
 });
 
 // Ping backend every 30s to keep WS alive
@@ -120,11 +123,11 @@ async function openBrowser(url: string): Promise<void> {
       await Bun.$`xdg-open ${url}`;
     }
   } catch (err) {
-    console.error(`[Auth] Failed to open browser: ${err}`);
-    console.log(`[Auth] Please open manually: ${url}`);
+    log.error(`[Auth] Failed to open browser: ${err}`);
+    log.info(`[Auth] Please open manually: ${url}`);
   }
 }
 
 export { aggregator, backendConn, clientSecret, overlayServer };
 
-console.log("[TwirChat] Ready.");
+log.info("Ready.");

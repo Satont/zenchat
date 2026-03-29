@@ -2,6 +2,9 @@ import { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DB_PATH } from "@twirchat/shared/constants";
+import { logger } from "@twirchat/shared/logger";
+
+const log = logger("db");
 
 let _db: Database | null = null;
 
@@ -86,5 +89,5 @@ function runMigrations(db: Database): void {
     )
   `);
 
-  console.log("[DB] Migrations applied");
+  log.info("Migrations applied");
 }

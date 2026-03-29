@@ -28,6 +28,9 @@ import type {
   NormalizedEvent,
 } from "@twirchat/shared/types";
 import { join } from "path";
+import { logger } from "@twirchat/shared/logger";
+
+const log = logger("overlay-server");
 
 // ============================================================
 // Overlay WS message types (server → browser)
@@ -121,11 +124,11 @@ export function startOverlayServer(
     websocket: {
       open(ws) {
         clients.add(ws);
-        console.log(`[Overlay] Client connected (total: ${clients.size})`);
+        log.info(`Client connected (total: ${clients.size})`);
       },
       close(ws) {
         clients.delete(ws);
-        console.log(`[Overlay] Client disconnected (total: ${clients.size})`);
+        log.info(`Client disconnected (total: ${clients.size})`);
       },
       message(_ws, _msg) {
         // Overlay is receive-only; ignore any messages from the browser
@@ -133,8 +136,8 @@ export function startOverlayServer(
     },
   });
 
-  console.log(`[Overlay] Server running on http://localhost:${port}`);
-  console.log(`[Overlay] OBS URL: http://localhost:${port}/?bg=transparent`);
+  log.info(`Server running on http://localhost:${port}`);
+  log.info(`OBS URL: http://localhost:${port}/?bg=transparent`);
 
   return server;
 }
