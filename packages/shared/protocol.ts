@@ -23,7 +23,10 @@ export type BackendToDesktopMessage =
   | { type: "auth_success"; platform: Platform; username: string; displayName: string }
   | { type: "auth_error"; platform: Platform; error: string }
   | { type: "error"; message: string }
-  | { type: "pong" };
+  | { type: "pong" }
+  | { type: "chat_message"; data: unknown }
+  | { type: "chat_event"; data: unknown }
+  | { type: "platform_status"; platform: Platform; status: "connected" | "disconnected" | "error"; error?: string };
 
 // ============================================================
 // Desktop → Backend
@@ -33,7 +36,10 @@ export type DesktopToBackendMessage =
   | { type: "ping" }
   | { type: "auth_start"; platform: Exclude<Platform, "twitch"> }
   | { type: "auth_start_twitch"; codeChallenge: string; state: string }
-  | { type: "auth_logout"; platform: Platform };
+  | { type: "auth_logout"; platform: Platform }
+  | { type: "send_message"; platform: Platform; channel: string; message: string }
+  | { type: "channel_join"; platform: Platform; channel: string }
+  | { type: "channel_leave"; platform: Platform; channel: string };
 
 // ============================================================
 // HTTP API — запросы от desktop к backend
