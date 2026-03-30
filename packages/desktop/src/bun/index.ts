@@ -12,7 +12,7 @@
  *  - Handle RPC requests coming from the webview (accounts, settings, auth…)
  */
 
-import { BrowserWindow, defineElectrobunRPC, Updater } from "electrobun/bun";
+import { BrowserWindow, defineElectrobunRPC, Updater, BuildConfig } from "electrobun/bun";
 
 import { initDb } from "../store/db";
 import { getClientSecret } from "../store/client-secret";
@@ -37,7 +37,6 @@ import { TwitchAdapter } from "../platforms/twitch/adapter";
 import { KickAdapter } from "../platforms/kick/adapter";
 import { YouTubeAdapter } from "../platforms/youtube/adapter";
 import { sevenTVEventClient } from "../platforms/7tv/event-client";
-import { BACKEND_URL } from "@twirchat/shared/constants";
 import { logger } from "@twirchat/shared/logger";
 
 import type { TwirChatRPCSchema, WebviewSender } from "../shared/rpc";
@@ -55,7 +54,32 @@ import {
 } from "../auth";
 
 // ============================================================
-// 1. Initialisation
+// 1. Load runtime config from build.json
+// ============================================================
+
+const buildConfig = await BuildConfig.get();
+const runtimeConfig = buildConfig.runtime as {
+  backendUrl?: string;
+  backendWsUrl?: string;
+  nodeEnv?: string;
+};
+
+// Override process.env with runtime config
+if (runtimeConfig.backendUrl) {
+  process.env["CHATRIX_BACKEND_URL"] = runtimeConfig.backendUrl;
+}
+if (runtimeConfig.backendWsUrl) {
+  process.env["CHATRIX_BACKEND_WS_URL"] = runtimeConfig.backendWsUrl;
+}
+if (runtimeConfig.nodeEnv) {
+  process.env["NODE_ENV"] = runtimeConfig.nodeEnv;
+}
+
+// Now import modules that depend on env vars
+const { BACKEND_URL } = await import("@twirchat/shared/constants");
+
+// ============================================================
+// 2. Initialisation
 // ============================================================
 
 const log = logger("main");

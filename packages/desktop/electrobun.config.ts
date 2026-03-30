@@ -6,6 +6,7 @@ import type { ElectrobunConfig } from "electrobun/bun";
  * Views are built with Vite + @vitejs/plugin-vue (SFC support).
  * Electrobun copies the Vite dist output into the views:// protocol.
  */
+
 const config: ElectrobunConfig = {
   app: {
     name: "TwirChat",
@@ -17,7 +18,6 @@ const config: ElectrobunConfig = {
   build: {
     bun: {
       entrypoint: "src/bun/index.ts",
-      env: "CHATRIX_*",
     },
 
     copy: {
@@ -45,6 +45,10 @@ const config: ElectrobunConfig = {
 
   runtime: {
     exitOnLastWindowClosed: true,
+    backendUrl: process.env["CHATRIX_BACKEND_URL"] || "http://127.0.0.1:3000",
+    backendWsUrl:
+      process.env["CHATRIX_BACKEND_WS_URL"] || "ws://127.0.0.1:3000/ws",
+    nodeEnv: "production",
   },
 };
 

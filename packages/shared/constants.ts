@@ -27,11 +27,11 @@ export const DB_PATH =
 // App info
 export const APP_NAME = process.env["APP_NAME"] ?? "TwirChat";
 
-// Backend service URLs - configurable via env
-export const BACKEND_URL =
-  process.env["CHATRIX_BACKEND_URL"] ?? "http://127.0.0.1:3000";
-export const BACKEND_WS_URL =
-  process.env["CHATRIX_BACKEND_WS_URL"] ?? "ws://127.0.0.1:3000/ws";
+// Backend service URLs - injected at build time via define
+// @ts-ignore - these are injected by Bun bundler define option
+export const BACKEND_URL = (typeof process !== "undefined" && process.env?.["CHATRIX_BACKEND_URL"]) || "http://127.0.0.1:3000";
+// @ts-ignore
+export const BACKEND_WS_URL = (typeof process !== "undefined" && process.env?.["CHATRIX_BACKEND_WS_URL"]) || "ws://127.0.0.1:3000/ws";
 
 // Platform-specific constants (not secrets, just API endpoints)
 export const TWITCH_ANON_PREFIX = "justinfan";
