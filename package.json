@@ -9,6 +9,7 @@
     "typecheck": "bun run --workspaces typecheck",
     "build": "bun run --workspaces build",
     "generate-icons": "bun scripts/generate-icons.ts"
+  },
   "workspaces": {
     "packages": [
       "packages/*"
