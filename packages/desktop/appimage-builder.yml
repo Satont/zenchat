@@ -1,0 +1,37 @@
+version: 1
+
+script:
+  - echo "Building TwirChat AppImage"
+
+AppDir:
+  path: ./AppDir
+
+  app_info:
+    id: dev.twirchat.app
+    name: TwirChat
+    icon: twirchat
+    version: latest
+    exec: usr/bin/TwirChat
+    exec_args: $@
+
+  apt:
+    arch: amd64
+    sources:
+      - sourceline: 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x871920D1991BC93C'
+    include:
+      - libgtk-3-0
+      - libwebkit2gtk-4.0-37
+      - libnotify4
+      - libnss3
+      - libxss1
+      - libxtst6
+      - xdg-utils
+      - libatspi2.0-0
+      - libuuid1
+      - libsecret-1-0
+
+AppImage:
+  arch: x86_64
+  update-information: 'gh-releases-zsync|${GITHUB_REPOSITORY_OWNER}|twirchat|latest|TwirChat-*x86_64.AppImage.zsync'
+  sign-key: None

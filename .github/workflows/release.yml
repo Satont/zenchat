@@ -1,0 +1,252 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  changelog:
+    name: Generate Changelog
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release_notes: ${{ steps.changelog.outputs.release_notes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Generate Changelog
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          version-file: './packages/desktop/package.json'
+          version-path: 'version'
+          skip-version-file: true
+          skip-commit: true
+          skip-tag: true
+          create-summary: true
+
+  build-desktop:
+    name: Build Desktop (${{ matrix.os }})
+    needs: changelog
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+            artifact_name: TwirChat-linux-x64
+            asset_name: TwirChat-linux-x64
+          - os: ubuntu-latest
+            target: linux-arm64
+            artifact_name: TwirChat-linux-arm64
+            asset_name: TwirChat-linux-arm64
+          - os: macos-latest
+            target: macos-arm64
+            artifact_name: TwirChat-macos-arm64
+            asset_name: TwirChat-macos-arm64
+          - os: macos-13
+            target: macos-x64
+            artifact_name: TwirChat-macos-x64
+            asset_name: TwirChat-macos-x64
+          - os: windows-latest
+            target: win-x64
+            artifact_name: TwirChat-win-x64
+            asset_name: TwirChat-win-x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Setup .env for production
+        run: |
+          cat > packages/desktop/.env.production << EOF
+          NODE_ENV=production
+          CHATRIX_BACKEND_URL=${{ secrets.BACKEND_URL }}
+          CHATRIX_BACKEND_WS_URL=${{ secrets.BACKEND_WS_URL }}
+          EOF
+
+      - name: Build views
+        working-directory: packages/desktop
+        run: bun run build:views
+
+      - name: Build Electrobun
+        working-directory: packages/desktop
+        run: bunx electrobun build --env=stable --targets=${{ matrix.target }}
+
+      - name: Package Linux AppImage
+        if: startsWith(matrix.target, 'linux-')
+        working-directory: packages/desktop
+        run: |
+          # Create AppImage using appimage-builder
+          sudo apt-get update
+          sudo apt-get install -y appimage-builder
+          
+          # Create AppDir structure
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+          
+          # Copy built app
+          cp -r build/stable-${{ matrix.target }}/* AppDir/usr/bin/
+          
+          # Create desktop entry
+          cat > AppDir/usr/share/applications/twirchat.desktop << EOF
+          [Desktop Entry]
+          Name=TwirChat
+          Exec=twirchat
+          Icon=twirchat
+          Type=Application
+          Categories=Network;Chat;
+          Comment=Multi-platform chat manager for streamers
+          EOF
+          
+          # Copy icon (if exists)
+          if [ -f "assets/icon.png" ]; then
+            cp assets/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/twirchat.png
+          fi
+          
+          # Build AppImage
+          appimage-builder --recipe appimage-builder.yml || true
+          
+          # Move AppImage to build directory
+          mv *.AppImage build/${{ matrix.asset_name }}.AppImage 2>/dev/null || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            packages/desktop/build/stable-${{ matrix.target }}/**
+            packages/desktop/build/*.AppImage
+          if-no-files-found: ignore
+
+  build-backend:
+    name: Build Backend
+    needs: changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build backend binary
+        working-directory: packages/backend
+        run: bun run build:prod
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-linux-x64
+          path: packages/backend/.out/backend
+
+      - name: Build Docker image
+        working-directory: packages/backend
+        run: |
+          docker build -t twirchat-backend:${{ needs.changelog.outputs.version }} .
+          docker save twirchat-backend:${{ needs.changelog.outputs.version }} > twirchat-backend-${{ needs.changelog.outputs.version }}.tar
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-docker
+          path: packages/backend/twirchat-backend-*.tar
+
+  release:
+    name: Create Release
+    needs: [changelog, build-desktop, build-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.changelog.outputs.version }}
+          name: Release ${{ needs.changelog.outputs.version }}
+          body: ${{ needs.changelog.outputs.release_notes }}
+          draft: false
+          prerelease: ${{ contains(needs.changelog.outputs.version, 'alpha') || contains(needs.changelog.outputs.version, 'beta') || contains(needs.changelog.outputs.version, 'rc') }}
+          files: |
+            artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  push-docker:
+    name: Push Docker to Registry
+    needs: [changelog, build-backend]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        working-directory: packages/backend
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag ghcr.io/${{ github.repository }}/backend:${{ needs.changelog.outputs.version }} \
+            --tag ghcr.io/${{ github.repository }}/backend:latest \
+            --push .
