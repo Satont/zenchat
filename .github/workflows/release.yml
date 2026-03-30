@@ -62,16 +62,10 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux-x64
-            artifact_name: TwirChat-linux-x64
-            asset_name: TwirChat-linux-x64
           - os: macos-latest
             target: macos-arm64
-            artifact_name: TwirChat-macos-arm64
-            asset_name: TwirChat-macos-arm64
           - os: windows-latest
             target: win-x64
-            artifact_name: TwirChat-win-x64
-            asset_name: TwirChat-win-x64
 
     steps:
       - name: Checkout
@@ -98,77 +92,16 @@ jobs:
         working-directory: packages/desktop
         run: bun run build:views
 
-      - name: Install electrobun
-        working-directory: packages/desktop
-        run: bun add -g electrobun
-
       - name: Build Electrobun
         working-directory: packages/desktop
-        run: electrobun build --env=stable --targets=${{ matrix.target }}
+        run: bunx electrobun build --env=stable
 
-      - name: Package Linux AppImage
-        if: startsWith(matrix.target, 'linux-')
-        working-directory: packages/desktop
-        run: |
-          # Install appimagetool
-          sudo apt-get update
-          sudo apt-get install -y wget desktop-file-utils
-
-          # Download appimagetool
-          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O /tmp/appimagetool
-          chmod +x /tmp/appimagetool
-
-          # Create AppDir structure
-          mkdir -p AppDir/usr/bin
-          mkdir -p AppDir/usr/share/applications
-          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-
-          # Copy built app
-          cp -r build/stable-${{ matrix.target }}/* AppDir/usr/bin/
-
-          # Create desktop entry
-          cat > AppDir/usr/share/applications/twirchat.desktop << 'EOF'
-          [Desktop Entry]
-          Name=TwirChat
-          Exec=TwirChat
-          Icon=twirchat
-          Type=Application
-          Categories=Network;Chat;
-          Comment=Multi-platform chat manager for streamers
-          Terminal=false
-          EOF
-
-          # Copy icon (if exists) or create placeholder
-          if [ -f "assets/icon.png" ]; then
-            cp assets/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/twirchat.png
-            cp assets/icon.png AppDir/twirchat.png
-          else
-            # Create a simple placeholder icon
-            convert -size 256x256 xc:blue AppDir/twirchat.png 2>/dev/null || \
-            echo "Creating placeholder icon..."
-          fi
-
-          # Create AppRun
-          cat > AppDir/AppRun << 'EOF'
-          #!/bin/bash
-          HERE="$(dirname "$(readlink -f "$0")")"
-          export PATH="$HERE/usr/bin:$PATH"
-          cd "$HERE/usr/bin"
-          exec ./TwirChat "$@"
-          EOF
-          chmod +x AppDir/AppRun
-
-          # Build AppImage
-          ARCH=x86_64 /tmp/appimagetool AppDir build/${{ matrix.asset_name }}.AppImage || echo "AppImage build failed, continuing..."
-
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: |
-            packages/desktop/build/stable-${{ matrix.target }}/**
-            packages/desktop/build/*.AppImage
-          if-no-files-found: ignore
+          name: desktop-${{ matrix.target }}
+          path: packages/desktop/artifacts/**
+          if-no-files-found: error
 
   build-backend:
     name: Build Backend
@@ -190,17 +123,11 @@ jobs:
         working-directory: packages/backend
         run: bun run build:prod
 
-      - name: Build Docker image
-        working-directory: packages/backend
-        run: |
-          docker build -t twirchat-backend:${{ needs.changelog.outputs.version }} .
-          docker save twirchat-backend:${{ needs.changelog.outputs.version }} > twirchat-backend-${{ needs.changelog.outputs.version }}.tar
-
-      - name: Upload Docker image
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-docker
-          path: packages/backend/twirchat-backend-*.tar
+          name: backend-linux-x64
+          path: packages/backend/.out/backend
 
   release:
     name: Create Release
@@ -211,6 +138,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -221,7 +149,7 @@ jobs:
           draft: false
           prerelease: ${{ contains(needs.changelog.outputs.version, 'alpha') || contains(needs.changelog.outputs.version, 'beta') || contains(needs.changelog.outputs.version, 'rc') }}
           files: |
-            artifacts/**/*
+            artifacts/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

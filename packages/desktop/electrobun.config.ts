@@ -30,15 +30,16 @@ const config: ElectrobunConfig = {
       bundleCEF: false,
     },
     linux: {
-      bundleCEF: false,
+      bundleCEF: true,
       defaultRenderer: "cef",
-      chromiumFlags: {
-        "remote-debugging-port": "9222",
-      },
     },
     win: {
       bundleCEF: false,
     },
+  },
+
+  release: {
+    baseUrl: "https://github.com/Satont/twirchat/releases/download/",
   },
 
   runtime: {
