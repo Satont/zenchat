@@ -630,7 +630,6 @@ for (const account of accounts) {
 // 8. Connect to 7TV if User ID is configured
 // ============================================================
 
-const settings = SettingsStore.get();
 if (settings?.seventvUserId) {
   log.info("Connecting to 7TV...", {
     userId: settings.seventvUserId,

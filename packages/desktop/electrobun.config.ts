@@ -30,7 +30,7 @@ const config: ElectrobunConfig = {
       bundleCEF: false,
     },
     linux: {
-      bundleCEF: true,
+      bundleCEF: false,
       defaultRenderer: "cef",
     },
     win: {
