@@ -12,7 +12,12 @@
  *  - Handle RPC requests coming from the webview (accounts, settings, auth…)
  */
 
-import { BrowserWindow, defineElectrobunRPC, Updater, BuildConfig } from "electrobun/bun";
+import {
+  BrowserWindow,
+  defineElectrobunRPC,
+  Updater,
+  BuildConfig,
+} from "electrobun/bun";
 
 import { initDb } from "../store/db";
 import { getClientSecret } from "../store/client-secret";
@@ -52,6 +57,7 @@ import {
   setAuthServerRpcSender,
   setOnAuthSuccessCallback,
 } from "../auth";
+import { setRuntimeConfig, getRuntimeConfig, getBackendUrl } from "../runtime-config";
 
 // ============================================================
 // 1. Load runtime config from build.json
@@ -64,19 +70,24 @@ const runtimeConfig = buildConfig.runtime as {
   nodeEnv?: string;
 };
 
-// Override process.env with runtime config
-if (runtimeConfig.backendUrl) {
-  process.env["CHATRIX_BACKEND_URL"] = runtimeConfig.backendUrl;
-}
-if (runtimeConfig.backendWsUrl) {
-  process.env["CHATRIX_BACKEND_WS_URL"] = runtimeConfig.backendWsUrl;
-}
-if (runtimeConfig.nodeEnv) {
-  process.env["NODE_ENV"] = runtimeConfig.nodeEnv;
-}
+// Set runtime config (not baked into build, loaded at runtime)
+setRuntimeConfig({
+  backendUrl: runtimeConfig.backendUrl,
+  backendWsUrl: runtimeConfig.backendWsUrl,
+  nodeEnv: runtimeConfig.nodeEnv,
+});
 
-// Now import modules that depend on env vars
-const { BACKEND_URL } = await import("@twirchat/shared/constants");
+// Also set process.env for backward compatibility with other modules
+const currentConfig = getRuntimeConfig();
+if (currentConfig.backendUrl) {
+  process.env["CHATRIX_BACKEND_URL"] = currentConfig.backendUrl;
+}
+if (currentConfig.backendWsUrl) {
+  process.env["CHATRIX_BACKEND_WS_URL"] = currentConfig.backendWsUrl;
+}
+if (currentConfig.nodeEnv) {
+  process.env["NODE_ENV"] = currentConfig.nodeEnv;
+}
 
 // ============================================================
 // 2. Initialisation
@@ -304,7 +315,7 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
 
       getStreamStatus: async ({ platform, channelId }) => {
         const res = await fetch(
-          `${BACKEND_URL}/api/stream-status?platform=${platform}&channelId=${encodeURIComponent(channelId)}`,
+          `${getBackendUrl()}/api/stream-status?platform=${platform}&channelId=${encodeURIComponent(channelId)}`,
           { headers: { "X-Client-Secret": clientSecret } },
         );
         if (!res.ok) throw new Error(`stream-status: ${res.status}`);
@@ -323,21 +334,24 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
           userAccessToken: tokens.accessToken,
         };
 
-        const res = await fetch(`${BACKEND_URL}/api/update-stream`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Client-Secret": clientSecret,
+        const res = await fetch(
+          `${getBackendUrl()}/api/update-stream`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Client-Secret": clientSecret,
+            },
+            body: JSON.stringify(body),
           },
-          body: JSON.stringify(body),
-        });
+        );
         if (!res.ok) throw new Error(`update-stream: ${res.status}`);
         return (await res.json()) as UpdateStreamResponse;
       },
 
       searchCategories: async ({ platform, query }) => {
         const res = await fetch(
-          `${BACKEND_URL}/api/search-categories?platform=${platform}&query=${encodeURIComponent(query)}`,
+          `${getBackendUrl()}/api/search-categories?platform=${platform}&query=${encodeURIComponent(query)}`,
           { headers: { "X-Client-Secret": clientSecret } },
         );
         if (!res.ok) throw new Error(`search-categories: ${res.status}`);
@@ -359,14 +373,17 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
           return ch;
         });
 
-        const res = await fetch(`${BACKEND_URL}/api/channels-status`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Client-Secret": clientSecret,
+        const res = await fetch(
+          `${getBackendUrl()}/api/channels-status`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Client-Secret": clientSecret,
+            },
+            body: JSON.stringify({ channels: enriched }),
           },
-          body: JSON.stringify({ channels: enriched }),
-        });
+        );
         if (!res.ok) throw new Error(`channels-status: ${res.status}`);
         return (await res.json()) as import("@twirchat/shared/protocol").ChannelsStatusResponse;
       },

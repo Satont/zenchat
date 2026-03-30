@@ -7,8 +7,8 @@ import type {
 import {
   KICK_PUSHER_WS,
   KICK_API_BASE,
-  BACKEND_URL,
 } from "@twirchat/shared/constants";
+import { getBackendUrl } from "../../runtime-config";
 import { AccountStore } from "../../store/account-store";
 import { refreshKickToken } from "../../auth/kick";
 import { getKickBadgeSvg } from "./badges";
@@ -233,7 +233,7 @@ export class KickAdapter extends BasePlatformAdapter {
   // ============================================================
 
   private async fetchChatroomId(channelSlug: string): Promise<number> {
-    const url = `${BACKEND_URL}/api/kick/chatroom?slug=${encodeURIComponent(channelSlug)}`;
+    const url = `${getBackendUrl()}/api/kick/chatroom?slug=${encodeURIComponent(channelSlug)}`;
     const res = await fetch(url);
     if (!res.ok) {
       const body = await res.text().catch(() => "");

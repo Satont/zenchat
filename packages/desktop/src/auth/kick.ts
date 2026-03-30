@@ -23,7 +23,8 @@ import {
 } from "./pkce";
 import { AccountStore } from "../store/account-store";
 import { successPage } from "./server";
-import { BACKEND_URL, KICK_REDIRECT_URI } from "@twirchat/shared/constants";
+import { KICK_REDIRECT_URI } from "@twirchat/shared/constants";
+import { getBackendUrl } from "../runtime-config";
 import { logger } from "@twirchat/shared/logger";
 import type {
   KickBuildUrlRequest,
@@ -89,7 +90,7 @@ export async function getKickAuthUrl(
   codeChallenge: string,
   state: string,
 ): Promise<string> {
-  const res = await fetch(`${BACKEND_URL}/api/auth/kick/start`, {
+  const res = await fetch(`${getBackendUrl()}/api/auth/kick/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -141,7 +142,7 @@ export async function handleKickCallback(url: URL): Promise<{
   pendingSessions.delete(state);
 
   // Exchange code for tokens via backend proxy
-  const exchangeRes = await fetch(`${BACKEND_URL}/api/auth/kick/exchange`, {
+  const exchangeRes = await fetch(`${getBackendUrl()}/api/auth/kick/exchange`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -227,7 +228,7 @@ export async function refreshKickToken(accountId: string): Promise<string> {
     throw new Error("No refresh token for Kick account");
   }
 
-  const res = await fetch(`${BACKEND_URL}/api/auth/kick/refresh`, {
+  const res = await fetch(`${getBackendUrl()}/api/auth/kick/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

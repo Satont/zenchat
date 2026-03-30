@@ -2,7 +2,7 @@ import type {
   BackendToDesktopMessage,
   DesktopToBackendMessage,
 } from "@twirchat/shared";
-import { BACKEND_WS_URL } from "@twirchat/shared/constants";
+import { getBackendWsUrl } from "./runtime-config";
 import { logger } from "@twirchat/shared/logger";
 
 const log = logger("backend-connection");
@@ -60,9 +60,10 @@ export class BackendConnection {
   }
 
   private _connect(): void {
-    log.info(`Connecting to ${BACKEND_WS_URL}...`);
+    const backendWsUrl = getBackendWsUrl();
+    log.info(`Connecting to ${backendWsUrl}...`);
 
-    const ws = new WebSocket(BACKEND_WS_URL, {
+    const ws = new WebSocket(backendWsUrl, {
       headers: {
         "X-Client-Secret": this.clientSecret,
       },

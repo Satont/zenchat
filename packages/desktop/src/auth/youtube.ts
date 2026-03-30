@@ -23,7 +23,8 @@ import {
 } from "./pkce";
 import { AccountStore } from "../store/account-store";
 import { successPage } from "./server";
-import { BACKEND_URL, YOUTUBE_REDIRECT_URI } from "@twirchat/shared/constants";
+import { YOUTUBE_REDIRECT_URI } from "@twirchat/shared/constants";
+import { getBackendUrl } from "../runtime-config";
 import { logger } from "@twirchat/shared/logger";
 import type {
   YouTubeBuildUrlRequest,
@@ -89,7 +90,7 @@ export async function getYouTubeAuthUrl(
   codeChallenge: string,
   state: string,
 ): Promise<string> {
-  const res = await fetch(`${BACKEND_URL}/api/auth/youtube/start`, {
+  const res = await fetch(`${getBackendUrl()}/api/auth/youtube/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -141,7 +142,7 @@ export async function handleYouTubeCallback(url: URL): Promise<{
   pendingSessions.delete(state);
 
   // Exchange code for tokens via backend proxy
-  const exchangeRes = await fetch(`${BACKEND_URL}/api/auth/youtube/exchange`, {
+  const exchangeRes = await fetch(`${getBackendUrl()}/api/auth/youtube/exchange`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -233,7 +234,7 @@ export async function refreshYouTubeToken(accountId: string): Promise<string> {
     throw new Error("No refresh token for YouTube account");
   }
 
-  const res = await fetch(`${BACKEND_URL}/api/auth/youtube/refresh`, {
+  const res = await fetch(`${getBackendUrl()}/api/auth/youtube/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

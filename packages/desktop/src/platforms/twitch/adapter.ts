@@ -19,7 +19,8 @@ import type {
   NormalizedEvent,
   Badge,
 } from "@twirchat/shared/types";
-import { TWITCH_ANON_PREFIX, BACKEND_URL } from "@twirchat/shared/constants";
+import { TWITCH_ANON_PREFIX } from "@twirchat/shared/constants";
+import { getBackendUrl } from "../../runtime-config";
 import { AccountStore } from "../../store/account-store";
 import type { TwitchBadgesResponse } from "@twirchat/shared/types";
 import { logger } from "@twirchat/shared/logger";
@@ -433,7 +434,7 @@ export class TwitchAdapter extends BasePlatformAdapter {
   }
 
   private async fetchBadges(): Promise<void> {
-    const url = new URL(`${BACKEND_URL}/api/twitch/badges`);
+    const url = new URL(`${getBackendUrl()}/api/twitch/badges`);
     if (this.channelName) {
       url.searchParams.set("broadcasterLogin", this.channelName);
     }

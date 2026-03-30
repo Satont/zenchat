@@ -23,7 +23,8 @@ import {
 } from "./pkce";
 import { AccountStore } from "../store/account-store";
 import { successPage } from "./server";
-import { BACKEND_URL, TWITCH_REDIRECT_URI } from "@twirchat/shared/constants";
+import { TWITCH_REDIRECT_URI } from "@twirchat/shared/constants";
+import { getBackendUrl } from "../runtime-config";
 import { logger } from "@twirchat/shared/logger";
 import type {
   TwitchBuildUrlRequest,
@@ -89,7 +90,7 @@ export async function getTwitchAuthUrl(
   codeChallenge: string,
   state: string,
 ): Promise<string> {
-  const res = await fetch(`${BACKEND_URL}/api/auth/twitch/start`, {
+  const res = await fetch(`${getBackendUrl()}/api/auth/twitch/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -141,7 +142,7 @@ export async function handleTwitchCallback(url: URL): Promise<{
   pendingSessions.delete(state);
 
   // Exchange code for tokens via backend proxy
-  const exchangeRes = await fetch(`${BACKEND_URL}/api/auth/twitch/exchange`, {
+  const exchangeRes = await fetch(`${getBackendUrl()}/api/auth/twitch/exchange`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -219,7 +220,7 @@ export async function refreshTwitchToken(accountId: string): Promise<string> {
     throw new Error("No refresh token for Twitch account");
   }
 
-  const res = await fetch(`${BACKEND_URL}/api/auth/twitch/refresh`, {
+  const res = await fetch(`${getBackendUrl()}/api/auth/twitch/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
