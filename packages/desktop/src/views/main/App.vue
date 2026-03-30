@@ -73,6 +73,21 @@ onMounted(() => {
 
 const unsubscribers: Array<() => void> = [];
 
+// Update state
+const updateState = ref<{
+  show: boolean;
+  status: string;
+  message: string;
+  progress?: number;
+  updateAvailable: boolean;
+}>({
+  show: false,
+  status: "",
+  message: "",
+  progress: undefined,
+  updateAvailable: false,
+});
+
 onMounted(() => {
   const onChatMessage = (msg: NormalizedChatMessage) => {
     messages.value = [msg, ...messages.value].slice(0, 500);
@@ -93,12 +108,27 @@ onMounted(() => {
   const onAuthError = ({ platform, error }: { platform: string; error: string }) => {
     console.error(`[Auth] Error on ${platform}: ${error}`);
   };
+  const onUpdateStatus = (status: { status: string; message: string; progress?: number }) => {
+    console.log(`[Update] ${status.status}: ${status.message}`);
+    updateState.value.status = status.status;
+    updateState.value.message = status.message;
+    updateState.value.progress = status.progress;
+    if (status.status === "checking" || status.status === "downloading") {
+      updateState.value.show = true;
+    }
+    if (status.status === "complete" || status.status === "error") {
+      setTimeout(() => {
+        updateState.value.show = false;
+      }, 3000);
+    }
+  };
 
   rpc.addMessageListener("chat_message", onChatMessage);
   rpc.addMessageListener("chat_event", onChatEvent);
   rpc.addMessageListener("platform_status", onPlatformStatus);
   rpc.addMessageListener("auth_success", onAuthSuccess);
   rpc.addMessageListener("auth_error", onAuthError);
+  rpc.addMessageListener("update_status", onUpdateStatus);
 
   unsubscribers.push(
     () => rpc.removeMessageListener("chat_message", onChatMessage),
@@ -106,8 +136,33 @@ onMounted(() => {
     () => rpc.removeMessageListener("platform_status", onPlatformStatus),
     () => rpc.removeMessageListener("auth_success", onAuthSuccess),
     () => rpc.removeMessageListener("auth_error", onAuthError),
+    () => rpc.removeMessageListener("update_status", onUpdateStatus),
   );
+
+  // Check for updates on startup (if enabled)
+  checkForUpdates();
 });
+
+async function checkForUpdates() {
+  try {
+    const result = await rpc.request.checkForUpdate();
+    if (result.updateAvailable) {
+      updateState.value.updateAvailable = true;
+      // Auto-download update
+      await rpc.request.downloadUpdate();
+    }
+  } catch (err) {
+    console.warn("[Update] Failed to check for updates:", err);
+  }
+}
+
+async function applyUpdate() {
+  try {
+    await rpc.request.applyUpdate();
+  } catch (err) {
+    console.error("[Update] Failed to apply update:", err);
+  }
+}
 
 onUnmounted(() => {
   unsubscribers.forEach((unsub) => unsub());
@@ -124,6 +179,11 @@ function onSettingsSaved(s: AppSettings) {
 
 function onSettingsChange(s: AppSettings) {
   settings.value = s;
+}
+
+// Update notification dismissed
+function dismissUpdate() {
+  updateState.value.show = false;
 }
 </script>
 
@@ -286,6 +346,38 @@ function onSettingsChange(s: AppSettings) {
         @change="onSettingsChange"
       />
     </main>
+
+    <!-- Update notification toast -->
+    <div v-if="updateState.show" class="update-toast">
+      <div class="update-content">
+        <div class="update-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+            <path d="M16 16h5v5"/>
+          </svg>
+        </div>
+        <div class="update-info">
+          <div class="update-title">{{ updateState.message }}</div>
+          <div v-if="updateState.progress !== undefined" class="update-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: updateState.progress + '%' }"/>
+            </div>
+            <span class="progress-text">{{ updateState.progress }}%</span>
+          </div>
+        </div>
+        <button v-if="updateState.updateAvailable && !updateState.progress" class="update-btn" @click="applyUpdate">
+          Restart
+        </button>
+        <button class="update-close" @click="dismissUpdate">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -490,5 +582,118 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--c-bg, #0f0f11);
+}
+
+/* ---- Update toast ---- */
+.update-toast {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  background: var(--c-surface, #18181b);
+  border: 1px solid var(--c-border, #2a2a33);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 300px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.update-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.update-icon {
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.update-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.update-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-text, #e2e2e8);
+}
+
+.update-progress {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--c-surface-2, #1f1f24);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #a78bfa;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 11px;
+  color: var(--c-text-2, #8b8b99);
+  min-width: 32px;
+  text-align: right;
+}
+
+.update-btn {
+  background: #a78bfa;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.update-btn:hover {
+  opacity: 0.9;
+}
+
+.update-close {
+  background: none;
+  border: none;
+  color: var(--c-text-2, #8b8b99);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.update-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--c-text, #e2e2e8);
 }
 </style>

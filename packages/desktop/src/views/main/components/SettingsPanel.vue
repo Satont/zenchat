@@ -149,6 +149,23 @@ function copyOverlayUrl() {
         </div>
       </section>
 
+      <!-- Updates -->
+      <section class="settings-section">
+        <h3 class="section-title">Updates</h3>
+        <p class="section-desc">Automatic update settings</p>
+
+        <div class="form-row">
+          <div class="form-label">
+            <span>Auto-check for updates</span>
+            <span class="form-hint">Check on app startup</span>
+          </div>
+          <label class="switch">
+            <input v-model="local.autoCheckUpdates" type="checkbox" />
+            <span class="switch-thumb" />
+          </label>
+        </div>
+      </section>
+
       <!-- OBS Overlay -->
       <section class="settings-section">
         <h3 class="section-title">OBS Overlay</h3>

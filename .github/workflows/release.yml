@@ -79,21 +79,16 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Setup .env for production
-        shell: bash
-        run: |
-          cat > packages/desktop/.env.production << 'EOF'
-          NODE_ENV=production
-          CHATRIX_BACKEND_URL=${{ secrets.BACKEND_URL }}
-          CHATRIX_BACKEND_WS_URL=${{ secrets.BACKEND_WS_URL }}
-          EOF
-
       - name: Build views
         working-directory: packages/desktop
         run: bun run build:views
 
       - name: Build Electrobun
         working-directory: packages/desktop
+        env:
+          NODE_ENV: production
+          CHATRIX_BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CHATRIX_BACKEND_WS_URL: ${{ secrets.BACKEND_WS_URL }}
         run: bunx electrobun build --env=stable
 
       - name: Upload artifacts

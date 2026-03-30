@@ -97,6 +97,12 @@ type BunRequests = {
     params: { platform: Platform; username: string };
     response: string | null;
   };
+  /** Check for app updates */
+  checkForUpdate: { params: void; response: { updateAvailable: boolean; version?: string; currentVersion: string } };
+  /** Download available update */
+  downloadUpdate: { params: void; response: { success: boolean; error?: string } };
+  /** Apply downloaded update and restart */
+  applyUpdate: { params: void; response: void };
 };
 
 type BunMessages = Record<never, unknown>;
@@ -120,6 +126,8 @@ type WebviewMessages = {
   auth_success: { platform: Platform; username: string; displayName: string };
   /** OAuth failed */
   auth_error: { platform: Platform; error: string };
+  /** Update status changed */
+  update_status: { status: string; message: string; progress?: number };
 };
 
 // ----------------------------------------------------------------

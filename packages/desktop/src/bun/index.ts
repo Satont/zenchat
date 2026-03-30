@@ -357,6 +357,29 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
       getUsernameColor: ({ platform, username }) => {
         return UsernameColorCache.get(platform, username) ?? null;
       },
+
+      checkForUpdate: async () => {
+        const updateInfo = await Updater.checkForUpdate();
+        const currentVersion = await Updater.localInfo.version();
+        return {
+          updateAvailable: updateInfo.updateAvailable,
+          version: updateInfo.version,
+          currentVersion,
+        };
+      },
+
+      downloadUpdate: async () => {
+        try {
+          await Updater.downloadUpdate();
+          return { success: true };
+        } catch (err) {
+          return { success: false, error: String(err) };
+        }
+      },
+
+      applyUpdate: async () => {
+        await Updater.applyUpdate();
+      },
     },
   },
 });
@@ -398,6 +421,38 @@ const win = new BrowserWindow({
 
 if (channel === "dev") {
   win.webview.openDevTools();
+}
+
+// ============================================================
+// 3b. Auto-update setup
+// ============================================================
+
+// Subscribe to update status changes and forward to webview
+Updater.onStatusChange((entry) => {
+  log.info(`[Updater] ${entry.status}: ${entry.message}`);
+  sendToView.update_status({
+    status: entry.status,
+    message: entry.message,
+    progress: entry.details?.progress,
+  });
+});
+
+// Auto-check for updates on startup (if enabled in settings)
+const settings = SettingsStore.get();
+if (settings?.autoCheckUpdates !== false && channel !== "dev") {
+  log.info("Checking for updates...");
+  Updater.checkForUpdate()
+    .then((updateInfo) => {
+      if (updateInfo.updateAvailable) {
+        log.info(`Update available: ${updateInfo.version}`);
+        // Optionally auto-download: Updater.downloadUpdate()
+      } else {
+        log.info("No updates available");
+      }
+    })
+    .catch((err) => {
+      log.error("Failed to check for updates", { error: String(err) });
+    });
 }
 
 // ============================================================
