@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  backend:
+    image: ghcr.io/twirchat/backend:latest
+    container_name: twirchat-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - CHATRIX_BACKEND_URL=https://chat.twir.app
+      - CHATRIX_BACKEND_WS_URL=wss://chat.twir.app/ws
+    volumes:
+      - twirchat_data:/app/data
+    networks:
+      - twirchat-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: twirchat-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - twirchat-network
+    depends_on:
+      - backend
+    environment:
+      - CADDY_ADMIN=0.0.0.0:2019  # Optional: enable admin API
+
+volumes:
+  twirchat_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+
+networks:
+  twirchat-network:
+    driver: bridge

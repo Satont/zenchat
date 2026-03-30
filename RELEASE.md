@@ -73,20 +73,40 @@ Optional variables:
 
 ## Docker Deployment
 
-### Pull from GitHub Container Registry
+### Simple (without reverse proxy)
 
 ```bash
 docker pull ghcr.io/YOUR_USERNAME/twirchat/backend:latest
-```
 
-### Run the container
-
-```bash
 docker run -d \
   -p 3000:3000 \
   -e NODE_ENV=production \
   ghcr.io/YOUR_USERNAME/twirchat/backend:latest
 ```
+
+### Production (with Caddy)
+
+For production with SSL/TLS and domain:
+
+```bash
+# Clone repository
+git clone https://github.com/YOUR_USERNAME/twirchat.git
+cd twirchat
+
+# Update Caddyfile.prod with your domain
+# Edit: chat.twir.app -> your-domain.com
+
+# Start services
+cd docker
+docker compose up -d
+```
+
+Caddy will automatically:
+- Obtain Let's Encrypt certificates
+- Handle HTTP → HTTPS redirect
+- Proxy WebSocket connections
+- Enable HTTP/2 and HTTP/3
+- Compress responses with gzip/zstd
 
 ## Local Build
 
