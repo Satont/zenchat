@@ -1,15 +1,15 @@
 version: "3.8"
 
 services:
-  backend:
-    image: ghcr.io/twirchat/backend:latest
+  twirchat-backend:
+    image: ghcr.io/satont/twirchat/backend:latest
     restart: unless-stopped
     env_file: .env
     depends_on:
-      postgres:
+      twirchat-postgres:
         condition: service_healthy
 
-  postgres:
+  twirchat-postgres:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
