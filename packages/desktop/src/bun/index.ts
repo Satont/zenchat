@@ -174,7 +174,9 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
               });
             });
           } else {
-            log.info("7TV User ID removed, disconnecting...", { action: "7tv" });
+            log.info("7TV User ID removed, disconnecting...", {
+              action: "7tv",
+            });
             sevenTVEventClient.disconnect();
           }
         }
@@ -375,8 +377,8 @@ setAuthServerRpcSender(sendToView);
  * If it is, load from there so changes are reflected instantly.
  * In production (or when vite is not running), fall back to views://.
  */
+const channel = await Updater.localInfo.channel();
 async function resolveWindowUrl(): Promise<string> {
-  const channel = await Updater.localInfo.channel();
   if (channel === "dev") {
     log.info("Running in dev channel — skipping Vite server check");
     return "http://localhost:5173";
@@ -394,7 +396,9 @@ const win = new BrowserWindow({
   rpc,
 });
 
-win.webview.openDevTools();
+if (channel === "dev") {
+  win.webview.openDevTools();
+}
 
 // ============================================================
 // 4. Route adapter events → webview + overlay
