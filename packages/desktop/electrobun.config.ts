@@ -30,13 +30,16 @@ const config: ElectrobunConfig = {
 
     mac: {
       bundleCEF: false,
+      icons: "assets/icon.iconset",
     },
     linux: {
       bundleCEF: false,
       defaultRenderer: "cef",
+      icon: "assets/icon.png",
     },
     win: {
       bundleCEF: false,
+      icon: "assets/icon.ico",
     },
   },
 
