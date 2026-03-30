@@ -86,7 +86,6 @@ jobs:
       - name: Build Electrobun
         working-directory: packages/desktop
         env:
-          NODE_ENV: production
           CHATRIX_BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CHATRIX_BACKEND_WS_URL: ${{ secrets.BACKEND_WS_URL }}
         run: bunx electrobun build --env=stable

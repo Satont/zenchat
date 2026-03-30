@@ -17,6 +17,7 @@ const config: ElectrobunConfig = {
   build: {
     bun: {
       entrypoint: "src/bun/index.ts",
+      env: "CHATRIX_*",
     },
 
     copy: {
