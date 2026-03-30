@@ -101,6 +101,8 @@ export interface AppSettings {
   platformFilter: Platform[] | "all";
   overlay: OverlayConfig;
   seventvUserId?: string;
+  /** Auto-check for updates on startup */
+  autoCheckUpdates?: boolean;
 }
 
 export interface OverlayConfig {
@@ -143,6 +145,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     position: "bottom",
     port: 45823,
   },
+  autoCheckUpdates: true,
 };
 
 // ============================================================
