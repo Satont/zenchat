@@ -1,3 +1,5 @@
+- use worktree_create(branch, baseBranch?) and worktree_delete(reason) tools when working on features.
+
 Default to using Bun instead of Node.js.
 
 - Use `bun <file>` instead of `node <file>` or `ts-node <file>`
