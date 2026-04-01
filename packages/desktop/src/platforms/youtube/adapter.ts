@@ -111,10 +111,36 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       channelLogin: this.channelId,
     });
 
+    await this.tryFetchLiveChatAndConnect();
+  }
+
+  private async tryFetchLiveChatAndConnect(): Promise<void> {
+    if (!this.shouldReconnect) return;
+
     try {
-      this.liveChatId = await this.fetchLiveChatId(channelIdOrHandle);
+      this.liveChatId = await this.fetchLiveChatId(this.channelId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
+      
+      // Check if it's "no live broadcast" error - we should retry
+      const isNoLiveBroadcast = errorMessage.includes("No active live broadcast") ||
+                                 errorMessage.includes("no live broadcast");
+      
+      if (isNoLiveBroadcast && this.shouldReconnect) {
+        log.info(`[YouTube] No live broadcast yet, will retry...`);
+        this.emit("status", {
+          platform: "youtube",
+          status: "connecting",
+          mode: "authenticated",
+          error: `Waiting for live broadcast to start...`,
+          channelLogin: this.channelId,
+        });
+        
+        // Schedule retry with exponential backoff
+        this.scheduleLiveChatRetry();
+        return;
+      }
+      
       log.error(`Failed to get live chat ID`, { error: errorMessage });
       this.emit("status", {
         platform: "youtube",
@@ -129,6 +155,8 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     // Reset polling state
     this.nextPageToken = undefined;
     this.isPolling = false;
+    this.reconnectAttempts = 0;
+    this.liveChatRetryAttempts = 0; // Reset retry counter on successful connection
     
     this.emit("status", {
       platform: "youtube",
@@ -138,6 +166,37 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     });
 
     this.startGrpcStream();
+  }
+
+  private liveChatRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+  private liveChatRetryAttempts = 0;
+  private readonly MAX_LIVECHAT_RETRY_DELAY = 60000;
+  private readonly BASE_LIVECHAT_RETRY_DELAY = 10000; // Start with 10 seconds
+
+  private scheduleLiveChatRetry(): void {
+    if (!this.shouldReconnect) return;
+    
+    // Clean up any existing retry timeout
+    if (this.liveChatRetryTimeout) {
+      clearTimeout(this.liveChatRetryTimeout);
+    }
+
+    // Calculate exponential backoff with jitter
+    const baseDelay = Math.min(
+      this.BASE_LIVECHAT_RETRY_DELAY * Math.pow(2, this.liveChatRetryAttempts),
+      this.MAX_LIVECHAT_RETRY_DELAY,
+    );
+    const jitter = Math.random() * 2000; // Add up to 2 seconds of random jitter
+    const delay = baseDelay + jitter;
+
+    this.liveChatRetryAttempts++;
+    log.info(
+      `[YouTube] Retrying live chat lookup in ${Math.round(delay / 1000)}s... (attempt ${this.liveChatRetryAttempts})`,
+    );
+
+    this.liveChatRetryTimeout = setTimeout(() => {
+      this.tryFetchLiveChatAndConnect();
+    }, delay);
   }
 
   async disconnect(): Promise<void> {
@@ -630,6 +689,10 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
+    }
+    if (this.liveChatRetryTimeout) {
+      clearTimeout(this.liveChatRetryTimeout);
+      this.liveChatRetryTimeout = null;
     }
   }
 }
