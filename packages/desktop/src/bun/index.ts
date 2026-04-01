@@ -445,7 +445,7 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>("bun", {
 
       getWatchedChannels: () => watchedChannelManager.getAll(),
 
-      addWatchedChannel: async ({ platform, channelSlug }: { platform: "twitch" | "kick"; channelSlug: string }) => {
+      addWatchedChannel: async ({ platform, channelSlug }: { platform: "twitch" | "kick" | "youtube"; channelSlug: string }) => {
         return await watchedChannelManager.addChannel(platform, channelSlug);
       },
 

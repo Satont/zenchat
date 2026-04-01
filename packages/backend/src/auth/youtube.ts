@@ -19,6 +19,8 @@ import type {
 } from "@twirchat/shared";
 
 const YOUTUBE_SCOPES = [
+  "openid",
+  "profile",
   "https://www.googleapis.com/auth/youtube.readonly",
   "https://www.googleapis.com/auth/youtube.force-ssl",
 ];

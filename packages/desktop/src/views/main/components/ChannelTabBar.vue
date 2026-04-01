@@ -5,6 +5,8 @@ const props = defineProps<{
   watchedChannels: WatchedChannel[];
   activeTabId: string; // "home" or a WatchedChannel.id
   watchedStatuses: Map<string, PlatformStatusInfo>;
+  /** channelId → stream is live (from channels-status API) */
+  watchedLiveStatuses: Map<string, boolean>;
 }>();
 
 const emit = defineEmits<{
@@ -17,12 +19,13 @@ function platformColor(platform: string): string {
   switch (platform) {
     case "twitch": return "#9146ff";
     case "kick": return "#53fc18";
+    case "youtube": return "#ff0000";
     default: return "#a78bfa";
   }
 }
 
 function isLive(id: string): boolean {
-  return props.watchedStatuses.get(id)?.status === "connected";
+  return props.watchedLiveStatuses.get(id) === true;
 }
 </script>
 
@@ -55,11 +58,11 @@ function isLive(id: string): boolean {
         @click="emit('select-tab', ch.id)"
         :title="`${ch.platform}: ${ch.displayName}`"
       >
-        <!-- Live dot -->
+        <!-- Live dot: only shown when stream is live -->
         <span
+          v-if="isLive(ch.id)"
           class="live-dot"
-          :class="{ live: isLive(ch.id) }"
-          :style="isLive(ch.id) ? { '--dot-color': platformColor(ch.platform) } : {}"
+          :style="{ '--dot-color': platformColor(ch.platform) }"
         />
 
         <!-- Platform icon -->
@@ -68,6 +71,9 @@ function isLive(id: string): boolean {
         </svg>
         <svg v-else-if="ch.platform === 'kick'" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3 2h4v7.5l5-7.5h5l-6 9 6 11h-5l-5-8V22H3z"/>
+        </svg>
+        <svg v-else-if="ch.platform === 'youtube'" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
         </svg>
         <span class="tab-label">{{ ch.displayName }}</span>
       </button>
@@ -163,20 +169,8 @@ function isLive(id: string): boolean {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--c-text-2, #555);
-  flex-shrink: 0;
-  transition: background 0.3s;
-}
-
-.live-dot.live {
   background: var(--dot-color, #22c55e);
-  animation: dot-pulse 2s infinite;
-}
-
-@keyframes dot-pulse {
-  0%   { box-shadow: 0 0 0 0   color-mix(in srgb, var(--dot-color, #22c55e) 60%, transparent); }
-  70%  { box-shadow: 0 0 0 4px transparent; }
-  100% { box-shadow: 0 0 0 0   transparent; }
+  flex-shrink: 0;
 }
 
 .tab-close {

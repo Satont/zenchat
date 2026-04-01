@@ -11,6 +11,7 @@
 
 import { TwitchAdapter } from "../platforms/twitch/adapter";
 import { KickAdapter } from "../platforms/kick/adapter";
+import { YouTubeAdapter } from "../platforms/youtube/adapter";
 import type { NormalizedChatMessage, PlatformStatusInfo, WatchedChannel } from "@twirchat/shared/types";
 import { WatchedChannelStore } from "../store/watched-channels-store";
 import { logger } from "@twirchat/shared/logger";
@@ -31,7 +32,7 @@ export type WatchedChannelStatusHandler = (
 
 interface WatchedEntry {
   watchedChannel: WatchedChannel;
-  adapter: TwitchAdapter | KickAdapter;
+  adapter: TwitchAdapter | KickAdapter | YouTubeAdapter;
   messages: NormalizedChatMessage[];
   status: PlatformStatusInfo | null;
 }
@@ -166,7 +167,9 @@ export class WatchedChannelManager {
   private async startChannel(ch: WatchedChannel): Promise<void> {
     const adapter = ch.platform === "twitch"
       ? new TwitchAdapter()
-      : new KickAdapter();
+      : ch.platform === "youtube"
+        ? new YouTubeAdapter()
+        : new KickAdapter();
 
     const entry: WatchedEntry = {
       watchedChannel: ch,

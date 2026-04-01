@@ -184,7 +184,7 @@ export interface PlatformStatusInfo {
 
 export interface WatchedChannel {
   id: string;
-  platform: "twitch" | "kick";
+  platform: "twitch" | "kick" | "youtube";
   channelSlug: string;
   displayName: string;
   createdAt: number;

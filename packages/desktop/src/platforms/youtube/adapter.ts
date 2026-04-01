@@ -43,6 +43,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
 
   private channelId = "";
   private liveChatId: string | null = null;
+  private resolvedChannelId: string | null = null; // cached after first resolution
   private shouldReconnect = true;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
@@ -59,6 +60,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
   async connect(channelIdOrHandle: string): Promise<void> {
     this.channelId = channelIdOrHandle;
     this.shouldReconnect = true;
+    this.resolvedChannelId = null; // reset cache on fresh connect
 
     const account = AccountStore.findByPlatform("youtube");
     if (!account) {
@@ -118,7 +120,14 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     if (!this.shouldReconnect) return;
 
     try {
-      this.liveChatId = await this.fetchLiveChatId(this.channelId);
+      // If we already resolved the channel ID, skip straight to live search
+      // (avoids re-spending quota on handle resolution on every retry)
+      if (this.resolvedChannelId) {
+        log.info(`[YouTube] Retrying with cached channelId: ${this.resolvedChannelId}`);
+        this.liveChatId = await this.fetchLiveChatForChannel(this.resolvedChannelId);
+      } else {
+        this.liveChatId = await this.fetchLiveChatId(this.channelId);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       
@@ -170,7 +179,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
 
   private liveChatRetryTimeout: ReturnType<typeof setTimeout> | null = null;
   private liveChatRetryAttempts = 0;
-  private readonly MAX_LIVECHAT_RETRY_DELAY = 60000;
+  private readonly MAX_LIVECHAT_RETRY_DELAY = 300000; // Max 5 minutes — search costs 100 quota units
   private readonly BASE_LIVECHAT_RETRY_DELAY = 10000; // Start with 10 seconds
 
   private scheduleLiveChatRetry(): void {
@@ -312,80 +321,92 @@ export class YouTubeAdapter extends BasePlatformAdapter {
   private async fetchLiveChatId(channelOrVideoId: string): Promise<string> {
     if (!this.accessToken) throw new Error("No access token");
 
-    // Clean up the input - remove @ prefix if present
-    const cleanInput = channelOrVideoId.replace(/^@/, "");
+    // Strip @ prefix, trim whitespace
+    const cleanInput = channelOrVideoId.replace(/^@/, "").trim();
     log.info(
       `[YouTube] Looking for live chat, input="${channelOrVideoId}", clean="${cleanInput}"`,
     );
 
-    // Try as a video ID first (starts with characters other than UC)
-    if (!cleanInput.startsWith("UC")) {
-      log.info(`[YouTube] Trying as video ID: ${cleanInput}`);
-      const videoRes = await this.fetchWithAuth(
-        `${YOUTUBE_API_BASE}/videos?part=liveStreamingDetails&id=${encodeURIComponent(cleanInput)}`,
-      );
-
-      if (videoRes.ok) {
-        const body = (await videoRes.json()) as {
-          items?: Array<{
-            liveStreamingDetails?: { activeLiveChatId?: string };
-          }>;
-        };
-        const chatId = body.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
-        if (chatId) {
-          log.info(`[YouTube] Found liveChatId via video ID: ${chatId}`);
-          return chatId;
-        }
-        log.info(`[YouTube] Video found but no active live chat`);
-      } else {
-        log.info(`[YouTube] Video lookup failed: ${videoRes.status}`);
-      }
+    // If it already looks like a UC channel ID (case-insensitive), skip straight to live search
+    if (/^UC/i.test(cleanInput)) {
+      log.info(`[YouTube] Input looks like a channel ID: ${cleanInput}`);
+      this.resolvedChannelId = cleanInput;
+      return this.fetchLiveChatForChannel(cleanInput);
     }
 
-    // Try to resolve handle/username to channel ID
-    let channelId = cleanInput;
-    if (!cleanInput.startsWith("UC")) {
-      log.info(`[YouTube] Resolving handle/username: ${cleanInput}`);
-      // Try as a handle (custom URL) - search for the channel
-      const searchRes = await this.fetchWithAuth(
-        `${YOUTUBE_API_BASE}/search?part=snippet&q=${encodeURIComponent(cleanInput)}&type=channel&maxResults=1`,
-      );
-
-      if (!searchRes.ok) {
-        log.info(`[YouTube] Channel search failed: ${searchRes.status}`);
-        throw new Error(`YouTube channel search failed: ${searchRes.status}`);
-      }
-
-      const searchBody = (await searchRes.json()) as {
-        items?: Array<{
-          id?: { channelId?: string };
-          snippet?: { title?: string };
-        }>;
-      };
-
-      const foundChannelId = searchBody.items?.[0]?.id?.channelId;
-      const channelTitle = searchBody.items?.[0]?.snippet?.title;
-
-      if (!foundChannelId) {
-        throw new Error(`No channel found for "${cleanInput}"`);
-      }
-
-      channelId = foundChannelId;
-      log.info(
-        `[YouTube] Resolved to channel: ${channelId} (${channelTitle})`,
-      );
-    }
-
-    // Search for active live broadcast on the channel
-    log.info(
-      `[YouTube] Searching for live broadcast on channel: ${channelId}`,
+    // Try as a video ID (11-char base64 string — liveChatId can be fetched directly)
+    log.info(`[YouTube] Trying as video ID: ${cleanInput}`);
+    const videoRes = await this.fetchWithAuth(
+      `${YOUTUBE_API_BASE}/videos?part=liveStreamingDetails&id=${encodeURIComponent(cleanInput)}`,
     );
+    if (videoRes.ok) {
+      const body = (await videoRes.json()) as {
+        items?: Array<{ liveStreamingDetails?: { activeLiveChatId?: string } }>;
+      };
+      const chatId = body.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
+      if (chatId) {
+        log.info(`[YouTube] Found liveChatId via video ID: ${chatId}`);
+        return chatId;
+      }
+      if (body.items && body.items.length > 0) {
+        log.info(`[YouTube] Video found but no active live chat`);
+      }
+    } else {
+      log.info(`[YouTube] Video lookup failed: ${videoRes.status}`);
+    }
+
+    // Resolve handle → channel ID using channels?forHandle= (1 quota unit vs 100 for search)
+    log.info(`[YouTube] Resolving as YouTube handle: @${cleanInput}`);
+    const handleRes = await this.fetchWithAuth(
+      `${YOUTUBE_API_BASE}/channels?part=id,snippet&forHandle=${encodeURIComponent(cleanInput)}`,
+    );
+    if (handleRes.ok) {
+      const body = (await handleRes.json()) as {
+        items?: Array<{ id: string; snippet?: { title?: string } }>;
+      };
+      const channelId = body.items?.[0]?.id;
+      if (channelId) {
+        log.info(`[YouTube] Resolved handle to channel: ${channelId} (${body.items?.[0]?.snippet?.title})`);
+        this.resolvedChannelId = channelId;
+        return this.fetchLiveChatForChannel(channelId);
+      }
+    } else {
+      const errBody = await handleRes.text();
+      log.warn(`[YouTube] Handle resolution failed: ${handleRes.status}`, { body: errBody });
+    }
+
+    // Fall back to legacy forUsername (old custom URLs without @)
+    log.info(`[YouTube] Trying as legacy username: ${cleanInput}`);
+    const userRes = await this.fetchWithAuth(
+      `${YOUTUBE_API_BASE}/channels?part=id,snippet&forUsername=${encodeURIComponent(cleanInput)}`,
+    );
+    if (userRes.ok) {
+      const body = (await userRes.json()) as {
+        items?: Array<{ id: string; snippet?: { title?: string } }>;
+      };
+      const channelId = body.items?.[0]?.id;
+      if (channelId) {
+        log.info(`[YouTube] Resolved username to channel: ${channelId} (${body.items?.[0]?.snippet?.title})`);
+        this.resolvedChannelId = channelId;
+        return this.fetchLiveChatForChannel(channelId);
+      }
+    } else {
+      const errBody = await userRes.text();
+      log.warn(`[YouTube] Username resolution failed: ${userRes.status}`, { body: errBody });
+    }
+
+    throw new Error(`Could not resolve "${cleanInput}" to a YouTube channel or live video`);
+  }
+
+  /** Given a confirmed channel ID, find its active live chat ID. */
+  private async fetchLiveChatForChannel(channelId: string): Promise<string> {
+    log.info(`[YouTube] Searching for live broadcast on channel: ${channelId}`);
     const searchRes = await this.fetchWithAuth(
       `${YOUTUBE_API_BASE}/search?part=snippet&channelId=${encodeURIComponent(channelId)}&eventType=live&type=video`,
     );
-
     if (!searchRes.ok) {
-      throw new Error(`YouTube live search failed: ${searchRes.status}`);
+      const body = await searchRes.text();
+      throw new Error(`YouTube live search failed: ${searchRes.status} — ${body}`);
     }
 
     const searchBody = (await searchRes.json()) as {
@@ -399,7 +420,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
 
     if (!videoId) {
       throw new Error(
-        `No active live broadcast found for channel "${channelId}". Make sure you're currently streaming.`,
+        `No active live broadcast found for channel "${channelId}". Make sure the stream is live.`,
       );
     }
 
@@ -408,7 +429,6 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     const liveRes = await this.fetchWithAuth(
       `${YOUTUBE_API_BASE}/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`,
     );
-
     if (!liveRes.ok) {
       throw new Error(`YouTube videos.list failed: ${liveRes.status}`);
     }

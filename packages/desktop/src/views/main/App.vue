@@ -36,7 +36,36 @@ const activeChatTab = ref<string>("home");
 const watchedMessages = ref<Map<string, NormalizedChatMessage[]>>(new Map());
 /** channelId → PlatformStatusInfo */
 const watchedStatuses = ref<Map<string, PlatformStatusInfo>>(new Map());
+/** channelId → stream is live */
+const watchedLiveStatuses = ref<Map<string, boolean>>(new Map());
 const showAddModal = ref(false);
+
+let watchedLiveStatusInterval: ReturnType<typeof setInterval> | null = null;
+
+async function refreshWatchedLiveStatuses() {
+  const channels = watchedChannels.value;
+  // YouTube is not supported by the channels-status API — skip it
+  const supportedChannels = channels.filter(
+    (ch): ch is WatchedChannel & { platform: "twitch" | "kick" } => ch.platform !== "youtube",
+  );
+  if (supportedChannels.length === 0) return;
+  try {
+    const result = await rpc.request.getChannelsStatus({
+      channels: supportedChannels.map((ch) => ({ platform: ch.platform, channelLogin: ch.channelSlug })),
+    });
+    if (!result) return;
+    const map = new Map<string, boolean>(watchedLiveStatuses.value);
+    for (const ch of supportedChannels) {
+      const s = result.channels.find(
+        (r) => r.platform === ch.platform && r.channelLogin.toLowerCase() === ch.channelSlug.toLowerCase(),
+      );
+      map.set(ch.id, s?.isLive ?? false);
+    }
+    watchedLiveStatuses.value = map;
+  } catch {
+    // Not fatal — live status is best-effort
+  }
+}
 
 const activeWatchedChannel = computed<WatchedChannel | null>(() => {
   if (activeChatTab.value === "home") return null;
@@ -54,6 +83,7 @@ const activeWatchedMessages = computed<NormalizedChatMessage[]>(() => {
 });
 
 const connectedAccountsCount = computed(() => accounts.value.length);
+const youtubeAuthenticated = computed(() => accounts.value.some((a) => a.platform === "youtube"));
 
 // ----------------------------------------------------------------
 // Load initial data
@@ -114,6 +144,10 @@ async function loadInitialData() {
       // Not fatal
     }
   }
+
+  // Fetch stream live status for watched channels immediately, then poll every 60s
+  void refreshWatchedLiveStatuses();
+  watchedLiveStatusInterval = setInterval(() => void refreshWatchedLiveStatuses(), 60_000);
 }
 
 onMounted(() => {
@@ -232,6 +266,10 @@ async function applyUpdate() {
 
 onUnmounted(() => {
   unsubscribers.forEach((unsub) => unsub());
+  if (watchedLiveStatusInterval !== null) {
+    clearInterval(watchedLiveStatusInterval);
+    watchedLiveStatusInterval = null;
+  }
 });
 
 function switchTab(tab: typeof activeTab.value) {
@@ -255,7 +293,7 @@ function dismissUpdate() {
 // Watched channel actions
 // ----------------------------------------------------------------
 
-async function onAddChannel(platform: "twitch" | "kick", channelSlug: string) {
+async function onAddChannel(platform: "twitch" | "kick" | "youtube", channelSlug: string) {
   showAddModal.value = false;
   try {
     const ch = await rpc.request.addWatchedChannel({ platform, channelSlug });
@@ -264,6 +302,7 @@ async function onAddChannel(platform: "twitch" | "kick", channelSlug: string) {
       watchedChannels.value = [...watchedChannels.value, ch];
     }
     activeChatTab.value = ch.id;
+    void refreshWatchedLiveStatuses();
   } catch (err) {
     console.error("[App] addWatchedChannel failed:", err);
   }
@@ -275,6 +314,7 @@ async function onRemoveChannel(id: string) {
     watchedChannels.value = watchedChannels.value.filter((c: WatchedChannel) => c.id !== id);
     watchedMessages.value = new Map([...watchedMessages.value].filter(([k]) => k !== id));
     watchedStatuses.value = new Map([...watchedStatuses.value].filter(([k]) => k !== id));
+    watchedLiveStatuses.value = new Map([...watchedLiveStatuses.value].filter(([k]) => k !== id));
     if (activeChatTab.value === id) activeChatTab.value = "home";
   } catch (err) {
     console.error("[App] removeWatchedChannel failed:", err);
@@ -430,6 +470,7 @@ async function onSendWatched(text: string) {
         :watched-channels="watchedChannels"
         :active-tab-id="activeChatTab"
         :watched-statuses="watchedStatuses"
+        :watched-live-statuses="watchedLiveStatuses"
         @select-tab="activeChatTab = $event"
         @add-channel="showAddModal = true"
         @remove-channel="onRemoveChannel"
@@ -469,6 +510,7 @@ async function onSendWatched(text: string) {
     <!-- Add channel modal -->
     <AddChannelModal
       v-if="showAddModal"
+      :youtube-authenticated="youtubeAuthenticated"
       @confirm="onAddChannel"
       @cancel="showAddModal = false"
     />

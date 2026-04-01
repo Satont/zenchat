@@ -169,47 +169,80 @@ export async function handleYouTubeCallback(url: URL): Promise<{
     },
   );
 
-  if (!userRes.ok) {
-    throw new Error(`YouTube user info request failed: ${userRes.status}`);
+  let userId: string;
+  let displayName: string;
+  let customUrl: string | undefined;
+  let avatarUrl: string | undefined;
+
+  if (userRes.ok) {
+    const userData = (await userRes.json()) as {
+      items?: Array<{
+        id: string;
+        snippet: {
+          title: string;
+          customUrl?: string;
+          thumbnails?: { default?: { url: string } };
+        };
+      }>;
+    };
+
+    if (!userData.items || userData.items.length === 0) {
+      throw new Error("YouTube user info response empty — account may have no YouTube channel");
+    }
+
+    const channel = userData.items[0]!;
+    userId = channel.id;
+    displayName = channel.snippet.title;
+    customUrl = channel.snippet.customUrl;
+    avatarUrl = channel.snippet.thumbnails?.default?.url;
+  } else {
+    const body = await userRes.text();
+    log.warn(`YouTube channels API returned ${userRes.status}, falling back to Google userinfo`, { body });
+
+    // Fall back to Google OpenID Connect userinfo endpoint (always available with openid + profile scopes)
+    const infoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${tokens.accessToken}` },
+    });
+
+    if (!infoRes.ok) {
+      const infoBody = await infoRes.text();
+      throw new Error(
+        `YouTube user info request failed: ${userRes.status} (channels API); ${infoRes.status} (userinfo): ${infoBody}`,
+      );
+    }
+
+    const info = (await infoRes.json()) as {
+      sub: string;
+      name?: string;
+      given_name?: string;
+      picture?: string;
+    };
+
+    userId = info.sub;
+    displayName = info.name ?? info.given_name ?? info.sub;
+    avatarUrl = info.picture;
   }
-
-  const userData = (await userRes.json()) as {
-    items?: Array<{
-      id: string;
-      snippet: {
-        title: string;
-        customUrl?: string;
-        thumbnails?: { default?: { url: string } };
-      };
-    }>;
-  };
-
-  if (!userData.items || userData.items.length === 0) {
-    throw new Error("YouTube user info response empty");
-  }
-
-  const channel = userData.items[0]!;
 
   const expiresAt = tokens.expiresIn
     ? Math.floor(Date.now() / 1000) + tokens.expiresIn
     : undefined;
 
+  const username = customUrl ?? userId;
+
   AccountStore.upsert({
-    id: `youtube:${channel.id}`,
+    id: `youtube:${userId}`,
     platform: "youtube",
-    platformUserId: channel.id,
-    username: channel.snippet.customUrl ?? channel.id,
-    displayName: channel.snippet.title,
-    avatarUrl: channel.snippet.thumbnails?.default?.url,
+    platformUserId: userId,
+    username,
+    displayName,
+    avatarUrl,
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
     expiresAt,
     scopes: tokens.scope,
   });
 
-  log.info(`Logged in as ${channel.snippet.title}`);
-
-  const username = channel.snippet.customUrl ?? channel.id;
+  log.info(`Logged in as ${displayName}`);
 
   return {
     response: new Response(successPage("YouTube"), {
@@ -218,7 +251,7 @@ export async function handleYouTubeCallback(url: URL): Promise<{
     user: {
       platform: "youtube" as const,
       username,
-      displayName: channel.snippet.title,
+      displayName,
     },
     channelSlug: username,
   };

@@ -110,7 +110,7 @@ type BunRequests = {
   getWatchedChannels: { params: void; response: WatchedChannel[] };
   /** Add a new watched channel (persists + auto-connects) */
   addWatchedChannel: {
-    params: { platform: "twitch" | "kick"; channelSlug: string };
+    params: { platform: "twitch" | "kick" | "youtube"; channelSlug: string };
     response: WatchedChannel;
   };
   /** Remove a watched channel */
