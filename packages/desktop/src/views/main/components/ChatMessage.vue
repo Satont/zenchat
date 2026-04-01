@@ -473,6 +473,7 @@ onMounted(() => {
   align-items: flex-start;
   gap: 10px;
   padding: 6px 14px;
+  padding-right: 40px;
   font-size: var(--font-size, 14px);
   line-height: 1.45;
   word-break: break-word;
@@ -682,10 +683,12 @@ onMounted(() => {
   align-items: baseline;
   gap: 5px;
   padding: 3px 14px;
+  padding-right: 40px;
   font-size: var(--font-size, 14px);
   line-height: 1.5;
   word-break: break-word;
   flex-wrap: wrap;
+  position: relative;
 }
 .msg-compact:hover {
   background: rgba(255, 255, 255, 0.025);
@@ -721,9 +724,9 @@ onMounted(() => {
 }
 
 .msg-compact .copy-btn {
-  position: static;
-  transform: none;
-  margin-left: auto;
-  flex-shrink: 0;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
 }
 </style>
