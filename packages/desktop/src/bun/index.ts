@@ -45,6 +45,9 @@ import { sevenTVEventClient } from "../platforms/7tv/event-client";
 import { WatchedChannelManager } from "../watched-channels/manager";
 import { logger } from "@twirchat/shared/logger";
 
+// Set process title to show "TwirChat" instead of "bun" in process managers
+process.title = "TwirChat";
+
 import type { TwirChatRPCSchema, WebviewSender } from "../shared/rpc";
 import type {
   StreamStatusResponse,
