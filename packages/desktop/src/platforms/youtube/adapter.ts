@@ -27,6 +27,8 @@ import { logger } from "@twirchat/shared/logger";
 
 const log = logger("youtube");
 
+const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
+
 // Extract types from youtubei.js YT namespace
 type LiveChatInstance = InstanceType<typeof YT.LiveChat>;
 
@@ -62,18 +64,31 @@ export class YouTubeAdapter extends BasePlatformAdapter {
 
   private innertube: Awaited<ReturnType<typeof Innertube.create>> | null = null;
   private liveChat: LiveChatInstance | null = null;
+  private isAuthenticated = false;
+  
+  // For sending messages via official API
+  private liveChatId: string | null = null;
+  private accessToken: string | null = null;
+  private accountId: string | null = null;
 
   async connect(channelIdOrHandle: string): Promise<void> {
     this.channelId = channelIdOrHandle;
     this.shouldReconnect = true;
     this.reconnectAttempts = 0;
 
-    this.emit("status", {
-      platform: "youtube",
-      status: "connecting",
-      mode: "anonymous",
-      channelLogin: this.channelId,
-    });
+    // Check if user is authenticated with YouTube
+    const account = AccountStore.findByPlatform("youtube");
+    this.isAuthenticated = !!account;
+    
+    if (account) {
+      this.accountId = account.id;
+      const tokens = AccountStore.getTokens(account.id);
+      if (tokens) {
+        this.accessToken = tokens.accessToken;
+      }
+    }
+
+    this.emitStatus("connecting");
 
     // Resolve channel ID from handle if needed
     try {
@@ -82,17 +97,21 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       log.error(`[YouTube] Failed to resolve channel: ${errorMessage}`);
       
-      this.emit("status", {
-        platform: "youtube",
-        status: "error",
-        mode: "anonymous",
-        error: errorMessage,
-        channelLogin: this.channelId,
-      });
+      this.emitStatus("error", errorMessage);
       return;
     }
 
     await this.tryConnect();
+  }
+
+  private emitStatus(status: "connecting" | "connected" | "disconnected" | "error", error?: string): void {
+    this.emit("status", {
+      platform: "youtube",
+      status,
+      mode: this.isAuthenticated ? "authenticated" : "anonymous",
+      channelLogin: this.channelId,
+      ...(error && { error }),
+    });
   }
 
   /**
@@ -165,6 +184,8 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     return null;
   }
 
+  private currentVideoId: string | null = null;
+
   private async tryConnect(): Promise<void> {
     if (!this.shouldReconnect) return;
 
@@ -188,13 +209,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
 
       if (!liveStreams.videos || liveStreams.videos.length === 0) {
         log.info("[YouTube] No active live stream found");
-        this.emit("status", {
-          platform: "youtube",
-          status: "connecting",
-          mode: "anonymous",
-          error: "Waiting for live stream to start...",
-          channelLogin: this.channelId,
-        });
+        this.emitStatus("connecting", "Waiting for live stream to start...");
 
         this.scheduleReconnect();
         return;
@@ -214,6 +229,9 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       if (!videoId) {
         throw new Error("Live video has no ID");
       }
+
+      // Save videoId for later use (to get liveChatId when sending messages)
+      this.currentVideoId = videoId;
 
       log.info(
         `[YouTube] Found live stream: ${videoTitle || "Unknown"} (${videoId})`,
@@ -237,25 +255,14 @@ export class YouTubeAdapter extends BasePlatformAdapter {
 
       this.reconnectAttempts = 0;
 
-      this.emit("status", {
-        platform: "youtube",
-        status: "connected",
-        mode: "anonymous",
-        channelLogin: this.channelId,
-      });
+      this.emitStatus("connected");
 
       log.info("[YouTube] Connected to live chat");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       log.error(`[YouTube] Connection error: ${errorMessage}`);
 
-      this.emit("status", {
-        platform: "youtube",
-        status: "error",
-        mode: "anonymous",
-        error: errorMessage,
-        channelLogin: this.channelId,
-      });
+      this.emitStatus("error", errorMessage);
 
       this.scheduleReconnect();
     }
@@ -516,21 +523,148 @@ export class YouTubeAdapter extends BasePlatformAdapter {
 
     this.innertube = null;
 
-    this.emit("status", {
-      platform: "youtube",
-      status: "disconnected",
-      mode: "anonymous",
-    });
+    this.emitStatus("disconnected");
 
     log.info("[YouTube] Disconnected");
   }
 
-  async sendMessage(_channelId: string, _text: string): Promise<void> {
-    // Sending messages requires authentication
-    // This would need to be implemented with OAuth if needed
-    throw new Error(
-      "YouTubeAdapter.sendMessage: not implemented for unofficial API. Use official API for sending messages.",
-    );
+  /**
+   * Fetches the liveChatId using the official YouTube API.
+   * Uses the videoId we already got from Innertube (no extra search request).
+   */
+  private async fetchLiveChatId(): Promise<string | null> {
+    if (!this.accessToken) {
+      log.warn("[YouTube] Cannot fetch liveChatId: no access token");
+      return null;
+    }
+
+    if (!this.currentVideoId) {
+      log.warn("[YouTube] Cannot fetch liveChatId: no videoId");
+      return null;
+    }
+
+    try {
+      // Get liveChatId from video details (only 1 API call)
+      const videoRes = await this.fetchWithAuth(
+        `${YOUTUBE_API_BASE}/videos?part=liveStreamingDetails&id=${encodeURIComponent(this.currentVideoId)}`,
+      );
+
+      if (!videoRes.ok) {
+        const body = await videoRes.text();
+        log.warn(`[YouTube] Video details failed: ${videoRes.status}`, { body: body.slice(0, 300) });
+        return null;
+      }
+
+      const videoBody = (await videoRes.json()) as {
+        items?: Array<{ liveStreamingDetails?: { activeLiveChatId?: string } }>;
+      };
+      const liveChatId = videoBody.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
+
+      if (liveChatId) {
+        log.info(`[YouTube] Found liveChatId: ${liveChatId}`);
+      }
+
+      return liveChatId ?? null;
+    } catch (err) {
+      log.error(`[YouTube] Failed to fetch liveChatId`, { error: String(err) });
+      return null;
+    }
+  }
+
+  /**
+   * Makes an authenticated request to YouTube API.
+   * Automatically refreshes token on 401.
+   */
+  private async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+    if (!this.accessToken) throw new Error("No access token");
+
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+    });
+
+    // If 401, try to refresh token and retry once
+    if (res.status === 401 && this.accountId) {
+      log.info("[YouTube] Got 401, attempting token refresh...");
+      const refreshed = await this.refreshTokenIfNeeded();
+      if (refreshed) {
+        return fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            Authorization: `Bearer ${this.accessToken}`,
+          },
+        });
+      }
+    }
+
+    return res;
+  }
+
+  /**
+   * Refreshes the access token if needed.
+   */
+  private async refreshTokenIfNeeded(): Promise<boolean> {
+    if (!this.accountId) return false;
+
+    const tokens = AccountStore.getTokens(this.accountId);
+    if (!tokens?.refreshToken) return false;
+
+    const now = Math.floor(Date.now() / 1000);
+    if (tokens.expiresAt && tokens.expiresAt < now + 300) {
+      log.info("[YouTube] Token expired or expiring soon, refreshing...");
+      try {
+        const { refreshYouTubeToken } = await import("../../auth/youtube.js");
+        this.accessToken = await refreshYouTubeToken(this.accountId);
+        log.info("[YouTube] Token refreshed successfully");
+        return true;
+      } catch (err) {
+        log.error("[YouTube] Failed to refresh token", { error: String(err) });
+        return false;
+      }
+    }
+    return false;
+  }
+
+  async sendMessage(_channelId: string, text: string): Promise<void> {
+    if (!this.accessToken) {
+      throw new Error("YouTubeAdapter.sendMessage: not authenticated");
+    }
+
+    // Get liveChatId if we don't have it yet (lazy load - only when sending)
+    if (!this.liveChatId) {
+      this.liveChatId = await this.fetchLiveChatId();
+    }
+
+    if (!this.liveChatId) {
+      throw new Error("YouTubeAdapter.sendMessage: no active live chat");
+    }
+
+    const res = await this.fetchWithAuth(`${YOUTUBE_API_BASE}/liveChat/messages?part=snippet`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        snippet: {
+          liveChatId: this.liveChatId,
+          type: "textMessageEvent",
+          textMessageDetails: {
+            messageText: text,
+          },
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`YouTube sendMessage failed: ${res.status} ${body}`);
+    }
+
+    log.info(`[YouTube] Message sent: ${text.slice(0, 50)}...`);
   }
 
   private scheduleReconnect(): void {
@@ -555,13 +689,7 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       `[YouTube] Reconnecting in ${Math.round(delay / 1000)}s... (attempt ${this.reconnectAttempts})`,
     );
 
-    this.emit("status", {
-      platform: "youtube",
-      status: "connecting",
-      mode: "anonymous",
-      error: `Reconnecting in ${Math.round(delay / 1000)}s...`,
-      channelLogin: this.channelId,
-    });
+    this.emitStatus("connecting", `Reconnecting in ${Math.round(delay / 1000)}s...`);
 
     this.reconnectTimeout = setTimeout(() => {
       this.tryConnect();
