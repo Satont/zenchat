@@ -12,7 +12,7 @@ const log = logger("kick-chatroom");
 
 export interface KickChatroomResponse {
   chatroomId: number;
-  channelId: number;
+  broadcasterUserId: number;
 }
 
 export async function handleKickChatroom(url: URL): Promise<KickChatroomResponse> {
@@ -42,11 +42,11 @@ export async function handleKickChatroom(url: URL): Promise<KickChatroomResponse
   };
 
   const chatroomId = body.chatroom?.id;
-  const channelId = body.id;
+  const broadcasterUserId = body.user_id;
 
   if (!chatroomId) throw new Error(`Kick chatroom.id not found for "${slug}"`);
-  if (!channelId) throw new Error(`Kick channel.id not found for "${slug}"`);
+  if (!broadcasterUserId) throw new Error(`Kick user_id not found for "${slug}"`);
 
-  log.debug("Kick chatroom resolved", { slug, chatroomId, channelId });
-  return { chatroomId, channelId };
+  log.debug("Kick chatroom resolved", { slug, chatroomId, broadcasterUserId });
+  return { chatroomId, broadcasterUserId };
 }

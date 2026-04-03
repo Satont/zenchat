@@ -85,6 +85,7 @@ export class KickAdapter extends BasePlatformAdapter {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private channelSlug = "";
   private chatroomId: number | null = null;
+  private broadcasterUserId: number | null = null;
   private isConnected = false;
   private shouldReconnect = true;
 
@@ -132,7 +133,9 @@ export class KickAdapter extends BasePlatformAdapter {
       channelLogin: channelSlug,
     });
 
-    this.chatroomId = await this.fetchChatroomId(channelSlug);
+    const info = await this.fetchChatroomId(channelSlug);
+    this.chatroomId = info.chatroomId;
+    this.broadcasterUserId = info.broadcasterUserId;
     await this.connectPusher();
   }
 
@@ -168,7 +171,7 @@ export class KickAdapter extends BasePlatformAdapter {
     await this.refreshTokenIfNeeded();
 
     const body = {
-      broadcaster_user_id: Number(this.platformUserId),
+      broadcaster_user_id: this.broadcasterUserId ?? Number(this.platformUserId),
       content: text,
       type: "user",
     };
@@ -232,7 +235,7 @@ export class KickAdapter extends BasePlatformAdapter {
   // Private
   // ============================================================
 
-  private async fetchChatroomId(channelSlug: string): Promise<number> {
+  private async fetchChatroomId(channelSlug: string): Promise<{ chatroomId: number; broadcasterUserId: number }> {
     const url = `${getBackendUrl()}/api/kick/chatroom?slug=${encodeURIComponent(channelSlug)}`;
     const res = await fetch(url);
     if (!res.ok) {
@@ -242,20 +245,25 @@ export class KickAdapter extends BasePlatformAdapter {
       );
     }
 
-    const data = (await res.json()) as { chatroomId?: number; error?: string };
+    const data = (await res.json()) as { chatroomId?: number; broadcasterUserId?: number; error?: string };
     if (data.error)
       throw new Error(
         `Kick chatroom error for "${channelSlug}": ${data.error}`,
       );
 
-    const id = data.chatroomId;
-    if (!id)
+    const chatroomId = data.chatroomId;
+    const broadcasterUserId = data.broadcasterUserId;
+    if (!chatroomId)
       throw new Error(
         `Kick chatroom ID not found for channel "${channelSlug}"`,
       );
+    if (!broadcasterUserId)
+      throw new Error(
+        `Kick broadcaster user ID not found for channel "${channelSlug}"`,
+      );
 
-    log.info(`[Kick] Channel "${channelSlug}" → chatroom_id=${id}`);
-    return id;
+    log.info(`[Kick] Channel "${channelSlug}" → chatroom_id=${chatroomId}, broadcaster_user_id=${broadcasterUserId}`);
+    return { chatroomId, broadcasterUserId };
   }
 
   private async connectPusher(): Promise<void> {
