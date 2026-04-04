@@ -155,14 +155,14 @@ query GetEmoteSet($id: Id!) {
 
 ```typescript
 // codegen.ts
-import type { CodegenConfig } from "@graphql-codegen/cli";
+import type { CodegenConfig } from '@graphql-codegen/cli'
 
 const config: CodegenConfig = {
-  schema: "./src/seventv/schema.graphql",
-  documents: "./src/seventv/queries/*.graphql",
+  schema: './src/seventv/schema.graphql',
+  documents: './src/seventv/queries/*.graphql',
   generates: {
-    "./src/seventv/gql/": {
-      preset: "client",
+    './src/seventv/gql/': {
+      preset: 'client',
       plugins: [],
       config: {
         useTypeImports: true,
@@ -170,9 +170,9 @@ const config: CodegenConfig = {
       },
     },
   },
-};
+}
 
-export default config;
+export default config
 ```
 
 **Script to add:**
@@ -210,37 +210,33 @@ packages/backend/src/seventv/
 ```typescript
 // cache.ts
 interface CachedEmoteSet {
-  id: string;
-  channelId: string;
-  platform: Platform;
-  emotes: SevenTVEmoteSetEmote[];
-  fetchedAt: Date;
-  ttl: number; // ms
+  id: string
+  channelId: string
+  platform: Platform
+  emotes: SevenTVEmoteSetEmote[]
+  fetchedAt: Date
+  ttl: number // ms
 }
 
 class SevenTVCache {
-  private cache = new Map<string, CachedEmoteSet>();
-  private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
+  private cache = new Map<string, CachedEmoteSet>()
+  private readonly DEFAULT_TTL = 5 * 60 * 1000 // 5 minutes
 
   // Key format: `${platform}:${channelId}`
 
-  get(channelKey: string): CachedEmoteSet | undefined;
-  set(channelKey: string, data: CachedEmoteSet): void;
-  has(channelKey: string): boolean;
-  invalidate(channelKey: string): void;
-  invalidateAll(): void;
+  get(channelKey: string): CachedEmoteSet | undefined
+  set(channelKey: string, data: CachedEmoteSet): void
+  has(channelKey: string): boolean
+  invalidate(channelKey: string): void
+  invalidateAll(): void
 
   // Update specific emote in cached set
-  updateEmote(
-    channelKey: string,
-    emoteId: string,
-    update: Partial<Emote>,
-  ): void;
-  addEmote(channelKey: string, emote: SevenTVEmoteSetEmote): void;
-  removeEmote(channelKey: string, emoteId: string): void;
+  updateEmote(channelKey: string, emoteId: string, update: Partial<Emote>): void
+  addEmote(channelKey: string, emote: SevenTVEmoteSetEmote): void
+  removeEmote(channelKey: string, emoteId: string): void
 
   // Cleanup expired entries
-  cleanup(): void;
+  cleanup(): void
 }
 ```
 
@@ -258,70 +254,66 @@ class SevenTVCache {
 // subscription-manager.ts
 
 interface Subscription {
-  type: "emote_set.update" | "user.update";
-  condition: Record<string, string>;
-  weight: number;
-  channelKey: string; // `${platform}:${channelId}`
-  clientSecrets: Set<string>; // Desktop clients interested
+  type: 'emote_set.update' | 'user.update'
+  condition: Record<string, string>
+  weight: number
+  channelKey: string // `${platform}:${channelId}`
+  clientSecrets: Set<string> // Desktop clients interested
 }
 
 interface ConnectionPool {
-  ws: WebSocket;
-  sessionId: string;
-  subscriptions: Map<string, Subscription>; // subscriptionId -> Subscription
-  totalWeight: number;
-  maxWeight: number;
-  isReady: boolean;
+  ws: WebSocket
+  sessionId: string
+  subscriptions: Map<string, Subscription> // subscriptionId -> Subscription
+  totalWeight: number
+  maxWeight: number
+  isReady: boolean
 }
 
 class SevenTVSubscriptionManager {
-  private pools: ConnectionPool[] = [];
-  private readonly MAX_WEIGHT_PER_POOL = 500;
-  private readonly POOL_TARGET_WEIGHT = 400; // Leave headroom
+  private pools: ConnectionPool[] = []
+  private readonly MAX_WEIGHT_PER_POOL = 500
+  private readonly POOL_TARGET_WEIGHT = 400 // Leave headroom
 
   // Channel -> Subscription mapping
-  private channelSubscriptions = new Map<string, Subscription>();
+  private channelSubscriptions = new Map<string, Subscription>()
 
   // Add desktop client interest in a channel
-  async subscribeClient(
-    clientSecret: string,
-    platform: Platform,
-    channelId: string,
-  ): Promise<void>;
+  async subscribeClient(clientSecret: string, platform: Platform, channelId: string): Promise<void>
 
   // Remove desktop client interest
   async unsubscribeClient(
     clientSecret: string,
     platform: Platform,
     channelId: string,
-  ): Promise<void>;
+  ): Promise<void>
 
   // Internal: find or create pool with available capacity
-  private getOrCreatePool(): ConnectionPool;
+  private getOrCreatePool(): ConnectionPool
 
   // Internal: subscribe to 7TV EventAPI
   private async addSubscriptionToPool(
     pool: ConnectionPool,
     subscription: Subscription,
-  ): Promise<void>;
+  ): Promise<void>
 
   // Internal: unsubscribe from 7TV EventAPI
   private async removeSubscriptionFromPool(
     pool: ConnectionPool,
     subscriptionId: string,
-  ): Promise<void>;
+  ): Promise<void>
 
   // Handle incoming 7TV events
-  private handleEvent(event: SevenTVEvent): void;
+  private handleEvent(event: SevenTVEvent): void
 
   // Forward event to interested desktop clients
-  private forwardToClients(channelKey: string, event: SevenTVUpdateEvent): void;
+  private forwardToClients(channelKey: string, event: SevenTVUpdateEvent): void
 
   // Reconnection with resume
-  private async reconnectPool(pool: ConnectionPool): Promise<void>;
+  private async reconnectPool(pool: ConnectionPool): Promise<void>
 
   // Graceful cleanup on shutdown
-  dispose(): Promise<void>;
+  dispose(): Promise<void>
 }
 ```
 
@@ -331,54 +323,54 @@ class SevenTVSubscriptionManager {
 // event-client.ts
 
 interface SevenTVEventMessage {
-  op: number;
-  t?: number;
-  d?: unknown;
+  op: number
+  t?: number
+  d?: unknown
 }
 
 interface SevenTVHello {
-  heartbeat_interval: number;
-  session_id: string;
-  subscription_limit: number;
+  heartbeat_interval: number
+  session_id: string
+  subscription_limit: number
 }
 
 interface SevenTVDispatch {
-  type: string;
+  type: string
   body: {
-    id: string;
-    actor?: { id: string; display_name: string };
-    pushed?: ChangeField[];
-    pulled?: ChangeField[];
-    updated?: ChangeField[];
-  };
+    id: string
+    actor?: { id: string; display_name: string }
+    pushed?: ChangeField[]
+    pulled?: ChangeField[]
+    updated?: ChangeField[]
+  }
 }
 
 class SevenTVEventClient {
-  private ws: WebSocket | null = null;
-  private heartbeatInterval: Timer | null = null;
-  private reconnectTimer: Timer | null = null;
-  private sessionId: string | null = null;
-  private subscriptionLimit = 0;
-  private pendingSubscriptions: Subscription[] = [];
-  private isConnecting = false;
-  private messageQueue: SevenTVEventMessage[] = [];
+  private ws: WebSocket | null = null
+  private heartbeatInterval: Timer | null = null
+  private reconnectTimer: Timer | null = null
+  private sessionId: string | null = null
+  private subscriptionLimit = 0
+  private pendingSubscriptions: Subscription[] = []
+  private isConnecting = false
+  private messageQueue: SevenTVEventMessage[] = []
 
   // Callbacks
-  onHello?: (hello: SevenTVHello) => void;
-  onDispatch?: (dispatch: SevenTVDispatch) => void;
-  onError?: (error: Error) => void;
-  onClose?: (code: number, reason: string) => void;
+  onHello?: (hello: SevenTVHello) => void
+  onDispatch?: (dispatch: SevenTVDispatch) => void
+  onError?: (error: Error) => void
+  onClose?: (code: number, reason: string) => void
 
-  async connect(): Promise<void>;
-  disconnect(): void;
+  async connect(): Promise<void>
+  disconnect(): void
 
-  subscribe(type: string, condition: Record<string, string>): void;
-  unsubscribe(type: string, condition?: Record<string, string>): void;
+  subscribe(type: string, condition: Record<string, string>): void
+  unsubscribe(type: string, condition?: Record<string, string>): void
 
-  private send(message: SevenTVEventMessage): void;
-  private startHeartbeat(interval: number): void;
-  private scheduleReconnect(delay?: number): void;
-  private handleMessage(data: string): void;
+  private send(message: SevenTVEventMessage): void
+  private startHeartbeat(interval: number): void
+  private scheduleReconnect(delay?: number): void
+  private handleMessage(data: string): void
 }
 ```
 
@@ -386,38 +378,38 @@ class SevenTVEventClient {
 
 ```typescript
 // image-proxy.ts
-import { route } from "../routes/utils";
+import { route } from '../routes/utils'
 
-const SEVENTV_CDN_BASE = "https://cdn.7tv.app/emote";
+const SEVENTV_CDN_BASE = 'https://cdn.7tv.app/emote'
 
 export function handleSevenTVImageProxy(req: Request): Response {
-  const url = new URL(req.url);
-  const emoteId = url.pathname.split("/").pop();
-  const size = url.searchParams.get("size") || "4x";
-  const format = url.searchParams.get("format") || "webp";
+  const url = new URL(req.url)
+  const emoteId = url.pathname.split('/').pop()
+  const size = url.searchParams.get('size') || '4x'
+  const format = url.searchParams.get('format') || 'webp'
 
   if (!emoteId) {
-    return new Response("Missing emote ID", { status: 400 });
+    return new Response('Missing emote ID', { status: 400 })
   }
 
-  const sevenTvUrl = `${SEVENTV_CDN_BASE}/${emoteId}/${size}.${format}`;
+  const sevenTvUrl = `${SEVENTV_CDN_BASE}/${emoteId}/${size}.${format}`
 
   // Proxy the request
   return fetch(sevenTvUrl, {
     headers: {
-      Accept: req.headers.get("Accept") || "image/webp,image/avif,*/*",
+      Accept: req.headers.get('Accept') || 'image/webp,image/avif,*/*',
     },
   }).then((response) => {
     // Clone and add CORS headers
-    const newHeaders = new Headers(response.headers);
-    newHeaders.set("Access-Control-Allow-Origin", "*");
-    newHeaders.set("Cache-Control", "public, max-age=86400"); // 24h cache
+    const newHeaders = new Headers(response.headers)
+    newHeaders.set('Access-Control-Allow-Origin', '*')
+    newHeaders.set('Cache-Control', 'public, max-age=86400') // 24h cache
 
     return new Response(response.body, {
       status: response.status,
       headers: newHeaders,
-    });
-  });
+    })
+  })
 }
 
 // Route registration
@@ -454,21 +446,21 @@ export type DesktopToBackendMessage =
 
 ```typescript
 export interface SevenTVEmote {
-  id: string;
-  alias: string;
-  name: string;
-  animated: boolean;
-  zeroWidth: boolean;
-  aspectRatio: number;
-  imageUrl: string; // Will be proxied URL
+  id: string
+  alias: string
+  name: string
+  animated: boolean
+  zeroWidth: boolean
+  aspectRatio: number
+  imageUrl: string // Will be proxied URL
 }
 
 export interface SevenTVEmoteSet {
-  id: string;
-  name: string;
-  channelId: string;
-  platform: Platform;
-  emotes: SevenTVEmote[];
+  id: string
+  name: string
+  channelId: string
+  platform: Platform
+  emotes: SevenTVEmote[]
 }
 ```
 
@@ -481,39 +473,31 @@ export interface SevenTVEmoteSet {
 **Modify `packages/backend/src/ws/handlers.ts`:**
 
 ```typescript
-import { sevenTVManager } from "../seventv";
+import { sevenTVManager } from '../seventv'
 
 export async function handleWsMessage(
   ws: ServerWebSocket<WsData>,
   message: string | Buffer,
 ): Promise<void> {
-  const data = JSON.parse(message.toString()) as DesktopToBackendMessage;
+  const data = JSON.parse(message.toString()) as DesktopToBackendMessage
 
   switch (data.type) {
     // ... existing cases
 
-    case "seventv_subscribe":
-      await sevenTVManager.subscribeClient(
-        ws.data.clientSecret,
-        data.platform,
-        data.channelId,
-      );
-      break;
+    case 'seventv_subscribe':
+      await sevenTVManager.subscribeClient(ws.data.clientSecret, data.platform, data.channelId)
+      break
 
-    case "seventv_unsubscribe":
-      await sevenTVManager.unsubscribeClient(
-        ws.data.clientSecret,
-        data.platform,
-        data.channelId,
-      );
-      break;
+    case 'seventv_unsubscribe':
+      await sevenTVManager.unsubscribeClient(ws.data.clientSecret, data.platform, data.channelId)
+      break
   }
 }
 
 export function handleWsClose(ws: ServerWebSocket<WsData>): void {
-  connectionManager.remove(ws);
+  connectionManager.remove(ws)
   // Cleanup 7TV subscriptions for this client
-  sevenTVManager.cleanupClient(ws.data.clientSecret);
+  sevenTVManager.cleanupClient(ws.data.clientSecret)
 }
 ```
 
@@ -522,16 +506,16 @@ export function handleWsClose(ws: ServerWebSocket<WsData>): void {
 **Modify `packages/backend/src/index.ts`:**
 
 ```typescript
-import { handleSevenTVImageProxy } from "./seventv/image-proxy";
+import { handleSevenTVImageProxy } from './seventv/image-proxy'
 
 const server = Bun.serve<WsData>({
   // ...
   routes: {
     // ... existing routes
-    "/proxy/7tv/:emoteId": (req) => handleSevenTVImageProxy(req),
+    '/proxy/7tv/:emoteId': (req) => handleSevenTVImageProxy(req),
   },
   // ...
-});
+})
 ```
 
 ---
@@ -560,25 +544,25 @@ const server = Bun.serve<WsData>({
 ```typescript
 // packages/desktop/src/seventv/index.ts
 
-import { rpc } from "../shared/rpc";
+import { rpc } from '../shared/rpc'
 
 interface SevenTVEmote {
-  id: string;
-  alias: string;
-  name: string;
-  animated: boolean;
-  zeroWidth: boolean;
-  aspectRatio: number;
-  imageUrl: string;
+  id: string
+  alias: string
+  name: string
+  animated: boolean
+  zeroWidth: boolean
+  aspectRatio: number
+  imageUrl: string
 }
 
 class DesktopSevenTVService {
-  private emotesByChannel = new Map<string, Map<string, SevenTVEmote>>(); // channelKey -> alias -> emote
-  private backendUrl: string;
+  private emotesByChannel = new Map<string, Map<string, SevenTVEmote>>() // channelKey -> alias -> emote
+  private backendUrl: string
 
   constructor(backendUrl: string) {
-    this.backendUrl = backendUrl;
-    this.setupMessageHandlers();
+    this.backendUrl = backendUrl
+    this.setupMessageHandlers()
   }
 
   private setupMessageHandlers(): void {
@@ -587,72 +571,58 @@ class DesktopSevenTVService {
   }
 
   // Subscribe to 7TV emotes for a channel
-  async subscribeToChannel(
-    platform: Platform,
-    channelId: string,
-  ): Promise<void> {
+  async subscribeToChannel(platform: Platform, channelId: string): Promise<void> {
     // Send via backend WebSocket: { type: 'seventv_subscribe', platform, channelId }
   }
 
   // Unsubscribe when leaving channel
-  async unsubscribeFromChannel(
-    platform: Platform,
-    channelId: string,
-  ): Promise<void> {
+  async unsubscribeFromChannel(platform: Platform, channelId: string): Promise<void> {
     // Send via backend WebSocket: { type: 'seventv_unsubscribe', platform, channelId }
   }
 
   // Get proxied image URL
-  getImageUrl(emoteId: string, size: string = "4x"): string {
-    return `${this.backendUrl}/proxy/7tv/${emoteId}?size=${size}`;
+  getImageUrl(emoteId: string, size: string = '4x'): string {
+    return `${this.backendUrl}/proxy/7tv/${emoteId}?size=${size}`
   }
 
   // Lookup emote by alias for a channel
-  getEmote(
-    platform: Platform,
-    channelId: string,
-    alias: string,
-  ): SevenTVEmote | undefined {
-    const channelKey = `${platform}:${channelId}`;
-    return this.emotesByChannel.get(channelKey)?.get(alias.toLowerCase());
+  getEmote(platform: Platform, channelId: string, alias: string): SevenTVEmote | undefined {
+    const channelKey = `${platform}:${channelId}`
+    return this.emotesByChannel.get(channelKey)?.get(alias.toLowerCase())
   }
 
   // Handle incoming emote set from backend
   private handleEmoteSet(data: {
-    platform: Platform;
-    channelId: string;
-    emotes: SevenTVEmote[];
+    platform: Platform
+    channelId: string
+    emotes: SevenTVEmote[]
   }): void {
-    const channelKey = `${data.platform}:${data.channelId}`;
-    const emoteMap = new Map<string, SevenTVEmote>();
+    const channelKey = `${data.platform}:${data.channelId}`
+    const emoteMap = new Map<string, SevenTVEmote>()
 
     for (const emote of data.emotes) {
-      emoteMap.set(emote.alias.toLowerCase(), emote);
+      emoteMap.set(emote.alias.toLowerCase(), emote)
     }
 
-    this.emotesByChannel.set(channelKey, emoteMap);
+    this.emotesByChannel.set(channelKey, emoteMap)
   }
 
   // Handle emote updates
   private handleEmoteAdded(data: {
-    platform: Platform;
-    channelId: string;
-    emote: SevenTVEmote;
-  }): void;
-  private handleEmoteRemoved(data: {
-    platform: Platform;
-    channelId: string;
-    emoteId: string;
-  }): void;
+    platform: Platform
+    channelId: string
+    emote: SevenTVEmote
+  }): void
+  private handleEmoteRemoved(data: { platform: Platform; channelId: string; emoteId: string }): void
   private handleEmoteUpdated(data: {
-    platform: Platform;
-    channelId: string;
-    emoteId: string;
-    alias: string;
-  }): void;
+    platform: Platform
+    channelId: string
+    emoteId: string
+    alias: string
+  }): void
 }
 
-export const sevenTVService = new DesktopSevenTVService(BACKEND_URL);
+export const sevenTVService = new DesktopSevenTVService(BACKEND_URL)
 ```
 
 ### 5.3 Emote Parser Update
@@ -660,31 +630,31 @@ export const sevenTVService = new DesktopSevenTVService(BACKEND_URL);
 **Modify `packages/desktop/src/platforms/7tv/emote-parser.ts`:**
 
 ```typescript
-import { sevenTVService } from "../../seventv";
+import { sevenTVService } from '../../seventv'
 
 export function parseMessageWithEmotes(
   text: string,
   platform: Platform,
   channelId: string,
 ): ParsedEmote[] {
-  const words = text.split(/\s+/);
-  const emotes: ParsedEmote[] = [];
-  let position = 0;
+  const words = text.split(/\s+/)
+  const emotes: ParsedEmote[] = []
+  let position = 0
 
   for (const word of words) {
-    const emote = sevenTVService.getEmote(platform, channelId, word);
+    const emote = sevenTVService.getEmote(platform, channelId, word)
     if (emote) {
       emotes.push({
         name: word,
         url: sevenTVService.getImageUrl(emote.id),
         positions: [{ start: position, end: position + word.length }],
         aspectRatio: emote.aspectRatio,
-      });
+      })
     }
-    position += word.length + 1; // +1 for space
+    position += word.length + 1 // +1 for space
   }
 
-  return emotes;
+  return emotes
 }
 ```
 
@@ -774,11 +744,11 @@ SEVENTV_IMAGE_CACHE_DAYS=1
 
 ```typescript
 // 7TV
-export const SEVENTV_GQL_ENDPOINT = "https://7tv.io/v4/gql";
-export const SEVENTV_EVENT_API_URL = "wss://events.7tv.io/v3";
-export const SEVENTV_CDN_BASE = "https://cdn.7tv.app/emote"; // Backend only
-export const SEVENTV_MAX_POOL_WEIGHT = 500;
-export const SEVENTV_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+export const SEVENTV_GQL_ENDPOINT = 'https://7tv.io/v4/gql'
+export const SEVENTV_EVENT_API_URL = 'wss://events.7tv.io/v3'
+export const SEVENTV_CDN_BASE = 'https://cdn.7tv.app/emote' // Backend only
+export const SEVENTV_MAX_POOL_WEIGHT = 500
+export const SEVENTV_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 ```
 
 ---
@@ -800,10 +770,10 @@ export const SEVENTV_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 ```typescript
 interface ReconnectionConfig {
-  maxRetries: number;
-  baseDelay: number; // 1000ms
-  maxDelay: number; // 30000ms
-  backoffMultiplier: number; // 2
+  maxRetries: number
+  baseDelay: number // 1000ms
+  maxDelay: number // 30000ms
+  backoffMultiplier: number // 2
 }
 
 // Close codes from 7TV that warrant reconnection:
@@ -825,18 +795,18 @@ interface ReconnectionConfig {
 // seventv/subscription-manager.test.ts
 // seventv/event-client.test.ts
 
-describe("SevenTVCache", () => {
-  test("should return stale data when GQL fails", () => {});
-  test("should cleanup expired entries", () => {});
-  test("should update emote in place", () => {});
-});
+describe('SevenTVCache', () => {
+  test('should return stale data when GQL fails', () => {})
+  test('should cleanup expired entries', () => {})
+  test('should update emote in place', () => {})
+})
 
-describe("SevenTVSubscriptionManager", () => {
-  test("should pool subscriptions across multiple connections", () => {});
-  test("should unsubscribe from 7TV when last client leaves", () => {});
-  test("should handle client disconnect cleanup", () => {});
-  test("should create new pool when weight limit reached", () => {});
-});
+describe('SevenTVSubscriptionManager', () => {
+  test('should pool subscriptions across multiple connections', () => {})
+  test('should unsubscribe from 7TV when last client leaves', () => {})
+  test('should handle client disconnect cleanup', () => {})
+  test('should create new pool when weight limit reached', () => {})
+})
 ```
 
 ### 9.2 Integration Tests

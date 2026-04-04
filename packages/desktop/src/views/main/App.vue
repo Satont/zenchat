@@ -1,89 +1,104 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import PlatformsPanel from "./components/PlatformsPanel.vue";
-import ChatList from "./components/ChatList.vue";
-import EventsFeed from "./components/EventsFeed.vue";
-import SettingsPanel from "./components/SettingsPanel.vue";
-import ChannelTabBar from "./components/ChannelTabBar.vue";
-import AddChannelModal from "./components/AddChannelModal.vue";
-import { rpc } from "./main";
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import PlatformsPanel from './components/PlatformsPanel.vue'
+import ChatList from './components/ChatList.vue'
+import EventsFeed from './components/EventsFeed.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
+import ChannelTabBar from './components/ChannelTabBar.vue'
+import AddChannelModal from './components/AddChannelModal.vue'
+import { rpc } from './main'
 import type {
+  Account,
+  AppSettings,
   NormalizedChatMessage,
   NormalizedEvent,
   PlatformStatusInfo,
-  Account,
-  AppSettings,
   WatchedChannel,
-} from "@twirchat/shared/types";
+} from '@twirchat/shared/types'
 
 // ----------------------------------------------------------------
 // State
 // ----------------------------------------------------------------
 
-const messages = ref<NormalizedChatMessage[]>([]);
-const events = ref<NormalizedEvent[]>([]);
-const statuses = ref<Map<string, PlatformStatusInfo>>(new Map());
-const accounts = ref<Account[]>([]);
-const settings = ref<AppSettings | null>(null);
-const activeTab = ref<"chat" | "events" | "platforms" | "settings">("chat");
-const unreadEvents = ref(0);
+const messages = ref<NormalizedChatMessage[]>([])
+const events = ref<NormalizedEvent[]>([])
+const statuses = ref<Map<string, PlatformStatusInfo>>(new Map())
+const accounts = ref<Account[]>([])
+const settings = ref<AppSettings | null>(null)
+const activeTab = ref<'chat' | 'events' | 'platforms' | 'settings'>('chat')
+const unreadEvents = ref(0)
 
 // ---- Watched channels ----
-const watchedChannels = ref<WatchedChannel[]>([]);
+const watchedChannels = ref<WatchedChannel[]>([])
 /** "home" | WatchedChannel.id */
-const activeChatTab = ref<string>("home");
-/** channelId → messages buffer */
-const watchedMessages = ref<Map<string, NormalizedChatMessage[]>>(new Map());
-/** channelId → PlatformStatusInfo */
-const watchedStatuses = ref<Map<string, PlatformStatusInfo>>(new Map());
-/** channelId → stream is live */
-const watchedLiveStatuses = ref<Map<string, boolean>>(new Map());
-const showAddModal = ref(false);
+const activeChatTab = ref<string>('home')
+/** ChannelId → messages buffer */
+const watchedMessages = ref<Map<string, NormalizedChatMessage[]>>(new Map())
+/** ChannelId → PlatformStatusInfo */
+const watchedStatuses = ref<Map<string, PlatformStatusInfo>>(new Map())
+/** ChannelId → stream is live */
+const watchedLiveStatuses = ref<Map<string, boolean>>(new Map())
+const showAddModal = ref(false)
 
-let watchedLiveStatusInterval: ReturnType<typeof setInterval> | null = null;
+let watchedLiveStatusInterval: ReturnType<typeof setInterval> | null = null
 
 async function refreshWatchedLiveStatuses() {
-  const channels = watchedChannels.value;
+  const channels = watchedChannels.value
   // YouTube is not supported by the channels-status API — skip it
   const supportedChannels = channels.filter(
-    (ch): ch is WatchedChannel & { platform: "twitch" | "kick" } => ch.platform !== "youtube",
-  );
-  if (supportedChannels.length === 0) return;
+    (ch): ch is WatchedChannel & { platform: 'twitch' | 'kick' } => ch.platform !== 'youtube',
+  )
+  if (supportedChannels.length === 0) {
+    return
+  }
   try {
     const result = await rpc.request.getChannelsStatus({
-      channels: supportedChannels.map((ch) => ({ platform: ch.platform, channelLogin: ch.channelSlug })),
-    });
-    if (!result) return;
-    const map = new Map<string, boolean>(watchedLiveStatuses.value);
+      channels: supportedChannels.map((ch) => ({
+        channelLogin: ch.channelSlug,
+        platform: ch.platform,
+      })),
+    })
+    if (!result) {
+      return
+    }
+    const map = new Map<string, boolean>(watchedLiveStatuses.value)
     for (const ch of supportedChannels) {
       const s = result.channels.find(
-        (r) => r.platform === ch.platform && r.channelLogin.toLowerCase() === ch.channelSlug.toLowerCase(),
-      );
-      map.set(ch.id, s?.isLive ?? false);
+        (r) =>
+          r.platform === ch.platform &&
+          r.channelLogin.toLowerCase() === ch.channelSlug.toLowerCase(),
+      )
+      map.set(ch.id, s?.isLive ?? false)
     }
-    watchedLiveStatuses.value = map;
+    watchedLiveStatuses.value = map
   } catch {
     // Not fatal — live status is best-effort
   }
 }
 
 const activeWatchedChannel = computed<WatchedChannel | null>(() => {
-  if (activeChatTab.value === "home") return null;
-  return watchedChannels.value.find((c: WatchedChannel) => c.id === activeChatTab.value) ?? null;
-});
+  if (activeChatTab.value === 'home') {
+    return null
+  }
+  return watchedChannels.value.find((c: WatchedChannel) => c.id === activeChatTab.value) ?? null
+})
 
 const activeWatchedStatus = computed<PlatformStatusInfo | null>(() => {
-  if (!activeWatchedChannel.value) return null;
-  return watchedStatuses.value.get(activeWatchedChannel.value.id) ?? null;
-});
+  if (!activeWatchedChannel.value) {
+    return null
+  }
+  return watchedStatuses.value.get(activeWatchedChannel.value.id) ?? null
+})
 
 const activeWatchedMessages = computed<NormalizedChatMessage[]>(() => {
-  if (!activeWatchedChannel.value) return [];
-  return watchedMessages.value.get(activeWatchedChannel.value.id) ?? [];
-});
+  if (!activeWatchedChannel.value) {
+    return []
+  }
+  return watchedMessages.value.get(activeWatchedChannel.value.id) ?? []
+})
 
-const connectedAccountsCount = computed(() => accounts.value.length);
-const youtubeAuthenticated = computed(() => accounts.value.some((a) => a.platform === "youtube"));
+const connectedAccountsCount = computed(() => accounts.value.length)
+const youtubeAuthenticated = computed(() => accounts.value.some((a) => a.platform === 'youtube'))
 
 // ----------------------------------------------------------------
 // Load initial data
@@ -96,49 +111,59 @@ async function loadInitialData() {
       rpc.request.getSettings(),
       rpc.request.getStatuses(),
       rpc.request.getWatchedChannels(),
-    ]);
-    if (accs !== undefined) accounts.value = accs;
-    if (setts !== undefined) settings.value = setts;
-    if (statList !== undefined) {
-      const map = new Map<string, PlatformStatusInfo>();
-      for (const s of statList) map.set(s.platform, s);
-      statuses.value = map;
+    ])
+    if (accs !== undefined) {
+      accounts.value = accs
     }
-    if (watched !== undefined) watchedChannels.value = watched;
+    if (setts !== undefined) {
+      settings.value = setts
+    }
+    if (statList !== undefined) {
+      const map = new Map<string, PlatformStatusInfo>()
+      for (const s of statList) {
+        map.set(s.platform, s)
+      }
+      statuses.value = map
+    }
+    if (watched !== undefined) {
+      watchedChannels.value = watched
+    }
 
     // Load current watched channel statuses (emitted before webview was ready)
     try {
-      const watchedStats = await rpc.request.getWatchedChannelStatuses();
+      const watchedStats = await rpc.request.getWatchedChannelStatuses()
       if (watchedStats !== undefined && watchedStats.length > 0) {
-        const map = new Map<string, PlatformStatusInfo>(watchedStatuses.value);
-        for (const { channelId, status } of watchedStats) map.set(channelId, status);
-        watchedStatuses.value = map;
+        const map = new Map<string, PlatformStatusInfo>(watchedStatuses.value)
+        for (const { channelId, status } of watchedStats) {
+          map.set(channelId, status)
+        }
+        watchedStatuses.value = map
       }
     } catch {
       // Not fatal
     }
-  } catch (err) {
-    console.warn("[App] Initial data load failed, retrying in 1s...", err);
-    setTimeout(loadInitialData, 1000);
-    return;
+  } catch (error) {
+    console.warn('[App] Initial data load failed, retrying in 1s...', error)
+    setTimeout(loadInitialData, 1000)
+    return
   }
 
   // Load recent messages separately so a failure here doesn't block the rest
   try {
-    const recentMsgs = await rpc.request.getRecentMessages({});
+    const recentMsgs = await rpc.request.getRecentMessages({})
     if (recentMsgs !== undefined && recentMsgs.length > 0) {
-      messages.value = [...recentMsgs].reverse();
+      messages.value = [...recentMsgs].toReversed()
     }
-  } catch (err) {
-    console.warn("[App] Failed to load recent messages:", err);
+  } catch (error) {
+    console.warn('[App] Failed to load recent messages:', error)
   }
 
   // Load buffered messages for all persisted watched channels
   for (const ch of watchedChannels.value) {
     try {
-      const msgs = await rpc.request.getWatchedChannelMessages({ id: ch.id });
+      const msgs = await rpc.request.getWatchedChannelMessages({ id: ch.id })
       if (msgs && msgs.length > 0) {
-        watchedMessages.value = new Map(watchedMessages.value).set(ch.id, msgs);
+        watchedMessages.value = new Map(watchedMessages.value).set(ch.id, msgs)
       }
     } catch {
       // Not fatal
@@ -146,246 +171,271 @@ async function loadInitialData() {
   }
 
   // Fetch stream live status for watched channels immediately, then poll every 60s
-  void refreshWatchedLiveStatuses();
-  watchedLiveStatusInterval = setInterval(() => void refreshWatchedLiveStatuses(), 60_000);
+  void refreshWatchedLiveStatuses()
+  watchedLiveStatusInterval = setInterval(() => void refreshWatchedLiveStatuses(), 60_000)
 }
 
 onMounted(() => {
-  loadInitialData();
-});
+  loadInitialData()
+})
 
 // ----------------------------------------------------------------
 // RPC listeners
 // ----------------------------------------------------------------
 
-const unsubscribers: Array<() => void> = [];
+const unsubscribers: (() => void)[] = []
 
 const updateState = ref<{
-  show: boolean;
-  status: string;
-  message: string;
-  progress?: number;
+  show: boolean
+  status: string
+  message: string
+  progress?: number
 }>({
-  show: false,
-  status: "",
-  message: "",
+  message: '',
   progress: undefined,
-});
+  show: false,
+  status: '',
+})
 
 // All Electrobun statuses that indicate a download is actively in progress
 const DOWNLOAD_IN_PROGRESS_STATUSES = new Set([
-  "download-starting",
-  "checking-local-tar",
-  "local-tar-found",
-  "local-tar-missing",
-  "fetching-patch",
-  "patch-found",
-  "patch-not-found",
-  "downloading-patch",
-  "applying-patch",
-  "patch-applied",
-  "extracting-version",
-  "patch-chain-complete",
-  "downloading-full-bundle",
-  "download-progress",
-  "decompressing",
-]);
+  'download-starting',
+  'checking-local-tar',
+  'local-tar-found',
+  'local-tar-missing',
+  'fetching-patch',
+  'patch-found',
+  'patch-not-found',
+  'downloading-patch',
+  'applying-patch',
+  'patch-applied',
+  'extracting-version',
+  'patch-chain-complete',
+  'downloading-full-bundle',
+  'download-progress',
+  'decompressing',
+])
 
 onMounted(() => {
   const onChatMessage = (msg: NormalizedChatMessage) => {
-    messages.value = [msg, ...messages.value].slice(0, 500);
-  };
+    messages.value = [msg, ...messages.value].slice(0, 500)
+  }
   const onChatEvent = (ev: NormalizedEvent) => {
-    events.value = [ev, ...events.value].slice(0, 200);
-    if (activeTab.value !== "events") unreadEvents.value++;
-  };
+    events.value = [ev, ...events.value].slice(0, 200)
+    if (activeTab.value !== 'events') {
+      unreadEvents.value++
+    }
+  }
   const onPlatformStatus = (s: PlatformStatusInfo) => {
-    statuses.value = new Map(statuses.value).set(s.platform, s);
-  };
-  const onAuthSuccess = ({ platform, displayName }: { platform: string; username: string; displayName: string }) => {
-    console.log(`[Auth] Authenticated as ${displayName} on ${platform}`);
+    statuses.value = new Map(statuses.value).set(s.platform, s)
+  }
+  const onAuthSuccess = ({
+    platform,
+    displayName,
+  }: {
+    platform: string
+    username: string
+    displayName: string
+  }) => {
+    console.log(`[Auth] Authenticated as ${displayName} on ${platform}`)
     rpc.request.getAccounts().then((a) => {
-      accounts.value = a;
-    });
-  };
+      accounts.value = a
+    })
+  }
   const onAuthError = ({ platform, error }: { platform: string; error: string }) => {
-    console.error(`[Auth] Error on ${platform}: ${error}`);
-  };
+    console.error(`[Auth] Error on ${platform}: ${error}`)
+  }
   const onUpdateStatus = (status: { status: string; message: string; progress?: number }) => {
-    console.log(`[Update] ${status.status}: ${status.message}`);
-    updateState.value.status = status.status;
-    updateState.value.message = status.message;
-    updateState.value.progress = status.progress;
+    console.log(`[Update] ${status.status}: ${status.message}`)
+    updateState.value.status = status.status
+    updateState.value.message = status.message
+    updateState.value.progress = status.progress
 
     if (
-      status.status === "checking" ||
-      status.status === "update-available" ||
-      status.status === "download-complete" ||
+      status.status === 'checking' ||
+      status.status === 'update-available' ||
+      status.status === 'download-complete' ||
       DOWNLOAD_IN_PROGRESS_STATUSES.has(status.status)
     ) {
       // Active update flow — keep toast visible
-      updateState.value.show = true;
-    } else if (status.status === "no-update") {
+      updateState.value.show = true
+    } else if (status.status === 'no-update') {
       // No update available (includes dev channel) — show briefly then hide
-      updateState.value.show = true;
+      updateState.value.show = true
       setTimeout(() => {
-        updateState.value.show = false;
-      }, 2000);
-    } else if (status.status === "error") {
-      updateState.value.show = true;
+        updateState.value.show = false
+      }, 2000)
+    } else if (status.status === 'error') {
+      updateState.value.show = true
       setTimeout(() => {
-        updateState.value.show = false;
-      }, 4000);
+        updateState.value.show = false
+      }, 4000)
     }
     // "applying", "extracting", "replacing-app", "launching-new-version", "complete"
-    // are terminal states where the app is about to restart — keep toast visible
+    // Are terminal states where the app is about to restart — keep toast visible
     else if (
-      status.status === "applying" ||
-      status.status === "extracting" ||
-      status.status === "replacing-app" ||
-      status.status === "launching-new-version" ||
-      status.status === "complete"
+      status.status === 'applying' ||
+      status.status === 'extracting' ||
+      status.status === 'replacing-app' ||
+      status.status === 'launching-new-version' ||
+      status.status === 'complete'
     ) {
-      updateState.value.show = true;
+      updateState.value.show = true
     }
-  };
+  }
 
-  const onWatchedMessage = ({ channelId, message }: { channelId: string; message: NormalizedChatMessage }) => {
-    const prev = watchedMessages.value.get(channelId) ?? [];
+  const onWatchedMessage = ({
+    channelId,
+    message,
+  }: {
+    channelId: string
+    message: NormalizedChatMessage
+  }) => {
+    const prev = watchedMessages.value.get(channelId) ?? []
     watchedMessages.value = new Map(watchedMessages.value).set(
       channelId,
       [message, ...prev].slice(0, 200),
-    );
-  };
+    )
+  }
 
-  const onWatchedStatus = ({ channelId, status }: { channelId: string; status: PlatformStatusInfo }) => {
-    watchedStatuses.value = new Map(watchedStatuses.value).set(channelId, status);
-  };
+  const onWatchedStatus = ({
+    channelId,
+    status,
+  }: {
+    channelId: string
+    status: PlatformStatusInfo
+  }) => {
+    watchedStatuses.value = new Map(watchedStatuses.value).set(channelId, status)
+  }
 
-  rpc.addMessageListener("chat_message", onChatMessage);
-  rpc.addMessageListener("chat_event", onChatEvent);
-  rpc.addMessageListener("platform_status", onPlatformStatus);
-  rpc.addMessageListener("auth_success", onAuthSuccess);
-  rpc.addMessageListener("auth_error", onAuthError);
-  rpc.addMessageListener("update_status", onUpdateStatus);
-  rpc.addMessageListener("watched_channel_message", onWatchedMessage);
-  rpc.addMessageListener("watched_channel_status", onWatchedStatus);
+  rpc.addMessageListener('chat_message', onChatMessage)
+  rpc.addMessageListener('chat_event', onChatEvent)
+  rpc.addMessageListener('platform_status', onPlatformStatus)
+  rpc.addMessageListener('auth_success', onAuthSuccess)
+  rpc.addMessageListener('auth_error', onAuthError)
+  rpc.addMessageListener('update_status', onUpdateStatus)
+  rpc.addMessageListener('watched_channel_message', onWatchedMessage)
+  rpc.addMessageListener('watched_channel_status', onWatchedStatus)
 
   unsubscribers.push(
-    () => rpc.removeMessageListener("chat_message", onChatMessage),
-    () => rpc.removeMessageListener("chat_event", onChatEvent),
-    () => rpc.removeMessageListener("platform_status", onPlatformStatus),
-    () => rpc.removeMessageListener("auth_success", onAuthSuccess),
-    () => rpc.removeMessageListener("auth_error", onAuthError),
-    () => rpc.removeMessageListener("update_status", onUpdateStatus),
-    () => rpc.removeMessageListener("watched_channel_message", onWatchedMessage),
-    () => rpc.removeMessageListener("watched_channel_status", onWatchedStatus),
-  );
+    () => rpc.removeMessageListener('chat_message', onChatMessage),
+    () => rpc.removeMessageListener('chat_event', onChatEvent),
+    () => rpc.removeMessageListener('platform_status', onPlatformStatus),
+    () => rpc.removeMessageListener('auth_success', onAuthSuccess),
+    () => rpc.removeMessageListener('auth_error', onAuthError),
+    () => rpc.removeMessageListener('update_status', onUpdateStatus),
+    () => rpc.removeMessageListener('watched_channel_message', onWatchedMessage),
+    () => rpc.removeMessageListener('watched_channel_status', onWatchedStatus),
+  )
 
-  checkForUpdates();
-});
+  checkForUpdates()
+})
 
 async function checkForUpdates() {
   try {
-    const result = await rpc.request.checkForUpdate();
+    const result = await rpc.request.checkForUpdate()
     if (result.updateAvailable) {
-      await rpc.request.downloadUpdate();
+      await rpc.request.downloadUpdate()
     }
-  } catch (err) {
-    console.warn("[Update] Failed to check for updates:", err);
+  } catch (error) {
+    console.warn('[Update] Failed to check for updates:', error)
   }
 }
 
 async function applyUpdate() {
   try {
-    await rpc.request.applyUpdate();
-  } catch (err) {
-    console.error("[Update] Failed to apply update:", err);
+    await rpc.request.applyUpdate()
+  } catch (error) {
+    console.error('[Update] Failed to apply update:', error)
   }
 }
 
 onUnmounted(() => {
-  unsubscribers.forEach((unsub) => unsub());
+  unsubscribers.forEach((unsub) => unsub())
   if (watchedLiveStatusInterval !== null) {
-    clearInterval(watchedLiveStatusInterval);
-    watchedLiveStatusInterval = null;
+    clearInterval(watchedLiveStatusInterval)
+    watchedLiveStatusInterval = null
   }
-});
+})
 
 function switchTab(tab: typeof activeTab.value) {
-  activeTab.value = tab;
-  if (tab === "events") unreadEvents.value = 0;
+  activeTab.value = tab
+  if (tab === 'events') {
+    unreadEvents.value = 0
+  }
 }
 
 function onSettingsSaved(s: AppSettings) {
-  settings.value = s;
+  settings.value = s
 }
 
 function onSettingsChange(s: AppSettings) {
-  settings.value = s;
+  settings.value = s
 }
 
 function dismissUpdate() {
-  updateState.value.show = false;
+  updateState.value.show = false
 }
 
 // ----------------------------------------------------------------
 // Watched channel actions
 // ----------------------------------------------------------------
 
-async function onAddChannel(platform: "twitch" | "kick" | "youtube", channelSlug: string) {
-  showAddModal.value = false;
+async function onAddChannel(platform: 'twitch' | 'kick' | 'youtube', channelSlug: string) {
+  showAddModal.value = false
   try {
-    const ch = await rpc.request.addWatchedChannel({ platform, channelSlug });
+    const ch = await rpc.request.addWatchedChannel({ channelSlug, platform })
     // Add to list if not already present
     if (!watchedChannels.value.find((c: WatchedChannel) => c.id === ch.id)) {
-      watchedChannels.value = [...watchedChannels.value, ch];
+      watchedChannels.value = [...watchedChannels.value, ch]
     }
-    activeChatTab.value = ch.id;
-    void refreshWatchedLiveStatuses();
-  } catch (err) {
-    console.error("[App] addWatchedChannel failed:", err);
+    activeChatTab.value = ch.id
+    void refreshWatchedLiveStatuses()
+  } catch (error) {
+    console.error('[App] addWatchedChannel failed:', error)
   }
 }
 
 async function onRemoveChannel(id: string) {
   try {
-    await rpc.request.removeWatchedChannel({ id });
-    watchedChannels.value = watchedChannels.value.filter((c: WatchedChannel) => c.id !== id);
-    watchedMessages.value = new Map([...watchedMessages.value].filter(([k]) => k !== id));
-    watchedStatuses.value = new Map([...watchedStatuses.value].filter(([k]) => k !== id));
-    watchedLiveStatuses.value = new Map([...watchedLiveStatuses.value].filter(([k]) => k !== id));
-    if (activeChatTab.value === id) activeChatTab.value = "home";
-  } catch (err) {
-    console.error("[App] removeWatchedChannel failed:", err);
+    await rpc.request.removeWatchedChannel({ id })
+    watchedChannels.value = watchedChannels.value.filter((c: WatchedChannel) => c.id !== id)
+    watchedMessages.value = new Map([...watchedMessages.value].filter(([k]) => k !== id))
+    watchedStatuses.value = new Map([...watchedStatuses.value].filter(([k]) => k !== id))
+    watchedLiveStatuses.value = new Map([...watchedLiveStatuses.value].filter(([k]) => k !== id))
+    if (activeChatTab.value === id) {
+      activeChatTab.value = 'home'
+    }
+  } catch (error) {
+    console.error('[App] removeWatchedChannel failed:', error)
   }
 }
 
 async function onSendWatched(text: string) {
-  if (!activeWatchedChannel.value) return;
+  if (!activeWatchedChannel.value) {
+    return
+  }
   try {
-    await rpc.request.sendWatchedChannelMessage({ id: activeWatchedChannel.value.id, text });
-  } catch (err) {
-    console.error("[App] sendWatchedChannelMessage failed:", err);
+    await rpc.request.sendWatchedChannelMessage({ id: activeWatchedChannel.value.id, text })
+  } catch (error) {
+    console.error('[App] sendWatchedChannelMessage failed:', error)
   }
 }
 </script>
 
 <template>
-  <div class="app" :class="[settings?.theme ?? 'dark', settings?.fontFamily ? `font-${settings.fontFamily}` : 'font-inter']">
+  <div
+    class="app"
+    :class="[
+      settings?.theme ?? 'dark',
+      settings?.fontFamily ? `font-${settings.fontFamily}` : 'font-inter',
+    ]"
+  >
     <!-- Left icon navigation -->
     <nav class="nav-rail">
       <div class="nav-logo">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <rect
-            x="2"
-            y="3"
-            width="20"
-            height="14"
-            rx="3"
-            fill="currentColor"
-            opacity=".9"
-          />
+          <rect x="2" y="3" width="20" height="14" rx="3" fill="currentColor" opacity=".9" />
           <path
             d="M7 21h10M12 17v4"
             stroke="currentColor"
@@ -412,9 +462,7 @@ async function onSendWatched(text: string) {
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <path
-              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-            />
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <span class="nav-label">Chat</span>
         </button>
@@ -440,7 +488,7 @@ async function onSendWatched(text: string) {
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
             <span v-if="unreadEvents > 0" class="badge">{{
-              unreadEvents > 99 ? "99+" : unreadEvents
+              unreadEvents > 99 ? '99+' : unreadEvents
             }}</span>
           </div>
           <span class="nav-label">Events</span>
@@ -559,29 +607,47 @@ async function onSendWatched(text: string) {
     <div v-if="updateState.show" class="update-toast">
       <div class="update-content">
         <div class="update-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-            <path d="M3 3v5h5"/>
-            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
-            <path d="M16 16h5v5"/>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+            <path d="M16 16h5v5" />
           </svg>
         </div>
         <div class="update-info">
           <div class="update-title">{{ updateState.message }}</div>
           <div v-if="updateState.progress !== undefined" class="update-progress">
             <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: updateState.progress + '%' }"/>
+              <div class="progress-fill" :style="{ width: updateState.progress + '%' }" />
             </div>
             <span class="progress-text">{{ updateState.progress }}%</span>
           </div>
         </div>
-        <button v-if="updateState.status === 'download-complete'" class="update-btn" @click="applyUpdate">
+        <button
+          v-if="updateState.status === 'download-complete'"
+          class="update-btn"
+          @click="applyUpdate"
+        >
           Restart
         </button>
         <button class="update-close" @click="dismissUpdate">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
@@ -599,7 +665,13 @@ async function onSendWatched(text: string) {
 }
 
 body {
-  font-family: var(--font-family, "Inter"), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    var(--font-family, 'Inter'),
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   background: #0f0f11;
   color: #e2e2e8;
   height: 100vh;
@@ -647,15 +719,15 @@ body {
 }
 
 .app.font-inter {
-  --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .app.font-manrope {
-  --font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .app.font-system {
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .app.light .nav-rail {
@@ -896,7 +968,9 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   flex-shrink: 0;
 }
 

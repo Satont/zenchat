@@ -1,4 +1,4 @@
-import { sql } from "bun";
+import { sql } from 'bun'
 
 export async function runMigrations(): Promise<void> {
   await sql`
@@ -7,7 +7,7 @@ export async function runMigrations(): Promise<void> {
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
-  `;
+  `
 
   await sql`
     CREATE TABLE IF NOT EXISTS platform_accounts (
@@ -26,7 +26,7 @@ export async function runMigrations(): Promise<void> {
       updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE(client_secret, platform)
     )
-  `;
+  `
 
   await sql`
     CREATE TABLE IF NOT EXISTS kick_oauth_sessions (
@@ -35,7 +35,7 @@ export async function runMigrations(): Promise<void> {
       code_verifier   TEXT NOT NULL,
       created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
-  `;
+  `
 
   await sql`
     CREATE TABLE IF NOT EXISTS youtube_channel_cache (
@@ -43,7 +43,7 @@ export async function runMigrations(): Promise<void> {
       channel_id      TEXT NOT NULL,
       available_until TIMESTAMPTZ NOT NULL
     )
-  `;
+  `
 
-  console.log("[DB] Migrations applied");
+  console.log('[DB] Migrations applied')
 }

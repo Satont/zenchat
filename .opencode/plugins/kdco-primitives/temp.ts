@@ -7,8 +7,8 @@
  * @module kdco-primitives/temp
  */
 
-import * as fsSync from "node:fs"
-import * as os from "node:os"
+import * as fsSync from 'node:fs'
+import * as os from 'node:os'
 
 /**
  * Get the real temp directory path, resolving symlinks.
@@ -32,5 +32,5 @@ import * as os from "node:os"
  * ```
  */
 export function getTempDir(): string {
-	return fsSync.realpathSync.native(os.tmpdir())
+  return fsSync.realpathSync.native(os.tmpdir())
 }

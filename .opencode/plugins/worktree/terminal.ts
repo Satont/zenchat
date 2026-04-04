@@ -8,22 +8,22 @@
  * interface for terminal operations with proper concurrency control.
  */
 
-import * as fs from "node:fs/promises"
-import * as os from "node:os"
-import * as path from "node:path"
-import { z } from "zod"
-import type { OpencodeClient } from "../kdco-primitives"
+import * as fs from 'node:fs/promises'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import { z } from 'zod'
+import type { OpencodeClient } from '../kdco-primitives'
 import {
-	escapeAppleScript,
-	escapeBash,
-	escapeBatch,
-	getTempDir,
-	isInsideTmux,
-	logWarn,
-	Mutex,
-	TimeoutError,
-	withTimeout,
-} from "../kdco-primitives"
+  Mutex,
+  TimeoutError,
+  escapeAppleScript,
+  escapeBash,
+  escapeBatch,
+  getTempDir,
+  isInsideTmux,
+  logWarn,
+  withTimeout,
+} from '../kdco-primitives'
 
 // =============================================================================
 // TEMP SCRIPT HELPER
@@ -39,30 +39,30 @@ import {
  * @returns Result of the function execution
  */
 export async function withTempScript<T>(
-	scriptContent: string,
-	fn: (scriptPath: string) => Promise<T>,
-	extension: string = ".sh",
-	client?: OpencodeClient,
+  scriptContent: string,
+  fn: (scriptPath: string) => Promise<T>,
+  extension: string = '.sh',
+  client?: OpencodeClient,
 ): Promise<T> {
-	const scriptPath = path.join(
-		getTempDir(),
-		`worktree-${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`,
-	)
-	await Bun.write(scriptPath, scriptContent)
-	await fs.chmod(scriptPath, 0o755)
+  const scriptPath = path.join(
+    getTempDir(),
+    `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`,
+  )
+  await Bun.write(scriptPath, scriptContent)
+  await fs.chmod(scriptPath, 0o755)
 
-	try {
-		return await fn(scriptPath)
-	} finally {
-		try {
-			if (await Bun.file(scriptPath).exists()) {
-				await fs.rm(scriptPath)
-			}
-		} catch (cleanupError) {
-			// Log but don't throw - cleanup is best-effort
-			logWarn(client, "worktree", `Failed to cleanup temp script: ${scriptPath}: ${cleanupError}`)
-		}
-	}
+  try {
+    return await fn(scriptPath)
+  } finally {
+    try {
+      if (await Bun.file(scriptPath).exists()) {
+        await fs.rm(scriptPath)
+      }
+    } catch (cleanupError) {
+      // Log but don't throw - cleanup is best-effort
+      logWarn(client, 'worktree', `Failed to cleanup temp script: ${scriptPath}: ${cleanupError}`)
+    }
+  }
 }
 
 /**
@@ -71,7 +71,7 @@ export async function withTempScript<T>(
  * This eliminates race conditions with detached processes.
  */
 function wrapWithSelfCleanup(script: string): string {
-	return `#!/bin/bash
+  return `#!/bin/bash
 trap 'rm -f "$0"' EXIT INT TERM
 ${script}`
 }
@@ -81,30 +81,30 @@ ${script}`
  * Uses goto trick to delete itself after execution.
  */
 function wrapBatchWithSelfCleanup(script: string): string {
-	return `@echo off
+  return `@echo off
 ${script}
 (goto) 2>nul & del "%~f0"`
 }
 
 /** Build Warp launch configuration YAML for Linux. */
 function buildWarpLaunchConfigYaml(
-	name: string,
-	cwd: string,
-	configPath: string,
-	command?: string,
+  name: string,
+  cwd: string,
+  configPath: string,
+  command?: string,
 ): string {
-	const quotedName = JSON.stringify(name)
-	const quotedCwd = JSON.stringify(cwd)
-	const cleanupCommand = `rm -f "${escapeBash(configPath)}"`
-	const commands = [cleanupCommand]
-	if (command) {
-		commands.push(command)
-	}
-	const commandsBlock = `\n          commands:${commands
-		.map((cmd) => `\n            - exec: ${JSON.stringify(cmd)}`)
-		.join("")}`
+  const quotedName = JSON.stringify(name)
+  const quotedCwd = JSON.stringify(cwd)
+  const cleanupCommand = `rm -f "${escapeBash(configPath)}"`
+  const commands = [cleanupCommand]
+  if (command) {
+    commands.push(command)
+  }
+  const commandsBlock = `\n          commands:${commands
+    .map((cmd) => `\n            - exec: ${JSON.stringify(cmd)}`)
+    .join('')}`
 
-	return `---
+  return `---
 name: ${quotedName}
 active_window_index: 0
 windows:
@@ -117,8 +117,8 @@ windows:
 
 /** Get Warp launch configuration directory for current platform user. */
 function getWarpLaunchConfigDir(): string {
-	const xdgDataHome = process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share")
-	return path.join(xdgDataHome, "warp-terminal", "launch_configurations")
+  const xdgDataHome = process.env.XDG_DATA_HOME ?? path.join(os.homedir(), '.local', 'share')
+  return path.join(xdgDataHome, 'warp-terminal', 'launch_configurations')
 }
 
 // =============================================================================
@@ -126,51 +126,51 @@ function getWarpLaunchConfigDir(): string {
 // =============================================================================
 
 /** Terminal type for the current platform */
-export type TerminalType = "tmux" | "cmux" | "macos" | "windows" | "linux-desktop"
+export type TerminalType = 'tmux' | 'cmux' | 'macos' | 'windows' | 'linux-desktop'
 
 /** Result of a terminal operation */
 export interface TerminalResult {
-	success: boolean
-	error?: string
+  success: boolean
+  error?: string
 }
 
 function normalizeArgv(argv?: string[]): string[] {
-	if (!argv) {
-		return []
-	}
+  if (!argv) {
+    return []
+  }
 
-	return argv
+  return argv
 }
 
 export function buildBashCommandFromArgv(argv?: string[]): string | undefined {
-	const normalizedArgv = normalizeArgv(argv)
-	if (normalizedArgv.length === 0) {
-		return undefined
-	}
+  const normalizedArgv = normalizeArgv(argv)
+  if (normalizedArgv.length === 0) {
+    return undefined
+  }
 
-	return normalizedArgv.map((arg) => `"${escapeBash(arg)}"`).join(" ")
+  return normalizedArgv.map((arg) => `"${escapeBash(arg)}"`).join(' ')
 }
 
 export function buildBatchCommandFromArgv(argv?: string[]): string | undefined {
-	const normalizedArgv = normalizeArgv(argv)
-	if (normalizedArgv.length === 0) {
-		return undefined
-	}
+  const normalizedArgv = normalizeArgv(argv)
+  if (normalizedArgv.length === 0) {
+    return undefined
+  }
 
-	return normalizedArgv.map((arg) => `"${escapeBatch(arg).replace(/"/g, '""')}"`).join(" ")
+  return normalizedArgv.map((arg) => `"${escapeBatch(arg).replace(/"/g, '""')}"`).join(' ')
 }
 
 type ResolveExecutable = (command: string) => string | null | undefined
 type CmuxEnvironment = Record<string, string | undefined>
-type CmuxCommandResult = {
-	exitCode: number
-	stderr: string
+interface CmuxCommandResult {
+  exitCode: number
+  stderr: string
 }
 type RunCmuxCommand = (args: string[]) => CmuxCommandResult | Promise<CmuxCommandResult>
 
 export interface CmuxTerminalExecutionResult {
-	terminalResult: TerminalResult
-	hasStateMutation: boolean
+  terminalResult: TerminalResult
+  hasStateMutation: boolean
 }
 
 const CMUX_COMMAND_TIMEOUT_MS = 1500
@@ -187,54 +187,54 @@ const STABILIZATION_DELAY_MS = 150
 
 /** Validates WSL environment detection */
 const wslEnvSchema = z.object({
-	WSL_DISTRO_NAME: z.string().optional(),
-	WSLENV: z.string().optional(),
+  WSLENV: z.string().optional(),
+  WSL_DISTRO_NAME: z.string().optional(),
 })
 
 /** Validates cmux environment detection */
 const cmuxEnvSchema = z.object({
-	CMUX_WORKSPACE_ID: z.string().optional(),
-	CMUX_SURFACE_ID: z.string().optional(),
-	CMUX_SOCKET_PATH: z.string().optional(),
-	CMUX_SOCKET_MODE: z.string().optional(),
+  CMUX_SOCKET_MODE: z.string().optional(),
+  CMUX_SOCKET_PATH: z.string().optional(),
+  CMUX_SURFACE_ID: z.string().optional(),
+  CMUX_WORKSPACE_ID: z.string().optional(),
 })
 
 /** Validates Linux terminal environment detection */
 const linuxTerminalEnvSchema = z.object({
-	KITTY_WINDOW_ID: z.string().optional(),
-	WEZTERM_PANE: z.string().optional(),
-	ALACRITTY_WINDOW_ID: z.string().optional(),
-	GHOSTTY_RESOURCES_DIR: z.string().optional(),
-	TERM_PROGRAM: z.string().optional(),
-	GNOME_TERMINAL_SERVICE: z.string().optional(),
-	KONSOLE_VERSION: z.string().optional(),
+  ALACRITTY_WINDOW_ID: z.string().optional(),
+  GHOSTTY_RESOURCES_DIR: z.string().optional(),
+  GNOME_TERMINAL_SERVICE: z.string().optional(),
+  KITTY_WINDOW_ID: z.string().optional(),
+  KONSOLE_VERSION: z.string().optional(),
+  TERM_PROGRAM: z.string().optional(),
+  WEZTERM_PANE: z.string().optional(),
 })
 
 /** Environment variables for macOS terminal detection */
 const macTerminalEnvSchema = z.object({
-	TERM_PROGRAM: z.string().optional(),
-	GHOSTTY_RESOURCES_DIR: z.string().optional(),
-	ITERM_SESSION_ID: z.string().optional(),
-	KITTY_WINDOW_ID: z.string().optional(),
-	ALACRITTY_WINDOW_ID: z.string().optional(),
-	__CFBundleIdentifier: z.string().optional(),
+  ALACRITTY_WINDOW_ID: z.string().optional(),
+  GHOSTTY_RESOURCES_DIR: z.string().optional(),
+  ITERM_SESSION_ID: z.string().optional(),
+  KITTY_WINDOW_ID: z.string().optional(),
+  TERM_PROGRAM: z.string().optional(),
+  __CFBundleIdentifier: z.string().optional(),
 })
 
 type LinuxTerminal =
-	| "kitty"
-	| "wezterm"
-	| "alacritty"
-	| "ghostty"
-	| "warp"
-	| "foot"
-	| "gnome-terminal"
-	| "konsole"
-	| "xfce4-terminal"
-	| "xdg-terminal-exec"
-	| "x-terminal-emulator"
-	| "xterm"
+  | 'kitty'
+  | 'wezterm'
+  | 'alacritty'
+  | 'ghostty'
+  | 'warp'
+  | 'foot'
+  | 'gnome-terminal'
+  | 'konsole'
+  | 'xfce4-terminal'
+  | 'xdg-terminal-exec'
+  | 'x-terminal-emulator'
+  | 'xterm'
 
-type MacTerminal = "ghostty" | "iterm" | "warp" | "kitty" | "alacritty" | "terminal"
+type MacTerminal = 'ghostty' | 'iterm' | 'warp' | 'kitty' | 'alacritty' | 'terminal'
 
 // =============================================================================
 // PLATFORM DETECTION
@@ -245,79 +245,83 @@ type MacTerminal = "ghostty" | "iterm" | "warp" | "kitty" | "alacritty" | "termi
  * Checks environment variables and os.release() for Microsoft string.
  */
 function isInsideWSL(): boolean {
-	const parsed = wslEnvSchema.safeParse(process.env)
-	if (parsed.success && (parsed.data.WSL_DISTRO_NAME || parsed.data.WSLENV)) {
-		return true
-	}
+  const parsed = wslEnvSchema.safeParse(process.env)
+  if (parsed.success && (parsed.data.WSL_DISTRO_NAME || parsed.data.WSLENV)) {
+    return true
+  }
 
-	// Fallback: check os.release() for Microsoft string
-	try {
-		return os.release().toLowerCase().includes("microsoft")
-	} catch {
-		return false
-	}
+  // Fallback: check os.release() for Microsoft string
+  try {
+    return os.release().toLowerCase().includes('microsoft')
+  } catch {
+    return false
+  }
 }
 
 export interface CmuxContext {
-	workspaceID?: string
-	surfaceID?: string
-	socketPath?: string
-	socketMode?: string
+  workspaceID?: string
+  surfaceID?: string
+  socketPath?: string
+  socketMode?: string
 }
 
 function normalizeCmuxValue(value?: string): string | undefined {
-	const trimmed = value?.trim()
-	return trimmed ? trimmed : undefined
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : undefined
 }
 
 export function detectCmuxContext(env: CmuxEnvironment = process.env): CmuxContext {
-	const parsed = cmuxEnvSchema.parse(env)
+  const parsed = cmuxEnvSchema.parse(env)
 
-	return {
-		workspaceID: normalizeCmuxValue(parsed.CMUX_WORKSPACE_ID),
-		surfaceID: normalizeCmuxValue(parsed.CMUX_SURFACE_ID),
-		socketPath: normalizeCmuxValue(parsed.CMUX_SOCKET_PATH),
-		socketMode: normalizeCmuxValue(parsed.CMUX_SOCKET_MODE),
-	}
+  return {
+    socketMode: normalizeCmuxValue(parsed.CMUX_SOCKET_MODE),
+    socketPath: normalizeCmuxValue(parsed.CMUX_SOCKET_PATH),
+    surfaceID: normalizeCmuxValue(parsed.CMUX_SURFACE_ID),
+    workspaceID: normalizeCmuxValue(parsed.CMUX_WORKSPACE_ID),
+  }
 }
 
 export function canUseCmuxWorkflow(
-	env: CmuxEnvironment = process.env,
-	resolveExecutable: ResolveExecutable = (command) => Bun.which(command),
-	cmuxExecutable: string = "cmux",
+  env: CmuxEnvironment = process.env,
+  resolveExecutable: ResolveExecutable = (command) => Bun.which(command),
+  cmuxExecutable: string = 'cmux',
 ): boolean {
-	if (!resolveExecutable(cmuxExecutable)) {
-		return false
-	}
+  if (!resolveExecutable(cmuxExecutable)) {
+    return false
+  }
 
-	const context = detectCmuxContext(env)
-	if (context.workspaceID) {
-		return true
-	}
+  const context = detectCmuxContext(env)
+  if (context.workspaceID) {
+    return true
+  }
 
-	const socketModeAllowsExternalControl = context.socketMode?.toLowerCase() === "allowall"
-	return Boolean(context.socketPath && socketModeAllowsExternalControl)
+  const socketModeAllowsExternalControl = context.socketMode?.toLowerCase() === 'allowall'
+  return Boolean(context.socketPath && socketModeAllowsExternalControl)
 }
 
-type PlatformTerminalType = Exclude<TerminalType, "tmux" | "cmux">
+type PlatformTerminalType = Exclude<TerminalType, 'tmux' | 'cmux'>
 
 function detectPlatformTerminalType(): PlatformTerminalType {
-	// WSL check (Linux inside Windows) - before platform detection
-	if (process.platform === "linux" && isInsideWSL()) {
-		return "windows" // Use Windows Terminal via interop
-	}
+  // WSL check (Linux inside Windows) - before platform detection
+  if (process.platform === 'linux' && isInsideWSL()) {
+    return 'windows' // Use Windows Terminal via interop
+  }
 
-	// Platform-specific
-	switch (process.platform) {
-		case "darwin":
-			return "macos"
-		case "win32":
-			return "windows"
-		case "linux":
-			return "linux-desktop"
-		default:
-			return "linux-desktop"
-	}
+  // Platform-specific
+  switch (process.platform) {
+    case 'darwin': {
+      return 'macos'
+    }
+    case 'win32': {
+      return 'windows'
+    }
+    case 'linux': {
+      return 'linux-desktop'
+    }
+    default: {
+      return 'linux-desktop'
+    }
+  }
 }
 
 /**
@@ -327,16 +331,16 @@ function detectPlatformTerminalType(): PlatformTerminalType {
  * @returns The detected terminal type
  */
 export function detectTerminalType(): TerminalType {
-	// tmux takes priority - user may be inside tmux on any platform
-	if (isInsideTmux()) {
-		return "tmux"
-	}
+  // Tmux takes priority - user may be inside tmux on any platform
+  if (isInsideTmux()) {
+    return 'tmux'
+  }
 
-	if (canUseCmuxWorkflow()) {
-		return "cmux"
-	}
+  if (canUseCmuxWorkflow()) {
+    return 'cmux'
+  }
 
-	return detectPlatformTerminalType()
+  return detectPlatformTerminalType()
 }
 
 // =============================================================================
@@ -372,60 +376,60 @@ export function detectTerminalType(): TerminalType {
  * ```
  */
 export async function openTmuxWindow(options: {
-	sessionName?: string
-	windowName: string
-	cwd: string
-	argv?: string[]
+  sessionName?: string
+  windowName: string
+  cwd: string
+  argv?: string[]
 }): Promise<TerminalResult> {
-	const { sessionName, windowName, cwd, argv } = options
-	const command = buildBashCommandFromArgv(argv)
+  const { sessionName, windowName, cwd, argv } = options
+  const command = buildBashCommandFromArgv(argv)
 
-	return tmuxMutex.runExclusive(async () => {
-		try {
-			// Build tmux new-window command
-			const tmuxArgs = ["new-window", "-n", windowName, "-c", cwd, "-P", "-F", "#{pane_id}"]
+  return tmuxMutex.runExclusive(async () => {
+    try {
+      // Build tmux new-window command
+      const tmuxArgs = ['new-window', '-n', windowName, '-c', cwd, '-P', '-F', '#{pane_id}']
 
-			// Add session target if specified
-			if (sessionName) {
-				tmuxArgs.splice(1, 0, "-t", sessionName)
-			}
+      // Add session target if specified
+      if (sessionName) {
+        tmuxArgs.splice(1, 0, '-t', sessionName)
+      }
 
-			// If there's a command to run, create script first and pass it to new-window
-			if (command) {
-				const scriptPath = path.join(getTempDir(), `worktree-${Bun.randomUUIDv7()}.sh`)
-				const escapedCwd = escapeBash(cwd)
-				const scriptContent = wrapWithSelfCleanup(
-					`cd "${escapedCwd}" || exit 1
+      // If there's a command to run, create script first and pass it to new-window
+      if (command) {
+        const scriptPath = path.join(getTempDir(), `worktree-${Bun.randomUUIDv7()}.sh`)
+        const escapedCwd = escapeBash(cwd)
+        const scriptContent = wrapWithSelfCleanup(
+          `cd "${escapedCwd}" || exit 1
 ${command}
 exec $SHELL`,
-				)
-				await Bun.write(scriptPath, scriptContent)
-				Bun.spawnSync(["chmod", "+x", scriptPath])
+        )
+        await Bun.write(scriptPath, scriptContent)
+        Bun.spawnSync(['chmod', '+x', scriptPath])
 
-				// Add script execution to tmux args
-				tmuxArgs.push("--", "bash", scriptPath)
-			}
+        // Add script execution to tmux args
+        tmuxArgs.push('--', 'bash', scriptPath)
+      }
 
-			const createResult = Bun.spawnSync(["tmux", ...tmuxArgs])
+      const createResult = Bun.spawnSync(['tmux', ...tmuxArgs])
 
-			if (createResult.exitCode !== 0) {
-				return {
-					success: false,
-					error: `Failed to create tmux window: ${createResult.stderr.toString()}`,
-				}
-			}
+      if (createResult.exitCode !== 0) {
+        return {
+          error: `Failed to create tmux window: ${createResult.stderr.toString()}`,
+          success: false,
+        }
+      }
 
-			// Stabilization delay to let tmux server process the window
-			await Bun.sleep(STABILIZATION_DELAY_MS)
+      // Stabilization delay to let tmux server process the window
+      await Bun.sleep(STABILIZATION_DELAY_MS)
 
-			return { success: true }
-		} catch (error) {
-			return {
-				success: false,
-				error: error instanceof Error ? error.message : String(error),
-			}
-		}
-	})
+      return { success: true }
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : String(error),
+        success: false,
+      }
+    }
+  })
 }
 
 // =============================================================================
@@ -433,132 +437,132 @@ exec $SHELL`,
 // =============================================================================
 
 export function buildCmuxCommandSequence(
-	_context: CmuxContext,
-	cwd: string,
-	argv?: string[],
+  _context: CmuxContext,
+  cwd: string,
+  argv?: string[],
 ): string[][] {
-	// Product policy: each worktree launch gets a new cmux workspace.
-	// We intentionally do not reuse the current workspace context.
-	const cmuxArgs = ["new-workspace", "--cwd", cwd]
-	const command = buildBashCommandFromArgv(argv)
+  // Product policy: each worktree launch gets a new cmux workspace.
+  // We intentionally do not reuse the current workspace context.
+  const cmuxArgs = ['new-workspace', '--cwd', cwd]
+  const command = buildBashCommandFromArgv(argv)
 
-	if (command) {
-		cmuxArgs.push("--command", command)
-	}
+  if (command) {
+    cmuxArgs.push('--command', command)
+  }
 
-	return [cmuxArgs]
+  return [cmuxArgs]
 }
 
 async function runCmuxCommandWithBun(
-	cmuxCommand: string,
-	args: string[],
+  cmuxCommand: string,
+  args: string[],
 ): Promise<CmuxCommandResult> {
-	const proc = Bun.spawn([cmuxCommand, ...args], {
-		stdout: "ignore",
-		stderr: "pipe",
-	})
+  const proc = Bun.spawn([cmuxCommand, ...args], {
+    stderr: 'pipe',
+    stdout: 'ignore',
+  })
 
-	try {
-		const exitCode = await withTimeout(
-			proc.exited,
-			CMUX_COMMAND_TIMEOUT_MS,
-			`cmux ${args[0]} timed out after ${CMUX_COMMAND_TIMEOUT_MS}ms`,
-		)
-		const stderr = await new Response(proc.stderr).text()
-		return {
-			exitCode,
-			stderr: stderr.trim(),
-		}
-	} catch (error) {
-		if (error instanceof TimeoutError) {
-			try {
-				proc.kill()
-			} catch {
-				// Best-effort process cleanup
-			}
-		}
+  try {
+    const exitCode = await withTimeout(
+      proc.exited,
+      CMUX_COMMAND_TIMEOUT_MS,
+      `cmux ${args[0]} timed out after ${CMUX_COMMAND_TIMEOUT_MS}ms`,
+    )
+    const stderr = await new Response(proc.stderr).text()
+    return {
+      exitCode,
+      stderr: stderr.trim(),
+    }
+  } catch (error) {
+    if (error instanceof TimeoutError) {
+      try {
+        proc.kill()
+      } catch {
+        // Best-effort process cleanup
+      }
+    }
 
-		throw error
-	}
+    throw error
+  }
 }
 
 export async function openCmuxTerminalWithState(
-	cwd: string,
-	argv?: string[],
-	options?: {
-		env?: CmuxEnvironment
-		resolveExecutable?: ResolveExecutable
-		runCmuxCommand?: RunCmuxCommand
-		cmuxCommand?: string
-	},
+  cwd: string,
+  argv?: string[],
+  options?: {
+    env?: CmuxEnvironment
+    resolveExecutable?: ResolveExecutable
+    runCmuxCommand?: RunCmuxCommand
+    cmuxCommand?: string
+  },
 ): Promise<CmuxTerminalExecutionResult> {
-	if (!cwd) {
-		return {
-			terminalResult: { success: false, error: "Working directory is required" },
-			hasStateMutation: false,
-		}
-	}
+  if (!cwd) {
+    return {
+      hasStateMutation: false,
+      terminalResult: { error: 'Working directory is required', success: false },
+    }
+  }
 
-	const env = options?.env ?? process.env
-	const cmuxCommand = options?.cmuxCommand ?? "cmux"
-	const resolveExecutable = options?.resolveExecutable ?? ((executable) => Bun.which(executable))
-	if (!canUseCmuxWorkflow(env, resolveExecutable, cmuxCommand)) {
-		return {
-			terminalResult: { success: false, error: "cmux environment not available" },
-			hasStateMutation: false,
-		}
-	}
+  const env = options?.env ?? process.env
+  const cmuxCommand = options?.cmuxCommand ?? 'cmux'
+  const resolveExecutable = options?.resolveExecutable ?? ((executable) => Bun.which(executable))
+  if (!canUseCmuxWorkflow(env, resolveExecutable, cmuxCommand)) {
+    return {
+      hasStateMutation: false,
+      terminalResult: { error: 'cmux environment not available', success: false },
+    }
+  }
 
-	const context = detectCmuxContext(env)
-	const runCmuxCommand: RunCmuxCommand =
-		options?.runCmuxCommand ?? ((args) => runCmuxCommandWithBun(cmuxCommand, args))
-	const commandSequence = buildCmuxCommandSequence(context, cwd, argv)
-	let hasStateMutation = false
+  const context = detectCmuxContext(env)
+  const runCmuxCommand: RunCmuxCommand =
+    options?.runCmuxCommand ?? ((args) => runCmuxCommandWithBun(cmuxCommand, args))
+  const commandSequence = buildCmuxCommandSequence(context, cwd, argv)
+  let hasStateMutation = false
 
-	for (const args of commandSequence) {
-		let result: CmuxCommandResult
-		try {
-			result = await runCmuxCommand(args)
-		} catch (error) {
-			const hasIndeterminateMutation = error instanceof TimeoutError
-			return {
-				terminalResult: {
-					success: false,
-					error: `cmux ${args[0]} failed: ${error instanceof Error ? error.message : String(error)}`,
-				},
-				hasStateMutation: hasStateMutation || hasIndeterminateMutation,
-			}
-		}
+  for (const args of commandSequence) {
+    let result: CmuxCommandResult
+    try {
+      result = await runCmuxCommand(args)
+    } catch (error) {
+      const hasIndeterminateMutation = error instanceof TimeoutError
+      return {
+        hasStateMutation: hasStateMutation || hasIndeterminateMutation,
+        terminalResult: {
+          error: `cmux ${args[0]} failed: ${error instanceof Error ? error.message : String(error)}`,
+          success: false,
+        },
+      }
+    }
 
-		if (result.exitCode !== 0) {
-			const stderr = result.stderr || "unknown cmux error"
-			return {
-				terminalResult: {
-					success: false,
-					error: `cmux ${args[0]} failed: ${stderr}`,
-				},
-				hasStateMutation,
-			}
-		}
+    if (result.exitCode !== 0) {
+      const stderr = result.stderr || 'unknown cmux error'
+      return {
+        hasStateMutation,
+        terminalResult: {
+          error: `cmux ${args[0]} failed: ${stderr}`,
+          success: false,
+        },
+      }
+    }
 
-		hasStateMutation = true
-	}
+    hasStateMutation = true
+  }
 
-	return { terminalResult: { success: true }, hasStateMutation }
+  return { hasStateMutation, terminalResult: { success: true } }
 }
 
 export async function openCmuxTerminal(
-	cwd: string,
-	argv?: string[],
-	options?: {
-		env?: CmuxEnvironment
-		resolveExecutable?: ResolveExecutable
-		runCmuxCommand?: RunCmuxCommand
-		cmuxCommand?: string
-	},
+  cwd: string,
+  argv?: string[],
+  options?: {
+    env?: CmuxEnvironment
+    resolveExecutable?: ResolveExecutable
+    runCmuxCommand?: RunCmuxCommand
+    cmuxCommand?: string
+  },
 ): Promise<TerminalResult> {
-	const result = await openCmuxTerminalWithState(cwd, argv, options)
-	return result.terminalResult
+  const result = await openCmuxTerminalWithState(cwd, argv, options)
+  return result.terminalResult
 }
 
 // =============================================================================
@@ -570,30 +574,44 @@ export async function openCmuxTerminal(
  * Prioritizes terminal-specific env vars over TERM_PROGRAM for reliability.
  */
 function detectCurrentMacTerminal(): MacTerminal {
-	const env = macTerminalEnvSchema.parse(process.env)
+  const env = macTerminalEnvSchema.parse(process.env)
 
-	// Check specific env vars first (most reliable)
-	if (env.GHOSTTY_RESOURCES_DIR) return "ghostty"
-	if (env.ITERM_SESSION_ID) return "iterm"
-	if (env.KITTY_WINDOW_ID) return "kitty"
-	if (env.ALACRITTY_WINDOW_ID) return "alacritty"
-	if (env.__CFBundleIdentifier === "dev.warp.Warp-Stable") return "warp"
+  // Check specific env vars first (most reliable)
+  if (env.GHOSTTY_RESOURCES_DIR) {
+    return 'ghostty'
+  }
+  if (env.ITERM_SESSION_ID) {
+    return 'iterm'
+  }
+  if (env.KITTY_WINDOW_ID) {
+    return 'kitty'
+  }
+  if (env.ALACRITTY_WINDOW_ID) {
+    return 'alacritty'
+  }
+  if (env.__CFBundleIdentifier === 'dev.warp.Warp-Stable') {
+    return 'warp'
+  }
 
-	// Fallback to TERM_PROGRAM
-	const termProgram = env.TERM_PROGRAM?.toLowerCase()
-	switch (termProgram) {
-		case "ghostty":
-			return "ghostty"
-		case "iterm.app":
-			return "iterm"
-		case "warpterm":
-			return "warp"
-		case "apple_terminal":
-			return "terminal"
-	}
+  // Fallback to TERM_PROGRAM
+  const termProgram = env.TERM_PROGRAM?.toLowerCase()
+  switch (termProgram) {
+    case 'ghostty': {
+      return 'ghostty'
+    }
+    case 'iterm.app': {
+      return 'iterm'
+    }
+    case 'warpterm': {
+      return 'warp'
+    }
+    case 'apple_terminal': {
+      return 'terminal'
+    }
+  }
 
-	// Default to Terminal.app
-	return "terminal"
+  // Default to Terminal.app
+  return 'terminal'
 }
 
 /**
@@ -605,150 +623,150 @@ function detectCurrentMacTerminal(): MacTerminal {
  * @returns Success status and optional error message
  */
 export async function openMacOSTerminal(cwd: string, argv?: string[]): Promise<TerminalResult> {
-	// Guard: validate cwd
-	if (!cwd) {
-		return { success: false, error: "Working directory is required" }
-	}
+  // Guard: validate cwd
+  if (!cwd) {
+    return { error: 'Working directory is required', success: false }
+  }
 
-	const escapedCwd = escapeBash(cwd)
-	const command = buildBashCommandFromArgv(argv)
-	const scriptContent = wrapWithSelfCleanup(
-		command ? `cd "${escapedCwd}" && ${command}\nexec bash` : `cd "${escapedCwd}"\nexec bash`,
-	)
+  const escapedCwd = escapeBash(cwd)
+  const command = buildBashCommandFromArgv(argv)
+  const scriptContent = wrapWithSelfCleanup(
+    command ? `cd "${escapedCwd}" && ${command}\nexec bash` : `cd "${escapedCwd}"\nexec bash`,
+  )
 
-	const terminal = detectCurrentMacTerminal()
+  const terminal = detectCurrentMacTerminal()
 
-	// Track script path for detached spawns to clean up on error
-	let detachedScriptPath: string | null = null
+  // Track script path for detached spawns to clean up on error
+  let detachedScriptPath: string | null = null
 
-	// Handle terminals based on whether they use detached spawns
-	try {
-		switch (terminal) {
-			// Ghostty uses inline command to avoid permission dialog - no temp script needed
-			case "ghostty": {
-				try {
-					const proc = Bun.spawn(
-						[
-							"open",
-							"-na",
-							"Ghostty.app",
-							"--args",
-							`--working-directory=${cwd}`,
-							"-e",
-							"bash",
-							"-c",
-							command ? `cd "${escapedCwd}" && ${command}` : `cd "${escapedCwd}"`,
-						],
-						{
-							detached: true,
-							stdio: ["ignore", "ignore", "ignore"],
-						},
-					)
-					proc.unref()
-					return { success: true }
-				} catch (error) {
-					return {
-						success: false,
-						error: error instanceof Error ? error.message : String(error),
-					}
-				}
-			}
+  // Handle terminals based on whether they use detached spawns
+  try {
+    switch (terminal) {
+      // Ghostty uses inline command to avoid permission dialog - no temp script needed
+      case 'ghostty': {
+        try {
+          const proc = Bun.spawn(
+            [
+              'open',
+              '-na',
+              'Ghostty.app',
+              '--args',
+              `--working-directory=${cwd}`,
+              '-e',
+              'bash',
+              '-c',
+              command ? `cd "${escapedCwd}" && ${command}` : `cd "${escapedCwd}"`,
+            ],
+            {
+              detached: true,
+              stdio: ['ignore', 'ignore', 'ignore'],
+            },
+          )
+          proc.unref()
+          return { success: true }
+        } catch (error) {
+          return {
+            error: error instanceof Error ? error.message : String(error),
+            success: false,
+          }
+        }
+      }
 
-			// Detached terminals: write script directly - it self-deletes via trap
-			// DO NOT use withTempScript for these - the finally block would delete
-			// the script before the detached process reads it
-			case "kitty": {
-				// Try kitty @ remote control first (synchronous, can use withTempScript)
-				const remoteResult = await withTempScript(scriptContent, async (scriptPath) => {
-					const result = Bun.spawnSync([
-						"kitty",
-						"@",
-						"launch",
-						"--type",
-						"tab",
-						"--cwd",
-						cwd,
-						"--",
-						"bash",
-						scriptPath,
-					])
-					return result.exitCode === 0
-				})
-				if (remoteResult) {
-					return { success: true }
-				}
+      // Detached terminals: write script directly - it self-deletes via trap
+      // DO NOT use withTempScript for these - the finally block would delete
+      // The script before the detached process reads it
+      case 'kitty': {
+        // Try kitty @ remote control first (synchronous, can use withTempScript)
+        const remoteResult = await withTempScript(scriptContent, async (scriptPath) => {
+          const result = Bun.spawnSync([
+            'kitty',
+            '@',
+            'launch',
+            '--type',
+            'tab',
+            '--cwd',
+            cwd,
+            '--',
+            'bash',
+            scriptPath,
+          ])
+          return result.exitCode === 0
+        })
+        if (remoteResult) {
+          return { success: true }
+        }
 
-				// Fallback: new window (detached) - write script directly
-				detachedScriptPath = path.join(
-					getTempDir(),
-					`worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
-				)
-				await Bun.write(detachedScriptPath, scriptContent)
-				await fs.chmod(detachedScriptPath, 0o755)
+        // Fallback: new window (detached) - write script directly
+        detachedScriptPath = path.join(
+          getTempDir(),
+          `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
+        )
+        await Bun.write(detachedScriptPath, scriptContent)
+        await fs.chmod(detachedScriptPath, 0o755)
 
-				const kittyProc = Bun.spawn(
-					["kitty", "--directory", cwd, "-e", "bash", detachedScriptPath],
-					{
-						detached: true,
-						stdio: ["ignore", "ignore", "ignore"],
-					},
-				)
-				kittyProc.unref()
-				detachedScriptPath = null // Clear on success - script will self-clean
-				return { success: true }
-			}
+        const kittyProc = Bun.spawn(
+          ['kitty', '--directory', cwd, '-e', 'bash', detachedScriptPath],
+          {
+            detached: true,
+            stdio: ['ignore', 'ignore', 'ignore'],
+          },
+        )
+        kittyProc.unref()
+        detachedScriptPath = null // Clear on success - script will self-clean
+        return { success: true }
+      }
 
-			case "alacritty": {
-				// Detached spawn - write script directly
-				detachedScriptPath = path.join(
-					getTempDir(),
-					`worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
-				)
-				await Bun.write(detachedScriptPath, scriptContent)
-				await fs.chmod(detachedScriptPath, 0o755)
+      case 'alacritty': {
+        // Detached spawn - write script directly
+        detachedScriptPath = path.join(
+          getTempDir(),
+          `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
+        )
+        await Bun.write(detachedScriptPath, scriptContent)
+        await fs.chmod(detachedScriptPath, 0o755)
 
-				const alacrittyProc = Bun.spawn(
-					["alacritty", "--working-directory", cwd, "-e", "bash", detachedScriptPath],
-					{
-						detached: true,
-						stdio: ["ignore", "ignore", "ignore"],
-					},
-				)
-				alacrittyProc.unref()
-				detachedScriptPath = null // Clear on success - script will self-clean
-				return { success: true }
-			}
+        const alacrittyProc = Bun.spawn(
+          ['alacritty', '--working-directory', cwd, '-e', 'bash', detachedScriptPath],
+          {
+            detached: true,
+            stdio: ['ignore', 'ignore', 'ignore'],
+          },
+        )
+        alacrittyProc.unref()
+        detachedScriptPath = null // Clear on success - script will self-clean
+        return { success: true }
+      }
 
-			case "warp": {
-				// Detached spawn - write script directly
-				detachedScriptPath = path.join(
-					getTempDir(),
-					`worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
-				)
-				await Bun.write(detachedScriptPath, scriptContent)
-				await fs.chmod(detachedScriptPath, 0o755)
+      case 'warp': {
+        // Detached spawn - write script directly
+        detachedScriptPath = path.join(
+          getTempDir(),
+          `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
+        )
+        await Bun.write(detachedScriptPath, scriptContent)
+        await fs.chmod(detachedScriptPath, 0o755)
 
-				const warpProc = Bun.spawn(["open", "-b", "dev.warp.Warp-Stable", detachedScriptPath], {
-					detached: true,
-					stdio: ["ignore", "ignore", "ignore"],
-				})
-				warpProc.unref()
-				detachedScriptPath = null // Clear on success - script will self-clean
-				return { success: true }
-			}
+        const warpProc = Bun.spawn(['open', '-b', 'dev.warp.Warp-Stable', detachedScriptPath], {
+          detached: true,
+          stdio: ['ignore', 'ignore', 'ignore'],
+        })
+        warpProc.unref()
+        detachedScriptPath = null // Clear on success - script will self-clean
+        return { success: true }
+      }
 
-			// iTerm uses AppleScript `write text` which returns before execution completes.
-			// Script must self-delete via trap — withTempScript would race.
-			case "iterm": {
-				detachedScriptPath = path.join(
-					getTempDir(),
-					`worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
-				)
-				await Bun.write(detachedScriptPath, scriptContent)
-				await fs.chmod(detachedScriptPath, 0o755)
+      // ITerm uses AppleScript `write text` which returns before execution completes.
+      // Script must self-delete via trap — withTempScript would race.
+      case 'iterm': {
+        detachedScriptPath = path.join(
+          getTempDir(),
+          `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
+        )
+        await Bun.write(detachedScriptPath, scriptContent)
+        await fs.chmod(detachedScriptPath, 0o755)
 
-				const escapedPath = escapeAppleScript(detachedScriptPath)
-				const appleScript = `
+        const escapedPath = escapeAppleScript(detachedScriptPath)
+        const appleScript = `
 				tell application "iTerm"
 					if not (exists window 1) then
 						reopen
@@ -763,52 +781,52 @@ export async function openMacOSTerminal(cwd: string, argv?: string[]): Promise<T
 					end tell
 				end tell
 			`
-				const result = Bun.spawnSync(["osascript", "-e", appleScript])
-				if (result.exitCode !== 0) {
-					// Best-effort cleanup of orphaned script before returning
-					try {
-						await fs.rm(detachedScriptPath)
-					} catch {
-						// Best-effort cleanup
-					}
-					return {
-						success: false,
-						error: `iTerm AppleScript failed: ${result.stderr.toString()}`,
-					}
-				}
-				detachedScriptPath = null
-				return { success: true }
-			}
+        const result = Bun.spawnSync(['osascript', '-e', appleScript])
+        if (result.exitCode !== 0) {
+          // Best-effort cleanup of orphaned script before returning
+          try {
+            await fs.rm(detachedScriptPath)
+          } catch {
+            // Best-effort cleanup
+          }
+          return {
+            error: `iTerm AppleScript failed: ${result.stderr.toString()}`,
+            success: false,
+          }
+        }
+        detachedScriptPath = null
+        return { success: true }
+      }
 
-			default: {
-				// Terminal.app - waits for completion, safe to use withTempScript
-				return await withTempScript(scriptContent, async (scriptPath) => {
-					const proc = Bun.spawn(["open", "-a", "Terminal", scriptPath], {
-						stdio: ["ignore", "ignore", "pipe"],
-					})
-					const exitCode = await proc.exited
-					if (exitCode !== 0) {
-						const stderr = await new Response(proc.stderr).text()
-						return { success: false, error: `Failed to open Terminal: ${stderr}` }
-					}
-					return { success: true }
-				})
-			}
-		}
-	} catch (error) {
-		// Clean up orphaned script on error (matches Linux/Windows behavior)
-		if (detachedScriptPath) {
-			try {
-				await fs.rm(detachedScriptPath)
-			} catch {
-				// Best-effort cleanup
-			}
-		}
-		return {
-			success: false,
-			error: `Failed to open terminal: ${error instanceof Error ? error.message : String(error)}`,
-		}
-	}
+      default: {
+        // Terminal.app - waits for completion, safe to use withTempScript
+        return await withTempScript(scriptContent, async (scriptPath) => {
+          const proc = Bun.spawn(['open', '-a', 'Terminal', scriptPath], {
+            stdio: ['ignore', 'ignore', 'pipe'],
+          })
+          const exitCode = await proc.exited
+          if (exitCode !== 0) {
+            const stderr = await new Response(proc.stderr).text()
+            return { error: `Failed to open Terminal: ${stderr}`, success: false }
+          }
+          return { success: true }
+        })
+      }
+    }
+  } catch (error) {
+    // Clean up orphaned script on error (matches Linux/Windows behavior)
+    if (detachedScriptPath) {
+      try {
+        await fs.rm(detachedScriptPath)
+      } catch {
+        // Best-effort cleanup
+      }
+    }
+    return {
+      error: `Failed to open terminal: ${error instanceof Error ? error.message : String(error)}`,
+      success: false,
+    }
+  }
 }
 
 // =============================================================================
@@ -820,22 +838,38 @@ export async function openMacOSTerminal(cwd: string, argv?: string[]): Promise<T
  * Returns null if no terminal can be detected (use fallback chain).
  */
 function detectCurrentLinuxTerminal(): LinuxTerminal | null {
-	const env = linuxTerminalEnvSchema.parse(process.env)
+  const env = linuxTerminalEnvSchema.parse(process.env)
 
-	// Check specific env vars first (most reliable)
-	if (env.KITTY_WINDOW_ID) return "kitty"
-	if (env.WEZTERM_PANE) return "wezterm"
-	if (env.ALACRITTY_WINDOW_ID) return "alacritty"
-	if (env.GHOSTTY_RESOURCES_DIR) return "ghostty"
-	if (env.GNOME_TERMINAL_SERVICE) return "gnome-terminal"
-	if (env.KONSOLE_VERSION) return "konsole"
+  // Check specific env vars first (most reliable)
+  if (env.KITTY_WINDOW_ID) {
+    return 'kitty'
+  }
+  if (env.WEZTERM_PANE) {
+    return 'wezterm'
+  }
+  if (env.ALACRITTY_WINDOW_ID) {
+    return 'alacritty'
+  }
+  if (env.GHOSTTY_RESOURCES_DIR) {
+    return 'ghostty'
+  }
+  if (env.GNOME_TERMINAL_SERVICE) {
+    return 'gnome-terminal'
+  }
+  if (env.KONSOLE_VERSION) {
+    return 'konsole'
+  }
 
-	// TERM_PROGRAM fallback
-	const termProgram = env.TERM_PROGRAM?.toLowerCase()
-	if (termProgram === "warpterminal") return "warp"
-	if (termProgram === "foot") return "foot"
+  // TERM_PROGRAM fallback
+  const termProgram = env.TERM_PROGRAM?.toLowerCase()
+  if (termProgram === 'warpterminal') {
+    return 'warp'
+  }
+  if (termProgram === 'foot') {
+    return 'foot'
+  }
 
-	return null
+  return null
 }
 
 /**
@@ -850,283 +884,294 @@ function detectCurrentLinuxTerminal(): LinuxTerminal | null {
  * @returns Success status and optional error message
  */
 export async function openLinuxTerminal(cwd: string, argv?: string[]): Promise<TerminalResult> {
-	// Guard: validate cwd
-	if (!cwd) {
-		return { success: false, error: "Working directory is required" }
-	}
+  // Guard: validate cwd
+  if (!cwd) {
+    return { error: 'Working directory is required', success: false }
+  }
 
-	const escapedCwd = escapeBash(cwd)
-	const command = buildBashCommandFromArgv(argv)
-	const scriptContent = wrapWithSelfCleanup(
-		command ? `cd "${escapedCwd}" && ${command}\nexec bash` : `cd "${escapedCwd}"\nexec bash`,
-	)
+  const escapedCwd = escapeBash(cwd)
+  const command = buildBashCommandFromArgv(argv)
+  const scriptContent = wrapWithSelfCleanup(
+    command ? `cd "${escapedCwd}" && ${command}\nexec bash` : `cd "${escapedCwd}"\nexec bash`,
+  )
 
-	let scriptPath: string | null = null
-	let warpConfigPath: string | null = null
+  let scriptPath: string | null = null
+  let warpConfigPath: string | null = null
 
-	const cleanupFile = async (filePath: string | null): Promise<void> => {
-		if (!filePath) {
-			return
-		}
-		try {
-			await fs.rm(filePath)
-		} catch {
-			// Best-effort cleanup
-		}
-	}
+  const cleanupFile = async (filePath: string | null): Promise<void> => {
+    if (!filePath) {
+      return
+    }
+    try {
+      await fs.rm(filePath)
+    } catch {
+      // Best-effort cleanup
+    }
+  }
 
-	const ensureScriptPath = async (): Promise<string> => {
-		if (scriptPath) {
-			return scriptPath
-		}
+  const ensureScriptPath = async (): Promise<string> => {
+    if (scriptPath) {
+      return scriptPath
+    }
 
-		// Write script directly - it self-deletes via trap
-		// DO NOT use withTempScript - all Linux spawns are detached
-		scriptPath = path.join(
-			getTempDir(),
-			`worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
-		)
-		await Bun.write(scriptPath, scriptContent)
-		await fs.chmod(scriptPath, 0o755)
-		return scriptPath
-	}
+    // Write script directly - it self-deletes via trap
+    // DO NOT use withTempScript - all Linux spawns are detached
+    scriptPath = path.join(
+      getTempDir(),
+      `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
+    )
+    await Bun.write(scriptPath, scriptContent)
+    await fs.chmod(scriptPath, 0o755)
+    return scriptPath
+  }
 
-	try {
-		// Helper to try a terminal (all detached spawns)
-		const tryTerminal = async (
-			name: string,
-			args: string[],
-		): Promise<{ tried: boolean; success: boolean }> => {
-			const check = Bun.spawnSync(["which", name])
-			if (check.exitCode !== 0) {
-				return { tried: false, success: false }
-			}
+  try {
+    // Helper to try a terminal (all detached spawns)
+    const tryTerminal = async (
+      name: string,
+      args: string[],
+    ): Promise<{ tried: boolean; success: boolean }> => {
+      const check = Bun.spawnSync(['which', name])
+      if (check.exitCode !== 0) {
+        return { success: false, tried: false }
+      }
 
-			try {
-				const proc = Bun.spawn(args, {
-					detached: true,
-					stdio: ["ignore", "ignore", "ignore"],
-				})
-				proc.unref()
-				return { tried: true, success: true }
-			} catch {
-				return { tried: true, success: false }
-			}
-		}
+      try {
+        const proc = Bun.spawn(args, {
+          detached: true,
+          stdio: ['ignore', 'ignore', 'ignore'],
+        })
+        proc.unref()
+        return { success: true, tried: true }
+      } catch {
+        return { success: false, tried: true }
+      }
+    }
 
-		// 1. Check current terminal via env detection
-		const currentTerminal = detectCurrentLinuxTerminal()
-		if (currentTerminal) {
-			let result: { tried: boolean; success: boolean }
+    // 1. Check current terminal via env detection
+    const currentTerminal = detectCurrentLinuxTerminal()
+    if (currentTerminal) {
+      let result: { tried: boolean; success: boolean }
 
-			switch (currentTerminal) {
-				case "kitty": {
-					const launchScriptPath = await ensureScriptPath()
-					// Try remote control first (synchronous, script still needed after)
-					const kittyRemote = Bun.spawnSync([
-						"kitty",
-						"@",
-						"launch",
-						"--type",
-						"tab",
-						"--cwd",
-						cwd,
-						"--",
-						"bash",
-						launchScriptPath,
-					])
-					if (kittyRemote.exitCode === 0) {
-						return { success: true }
-					}
-					result = await tryTerminal("kitty", [
-						"kitty",
-						"--directory",
-						cwd,
-						"-e",
-						"bash",
-						launchScriptPath,
-					])
-					break
-				}
-				case "wezterm": {
-					const launchScriptPath = await ensureScriptPath()
-					result = await tryTerminal("wezterm", [
-						"wezterm",
-						"cli",
-						"spawn",
-						"--cwd",
-						cwd,
-						"--",
-						"bash",
-						launchScriptPath,
-					])
-					break
-				}
-				case "alacritty": {
-					const launchScriptPath = await ensureScriptPath()
-					result = await tryTerminal("alacritty", [
-						"alacritty",
-						"--working-directory",
-						cwd,
-						"-e",
-						"bash",
-						launchScriptPath,
-					])
-					break
-				}
-				case "ghostty": {
-					const launchScriptPath = await ensureScriptPath()
-					result = await tryTerminal("ghostty", ["ghostty", "-e", "bash", launchScriptPath])
-					break
-				}
-				case "warp": {
-					const configName = `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}`
-					const configDir = getWarpLaunchConfigDir()
-					const configPath = path.join(configDir, `${configName}.yaml`)
-					warpConfigPath = configPath
-					const configContent = buildWarpLaunchConfigYaml(configName, cwd, configPath, command)
+      switch (currentTerminal) {
+        case 'kitty': {
+          const launchScriptPath = await ensureScriptPath()
+          // Try remote control first (synchronous, script still needed after)
+          const kittyRemote = Bun.spawnSync([
+            'kitty',
+            '@',
+            'launch',
+            '--type',
+            'tab',
+            '--cwd',
+            cwd,
+            '--',
+            'bash',
+            launchScriptPath,
+          ])
+          if (kittyRemote.exitCode === 0) {
+            return { success: true }
+          }
+          result = await tryTerminal('kitty', [
+            'kitty',
+            '--directory',
+            cwd,
+            '-e',
+            'bash',
+            launchScriptPath,
+          ])
+          break
+        }
+        case 'wezterm': {
+          const launchScriptPath = await ensureScriptPath()
+          result = await tryTerminal('wezterm', [
+            'wezterm',
+            'cli',
+            'spawn',
+            '--cwd',
+            cwd,
+            '--',
+            'bash',
+            launchScriptPath,
+          ])
+          break
+        }
+        case 'alacritty': {
+          const launchScriptPath = await ensureScriptPath()
+          result = await tryTerminal('alacritty', [
+            'alacritty',
+            '--working-directory',
+            cwd,
+            '-e',
+            'bash',
+            launchScriptPath,
+          ])
+          break
+        }
+        case 'ghostty': {
+          const launchScriptPath = await ensureScriptPath()
+          result = await tryTerminal('ghostty', ['ghostty', '-e', 'bash', launchScriptPath])
+          break
+        }
+        case 'warp': {
+          const configName = `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}`
+          const configDir = getWarpLaunchConfigDir()
+          const configPath = path.join(configDir, `${configName}.yaml`)
+          warpConfigPath = configPath
+          const configContent = buildWarpLaunchConfigYaml(configName, cwd, configPath, command)
 
-					await fs.mkdir(configDir, { recursive: true })
-					await Bun.write(configPath, configContent)
+          await fs.mkdir(configDir, { recursive: true })
+          await Bun.write(configPath, configContent)
 
-					result = await tryTerminal("warp-terminal", [
-						"warp-terminal",
-						`warp://launch/${encodeURIComponent(configName)}`,
-					])
+          result = await tryTerminal('warp-terminal', [
+            'warp-terminal',
+            `warp://launch/${encodeURIComponent(configName)}`,
+          ])
 
-					if (!result.success) {
-						result = await tryTerminal("warp-terminal", [
-							"warp-terminal",
-							`warp://launch/${encodeURIComponent(`${configName}.yaml`)}`,
-						])
-					}
+          if (!result.success) {
+            result = await tryTerminal('warp-terminal', [
+              'warp-terminal',
+              `warp://launch/${encodeURIComponent(`${configName}.yaml`)}`,
+            ])
+          }
 
-					if (!result.success) {
-						await cleanupFile(warpConfigPath)
-						warpConfigPath = null
-					}
-					break
-				}
-				case "foot": {
-					const launchScriptPath = await ensureScriptPath()
-					result = await tryTerminal("foot", [
-						"foot",
-						"--working-directory",
-						cwd,
-						"bash",
-						launchScriptPath,
-					])
-					break
-				}
-				case "gnome-terminal": {
-					const launchScriptPath = await ensureScriptPath()
-					result = await tryTerminal("gnome-terminal", [
-						"gnome-terminal",
-						"--working-directory",
-						cwd,
-						"--",
-						"bash",
-						launchScriptPath,
-					])
-					break
-				}
-				case "konsole": {
-					const launchScriptPath = await ensureScriptPath()
-					result = await tryTerminal("konsole", [
-						"konsole",
-						"--workdir",
-						cwd,
-						"-e",
-						"bash",
-						launchScriptPath,
-					])
-					break
-				}
-				default:
-					result = { tried: false, success: false }
-			}
+          if (!result.success) {
+            await cleanupFile(warpConfigPath)
+            warpConfigPath = null
+          }
+          break
+        }
+        case 'foot': {
+          const launchScriptPath = await ensureScriptPath()
+          result = await tryTerminal('foot', [
+            'foot',
+            '--working-directory',
+            cwd,
+            'bash',
+            launchScriptPath,
+          ])
+          break
+        }
+        case 'gnome-terminal': {
+          const launchScriptPath = await ensureScriptPath()
+          result = await tryTerminal('gnome-terminal', [
+            'gnome-terminal',
+            '--working-directory',
+            cwd,
+            '--',
+            'bash',
+            launchScriptPath,
+          ])
+          break
+        }
+        case 'konsole': {
+          const launchScriptPath = await ensureScriptPath()
+          result = await tryTerminal('konsole', [
+            'konsole',
+            '--workdir',
+            cwd,
+            '-e',
+            'bash',
+            launchScriptPath,
+          ])
+          break
+        }
+        default: {
+          result = { tried: false, success: false }
+        }
+      }
 
-			if (result.success) {
-				return { success: true }
-			}
-		}
+      if (result.success) {
+        return { success: true }
+      }
+    }
 
-		// 2. xdg-terminal-exec (modern XDG standard)
-		const launchScriptPath = await ensureScriptPath()
+    // 2. xdg-terminal-exec (modern XDG standard)
+    const launchScriptPath = await ensureScriptPath()
 
-		const xdgResult = await tryTerminal("xdg-terminal-exec", [
-			"xdg-terminal-exec",
-			"--",
-			"bash",
-			launchScriptPath,
-		])
-		if (xdgResult.success) return { success: true }
+    const xdgResult = await tryTerminal('xdg-terminal-exec', [
+      'xdg-terminal-exec',
+      '--',
+      'bash',
+      launchScriptPath,
+    ])
+    if (xdgResult.success) {
+      return { success: true }
+    }
 
-		// 3. x-terminal-emulator (Debian/Ubuntu)
-		const xteResult = await tryTerminal("x-terminal-emulator", [
-			"x-terminal-emulator",
-			"-e",
-			"bash",
-			launchScriptPath,
-		])
-		if (xteResult.success) return { success: true }
+    // 3. x-terminal-emulator (Debian/Ubuntu)
+    const xteResult = await tryTerminal('x-terminal-emulator', [
+      'x-terminal-emulator',
+      '-e',
+      'bash',
+      launchScriptPath,
+    ])
+    if (xteResult.success) {
+      return { success: true }
+    }
 
-		// 4. Modern terminals fallback
-		const modernTerminals: Array<{ name: string; args: string[] }> = [
-			{ name: "kitty", args: ["kitty", "--directory", cwd, "-e", "bash", launchScriptPath] },
-			{
-				name: "alacritty",
-				args: ["alacritty", "--working-directory", cwd, "-e", "bash", launchScriptPath],
-			},
-			{
-				name: "wezterm",
-				args: ["wezterm", "cli", "spawn", "--cwd", cwd, "--", "bash", launchScriptPath],
-			},
-			{ name: "ghostty", args: ["ghostty", "-e", "bash", launchScriptPath] },
-			{ name: "foot", args: ["foot", "--working-directory", cwd, "bash", launchScriptPath] },
-		]
+    // 4. Modern terminals fallback
+    const modernTerminals: { name: string; args: string[] }[] = [
+      { args: ['kitty', '--directory', cwd, '-e', 'bash', launchScriptPath], name: 'kitty' },
+      {
+        args: ['alacritty', '--working-directory', cwd, '-e', 'bash', launchScriptPath],
+        name: 'alacritty',
+      },
+      {
+        args: ['wezterm', 'cli', 'spawn', '--cwd', cwd, '--', 'bash', launchScriptPath],
+        name: 'wezterm',
+      },
+      { args: ['ghostty', '-e', 'bash', launchScriptPath], name: 'ghostty' },
+      { args: ['foot', '--working-directory', cwd, 'bash', launchScriptPath], name: 'foot' },
+    ]
 
-		for (const { name, args } of modernTerminals) {
-			const result = await tryTerminal(name, args)
-			if (result.success) return { success: true }
-		}
+    for (const { name, args } of modernTerminals) {
+      const result = await tryTerminal(name, args)
+      if (result.success) {
+        return { success: true }
+      }
+    }
 
-		// 5. DE terminals fallback
-		const deTerminals: Array<{ name: string; args: string[] }> = [
-			{
-				name: "gnome-terminal",
-				args: ["gnome-terminal", "--working-directory", cwd, "--", "bash", launchScriptPath],
-			},
-			{ name: "konsole", args: ["konsole", "--workdir", cwd, "-e", "bash", launchScriptPath] },
-			{
-				name: "xfce4-terminal",
-				args: ["xfce4-terminal", "--working-directory", cwd, "-x", "bash", launchScriptPath],
-			},
-		]
+    // 5. DE terminals fallback
+    const deTerminals: { name: string; args: string[] }[] = [
+      {
+        args: ['gnome-terminal', '--working-directory', cwd, '--', 'bash', launchScriptPath],
+        name: 'gnome-terminal',
+      },
+      { args: ['konsole', '--workdir', cwd, '-e', 'bash', launchScriptPath], name: 'konsole' },
+      {
+        args: ['xfce4-terminal', '--working-directory', cwd, '-x', 'bash', launchScriptPath],
+        name: 'xfce4-terminal',
+      },
+    ]
 
-		for (const { name, args } of deTerminals) {
-			const result = await tryTerminal(name, args)
-			if (result.success) return { success: true }
-		}
+    for (const { name, args } of deTerminals) {
+      const result = await tryTerminal(name, args)
+      if (result.success) {
+        return { success: true }
+      }
+    }
 
-		// 6. Last resort: xterm
-		const xtermResult = await tryTerminal("xterm", ["xterm", "-e", "bash", launchScriptPath])
-		if (xtermResult.success) return { success: true }
+    // 6. Last resort: xterm
+    const xtermResult = await tryTerminal('xterm', ['xterm', '-e', 'bash', launchScriptPath])
+    if (xtermResult.success) {
+      return { success: true }
+    }
 
-		// No terminal found - clean up orphaned temp files
-		await cleanupFile(scriptPath)
-		await cleanupFile(warpConfigPath)
-		scriptPath = null
-		warpConfigPath = null
-		return { success: false, error: "No terminal emulator found" }
-	} catch (error) {
-		await cleanupFile(scriptPath)
-		await cleanupFile(warpConfigPath)
-		return {
-			success: false,
-			error: `Failed to spawn terminal: ${error instanceof Error ? error.message : String(error)}`,
-		}
-	}
+    // No terminal found - clean up orphaned temp files
+    await cleanupFile(scriptPath)
+    await cleanupFile(warpConfigPath)
+    scriptPath = null
+    warpConfigPath = null
+    return { error: 'No terminal emulator found', success: false }
+  } catch (error) {
+    await cleanupFile(scriptPath)
+    await cleanupFile(warpConfigPath)
+    return {
+      error: `Failed to spawn terminal: ${error instanceof Error ? error.message : String(error)}`,
+      success: false,
+    }
+  }
 }
 
 // =============================================================================
@@ -1145,72 +1190,72 @@ export async function openLinuxTerminal(cwd: string, argv?: string[]): Promise<T
  * @returns Success status and optional error message
  */
 export async function openWindowsTerminal(cwd: string, argv?: string[]): Promise<TerminalResult> {
-	// Guard: validate cwd
-	if (!cwd) {
-		return { success: false, error: "Working directory is required" }
-	}
+  // Guard: validate cwd
+  if (!cwd) {
+    return { error: 'Working directory is required', success: false }
+  }
 
-	const escapedCwd = escapeBatch(cwd)
-	const command = buildBatchCommandFromArgv(argv)
-	const scriptContent = wrapBatchWithSelfCleanup(
-		command ? `cd /d "${escapedCwd}"\r\n${command}\r\ncmd /k` : `cd /d "${escapedCwd}"\r\ncmd /k`,
-	)
+  const escapedCwd = escapeBatch(cwd)
+  const command = buildBatchCommandFromArgv(argv)
+  const scriptContent = wrapBatchWithSelfCleanup(
+    command ? `cd /d "${escapedCwd}"\r\n${command}\r\ncmd /k` : `cd /d "${escapedCwd}"\r\ncmd /k`,
+  )
 
-	// Write script directly - it self-deletes via goto trick
-	// DO NOT use withTempScript - all Windows spawns are detached
-	const scriptPath = path.join(
-		getTempDir(),
-		`worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.bat`,
-	)
-	await Bun.write(scriptPath, scriptContent)
-	await fs.chmod(scriptPath, 0o755)
+  // Write script directly - it self-deletes via goto trick
+  // DO NOT use withTempScript - all Windows spawns are detached
+  const scriptPath = path.join(
+    getTempDir(),
+    `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.bat`,
+  )
+  await Bun.write(scriptPath, scriptContent)
+  await fs.chmod(scriptPath, 0o755)
 
-	try {
-		// Check for Windows Terminal
-		const wtCheck = Bun.spawnSync(["where", "wt"], {
-			stdout: "pipe",
-			stderr: "pipe",
-		})
+  try {
+    // Check for Windows Terminal
+    const wtCheck = Bun.spawnSync(['where', 'wt'], {
+      stderr: 'pipe',
+      stdout: 'pipe',
+    })
 
-		if (wtCheck.exitCode === 0) {
-			try {
-				const proc = Bun.spawn(["wt.exe", "-d", cwd, "cmd", "/k", scriptPath], {
-					detached: true,
-					stdio: ["ignore", "ignore", "ignore"],
-				})
-				proc.unref()
-				return { success: true }
-			} catch {
-				// Fall through to cmd.exe
-			}
-		}
+    if (wtCheck.exitCode === 0) {
+      try {
+        const proc = Bun.spawn(['wt.exe', '-d', cwd, 'cmd', '/k', scriptPath], {
+          detached: true,
+          stdio: ['ignore', 'ignore', 'ignore'],
+        })
+        proc.unref()
+        return { success: true }
+      } catch {
+        // Fall through to cmd.exe
+      }
+    }
 
-		// Fallback: cmd.exe
-		try {
-			const proc = Bun.spawn(["cmd", "/c", "start", "", scriptPath], {
-				detached: true,
-				stdio: ["ignore", "ignore", "ignore"],
-			})
-			proc.unref()
-			return { success: true }
-		} catch (error) {
-			// Failed to spawn - clean up orphaned script
-			try {
-				await fs.rm(scriptPath)
-			} catch {
-				// Best-effort cleanup
-			}
-			return {
-				success: false,
-				error: error instanceof Error ? error.message : String(error),
-			}
-		}
-	} catch (error) {
-		return {
-			success: false,
-			error: `Failed to spawn terminal: ${error instanceof Error ? error.message : String(error)}`,
-		}
-	}
+    // Fallback: cmd.exe
+    try {
+      const proc = Bun.spawn(['cmd', '/c', 'start', '', scriptPath], {
+        detached: true,
+        stdio: ['ignore', 'ignore', 'ignore'],
+      })
+      proc.unref()
+      return { success: true }
+    } catch (error) {
+      // Failed to spawn - clean up orphaned script
+      try {
+        await fs.rm(scriptPath)
+      } catch {
+        // Best-effort cleanup
+      }
+      return {
+        error: error instanceof Error ? error.message : String(error),
+        success: false,
+      }
+    }
+  } catch (error) {
+    return {
+      error: `Failed to spawn terminal: ${error instanceof Error ? error.message : String(error)}`,
+      success: false,
+    }
+  }
 }
 
 // =============================================================================
@@ -1225,69 +1270,69 @@ export async function openWindowsTerminal(cwd: string, argv?: string[]): Promise
  * instead of using withTempScript. The script self-deletes via trap.
  */
 export async function openWSLTerminal(cwd: string, argv?: string[]): Promise<TerminalResult> {
-	// Guard: validate cwd
-	if (!cwd) {
-		return { success: false, error: "Working directory is required" }
-	}
+  // Guard: validate cwd
+  if (!cwd) {
+    return { error: 'Working directory is required', success: false }
+  }
 
-	const escapedCwd = escapeBash(cwd)
-	const command = buildBashCommandFromArgv(argv)
-	const scriptContent = wrapWithSelfCleanup(
-		command ? `cd "${escapedCwd}" && ${command}\nexec bash` : `cd "${escapedCwd}"\nexec bash`,
-	)
+  const escapedCwd = escapeBash(cwd)
+  const command = buildBashCommandFromArgv(argv)
+  const scriptContent = wrapWithSelfCleanup(
+    command ? `cd "${escapedCwd}" && ${command}\nexec bash` : `cd "${escapedCwd}"\nexec bash`,
+  )
 
-	// Write script directly - it self-deletes via trap
-	// DO NOT use withTempScript - all WSL spawns are detached
-	const scriptPath = path.join(
-		getTempDir(),
-		`worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
-	)
-	await Bun.write(scriptPath, scriptContent)
-	await fs.chmod(scriptPath, 0o755)
+  // Write script directly - it self-deletes via trap
+  // DO NOT use withTempScript - all WSL spawns are detached
+  const scriptPath = path.join(
+    getTempDir(),
+    `worktree-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`,
+  )
+  await Bun.write(scriptPath, scriptContent)
+  await fs.chmod(scriptPath, 0o755)
 
-	try {
-		// Try wt.exe first (Windows Terminal via PATH interop)
-		const wtResult = Bun.spawnSync(["which", "wt.exe"])
-		if (wtResult.exitCode === 0) {
-			try {
-				const proc = Bun.spawn(["wt.exe", "-d", cwd, "bash", scriptPath], {
-					detached: true,
-					stdio: ["ignore", "ignore", "ignore"],
-				})
-				proc.unref()
-				return { success: true }
-			} catch {
-				// Fall through to bash
-			}
-		}
+  try {
+    // Try wt.exe first (Windows Terminal via PATH interop)
+    const wtResult = Bun.spawnSync(['which', 'wt.exe'])
+    if (wtResult.exitCode === 0) {
+      try {
+        const proc = Bun.spawn(['wt.exe', '-d', cwd, 'bash', scriptPath], {
+          detached: true,
+          stdio: ['ignore', 'ignore', 'ignore'],
+        })
+        proc.unref()
+        return { success: true }
+      } catch {
+        // Fall through to bash
+      }
+    }
 
-		// Fallback: open in current terminal (new bash process)
-		try {
-			const proc = Bun.spawn(["bash", scriptPath], {
-				cwd,
-				detached: true,
-				stdio: ["ignore", "ignore", "ignore"],
-			})
-			proc.unref()
-			return { success: true }
-		} catch (error) {
-			// Failed to spawn - clean up orphaned script
-			try {
-				await fs.rm(scriptPath)
-			} catch {
-				// Best-effort cleanup
-			}
-			return {
-				success: false,
-				error: error instanceof Error ? error.message : String(error),
-			}
-		}
-	} catch (error) {
-		return {
-			success: false,
-			error: `Failed to spawn terminal: ${error instanceof Error ? error.message : String(error)}`,
-		}
-	}
+    // Fallback: open in current terminal (new bash process)
+    try {
+      const proc = Bun.spawn(['bash', scriptPath], {
+        cwd,
+        detached: true,
+        stdio: ['ignore', 'ignore', 'ignore'],
+      })
+      proc.unref()
+      return { success: true }
+    } catch (error) {
+      // Failed to spawn - clean up orphaned script
+      try {
+        await fs.rm(scriptPath)
+      } catch {
+        // Best-effort cleanup
+      }
+      return {
+        error: error instanceof Error ? error.message : String(error),
+        success: false,
+      }
+    }
+  } catch (error) {
+    return {
+      error: `Failed to spawn terminal: ${error instanceof Error ? error.message : String(error)}`,
+      success: false,
+    }
+  }
 }
 
 // =============================================================================
@@ -1304,72 +1349,76 @@ export async function openWSLTerminal(cwd: string, argv?: string[]): Promise<Ter
  * @returns Success status and optional error message
  */
 export async function openTerminal(
-	cwd: string,
-	argv?: string[],
-	windowName?: string,
-	options?: {
-		detectTerminalType?: () => TerminalType
-		openCmuxTerminalWithState?: (
-			cwd: string,
-			argv?: string[],
-		) => Promise<CmuxTerminalExecutionResult>
-		openPlatformTerminal?: (cwd: string, argv?: string[]) => Promise<TerminalResult>
-	},
+  cwd: string,
+  argv?: string[],
+  windowName?: string,
+  options?: {
+    detectTerminalType?: () => TerminalType
+    openCmuxTerminalWithState?: (
+      cwd: string,
+      argv?: string[],
+    ) => Promise<CmuxTerminalExecutionResult>
+    openPlatformTerminal?: (cwd: string, argv?: string[]) => Promise<TerminalResult>
+  },
 ): Promise<TerminalResult> {
-	const terminalType = options?.detectTerminalType?.() ?? detectTerminalType()
-	if (terminalType === "cmux") {
-		const cmuxResult = await (options?.openCmuxTerminalWithState ?? openCmuxTerminalWithState)(
-			cwd,
-			argv,
-		)
-		if (cmuxResult.terminalResult.success) {
-			return cmuxResult.terminalResult
-		}
+  const terminalType = options?.detectTerminalType?.() ?? detectTerminalType()
+  if (terminalType === 'cmux') {
+    const cmuxResult = await (options?.openCmuxTerminalWithState ?? openCmuxTerminalWithState)(
+      cwd,
+      argv,
+    )
+    if (cmuxResult.terminalResult.success) {
+      return cmuxResult.terminalResult
+    }
 
-		if (!cmuxResult.hasStateMutation) {
-			return (options?.openPlatformTerminal ?? openPlatformTerminal)(cwd, argv)
-		}
+    if (!cmuxResult.hasStateMutation) {
+      return (options?.openPlatformTerminal ?? openPlatformTerminal)(cwd, argv)
+    }
 
-		return cmuxResult.terminalResult
-	}
+    return cmuxResult.terminalResult
+  }
 
-	return openTerminalByType(terminalType, cwd, argv, windowName)
+  return openTerminalByType(terminalType, cwd, argv, windowName)
 }
 
 async function openPlatformTerminal(cwd: string, argv?: string[]): Promise<TerminalResult> {
-	const platformTerminalType = detectPlatformTerminalType()
-	return openTerminalByType(platformTerminalType, cwd, argv)
+  const platformTerminalType = detectPlatformTerminalType()
+  return openTerminalByType(platformTerminalType, cwd, argv)
 }
 
 async function openTerminalByType(
-	terminalType: Exclude<TerminalType, "cmux">,
-	cwd: string,
-	argv?: string[],
-	windowName?: string,
+  terminalType: Exclude<TerminalType, 'cmux'>,
+  cwd: string,
+  argv?: string[],
+  windowName?: string,
 ): Promise<TerminalResult> {
-	if (terminalType === "tmux") {
-		return openTmuxWindow({
-			windowName: windowName || "worktree",
-			cwd,
-			argv,
-		})
-	}
+  if (terminalType === 'tmux') {
+    return openTmuxWindow({
+      argv,
+      cwd,
+      windowName: windowName || 'worktree',
+    })
+  }
 
-	switch (terminalType) {
-		case "macos":
-			return openMacOSTerminal(cwd, argv)
+  switch (terminalType) {
+    case 'macos': {
+      return openMacOSTerminal(cwd, argv)
+    }
 
-		case "windows":
-			// Check if we're in WSL
-			if (process.platform === "linux" && isInsideWSL()) {
-				return openWSLTerminal(cwd, argv)
-			}
-			return openWindowsTerminal(cwd, argv)
+    case 'windows': {
+      // Check if we're in WSL
+      if (process.platform === 'linux' && isInsideWSL()) {
+        return openWSLTerminal(cwd, argv)
+      }
+      return openWindowsTerminal(cwd, argv)
+    }
 
-		case "linux-desktop":
-			return openLinuxTerminal(cwd, argv)
+    case 'linux-desktop': {
+      return openLinuxTerminal(cwd, argv)
+    }
 
-		default:
-			return { success: false, error: `Unsupported terminal type: ${terminalType}` }
-	}
+    default: {
+      return { success: false, error: `Unsupported terminal type: ${terminalType}` }
+    }
+  }
 }

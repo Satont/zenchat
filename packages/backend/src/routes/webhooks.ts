@@ -1,7 +1,7 @@
-import { handleKickWebhook } from "../auth/kick-webhook.ts";
+import { handleKickWebhook } from '../auth/kick-webhook.ts'
 
 export const webhookRoutes = {
-  "/webhook/kick": {
+  '/webhook/kick': {
     POST: (req: Request) => handleKickWebhook(req),
   },
-} as const;
+} as const

@@ -1,212 +1,249 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, computed, onMounted, onUnmounted } from "vue";
-import ChatMessage from "./ChatMessage.vue";
-import ChatInput from "./ChatInput.vue";
-import Tooltip from "./ui/Tooltip.vue";
-import ChatAppearancePopover from "./ui/ChatAppearancePopover.vue";
-import { rpc } from "../main";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import ChatMessage from './ChatMessage.vue'
+import ChatInput from './ChatInput.vue'
+import Tooltip from './ui/Tooltip.vue'
+import ChatAppearancePopover from './ui/ChatAppearancePopover.vue'
+import { rpc } from '../main'
 import type {
-  NormalizedChatMessage,
-  AppSettings,
   Account,
+  AppSettings,
+  NormalizedChatMessage,
   PlatformStatusInfo,
   WatchedChannel,
-} from "@twirchat/shared/types";
-import type { ChannelStatus, ChannelStatusRequest } from "@twirchat/shared/protocol";
+} from '@twirchat/shared/types'
+import type { ChannelStatus, ChannelStatusRequest } from '@twirchat/shared/protocol'
 
 const props = defineProps<{
-  messages: NormalizedChatMessage[];
-  settings: AppSettings | null;
-  accounts: Account[];
-  statuses: Map<string, PlatformStatusInfo>;
+  messages: NormalizedChatMessage[]
+  settings: AppSettings | null
+  accounts: Account[]
+  statuses: Map<string, PlatformStatusInfo>
   /** Set when a watched channel tab is active */
-  watchedChannel?: WatchedChannel | null;
-  watchedChannelStatus?: PlatformStatusInfo | null;
-  watchedMessages?: NormalizedChatMessage[];
-}>();
+  watchedChannel?: WatchedChannel | null
+  watchedChannelStatus?: PlatformStatusInfo | null
+  watchedMessages?: NormalizedChatMessage[]
+}>()
 
 const emit = defineEmits<{
-  "go-to-platforms": [];
-  "settings-change": [settings: import("@twirchat/shared/types").AppSettings];
-  "send-watched": [text: string];
-}>();
+  'go-to-platforms': []
+  'settings-change': [settings: import('@twirchat/shared/types').AppSettings]
+  'send-watched': [text: string]
+}>()
 
-const listEl = ref<HTMLElement | null>(null);
-const isAtBottom = ref(true);
+const listEl = ref<HTMLElement | null>(null)
+const isAtBottom = ref(true)
 
 // ---- Channel status bar ----
-const channelStatuses = ref<ChannelStatus[]>([]);
+const channelStatuses = ref<ChannelStatus[]>([])
 
 // ---- Active messages (home vs watched) ----
 const activeMessages = computed<NormalizedChatMessage[]>(() => {
-  if (props.watchedChannel) return props.watchedMessages ?? [];
-  return props.messages;
-});
+  if (props.watchedChannel) {
+    return props.watchedMessages ?? []
+  }
+  return props.messages
+})
 
 // Connected channels: derived from statuses map — twitch/kick only (backend channels-status API)
 const connectedChannels = computed<ChannelStatusRequest[]>(() => {
-  const result: ChannelStatusRequest[] = [];
+  const result: ChannelStatusRequest[] = []
   for (const [, info] of props.statuses) {
     if (
-      (info.status === "connected" || info.status === "connecting") &&
+      (info.status === 'connected' || info.status === 'connecting') &&
       info.channelLogin &&
-      (info.platform === "twitch" || info.platform === "kick")
+      (info.platform === 'twitch' || info.platform === 'kick')
     ) {
-      result.push({ platform: info.platform as "twitch" | "kick", channelLogin: info.channelLogin });
+      result.push({ channelLogin: info.channelLogin, platform: info.platform as 'twitch' | 'kick' })
     }
   }
-  return result;
-});
+  return result
+})
 
 // Auto-connected channels for Kick: when user is authenticated, their own channel is auto-connected
 const autoConnectedChannels = computed<ChannelStatusRequest[]>(() => {
-  const result: ChannelStatusRequest[] = [];
+  const result: ChannelStatusRequest[] = []
   for (const account of props.accounts) {
     // For Kick, when authenticated, auto-connect to user's own channel
-    if (account.platform === "kick") {
+    if (account.platform === 'kick') {
       // Check if this channel is not already in connectedChannels (case-insensitive)
       const alreadyConnected = connectedChannels.value.some(
-        ch => ch.platform === account.platform && ch.channelLogin.toLowerCase() === account.username.toLowerCase()
-      );
+        (ch) =>
+          ch.platform === account.platform &&
+          ch.channelLogin.toLowerCase() === account.username.toLowerCase(),
+      )
       if (!alreadyConnected) {
-        result.push({ platform: account.platform as "twitch" | "kick", channelLogin: account.username });
+        result.push({
+          channelLogin: account.username,
+          platform: account.platform as 'twitch' | 'kick',
+        })
       }
     }
   }
-  return result;
-});
+  return result
+})
 
 // All channels to display: connected + auto-connected
-const allChannels = computed<ChannelStatusRequest[]>(() => {
-  return [...connectedChannels.value, ...autoConnectedChannels.value];
-});
+const allChannels = computed<ChannelStatusRequest[]>(() => [
+  ...connectedChannels.value,
+  ...autoConnectedChannels.value,
+])
 
 // Channels shown in the bar: merge allChannels with backend-fetched statuses.
 // This ensures the bar is visible immediately when a channel is joined, even if
-// the backend fetch hasn't returned yet (or fails).
+// The backend fetch hasn't returned yet (or fails).
 const displayedChannels = computed<ChannelStatus[]>(() => {
   const backendMap = new Map(
     channelStatuses.value.map((s) => [`${s.platform}:${s.channelLogin}`, s]),
-  );
+  )
   return allChannels.value.map((ch) => {
-    const key = `${ch.platform}:${ch.channelLogin}`;
-    const backendStatus = backendMap.get(key);
+    const key = `${ch.platform}:${ch.channelLogin}`
+    const backendStatus = backendMap.get(key)
 
     if (backendStatus) {
-      return backendStatus;
+      return backendStatus
     }
 
     return {
-      platform: ch.platform,
       channelLogin: ch.channelLogin,
       isLive: false,
-      title: "",
-    };
-  });
-});
+      platform: ch.platform,
+      title: '',
+    }
+  })
+})
 
 async function fetchChannelStatuses() {
-  const channels = allChannels.value;
+  const channels = allChannels.value
   if (channels.length === 0) {
-    channelStatuses.value = [];
-    return;
+    channelStatuses.value = []
+    return
   }
   try {
-    const res = await rpc.request.getChannelsStatus({ channels });
-    channelStatuses.value = res.channels;
-  } catch (err) {
-    console.warn("[ChannelStatusBar] fetch failed:", err);
+    const res = await rpc.request.getChannelsStatus({ channels })
+    channelStatuses.value = res.channels
+  } catch (error) {
+    console.warn('[ChannelStatusBar] fetch failed:', error)
   }
 }
 
-let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
-  fetchChannelStatuses();
-  pollTimer = setInterval(fetchChannelStatuses, 10_000);
-});
+  fetchChannelStatuses()
+  pollTimer = setInterval(fetchChannelStatuses, 10_000)
+})
 
 onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer);
-});
+  if (pollTimer) {
+    clearInterval(pollTimer)
+  }
+})
 
 // Re-fetch immediately when channels change
-watch(allChannels, () => fetchChannelStatuses(), { deep: true });
+watch(allChannels, () => fetchChannelStatuses(), { deep: true })
 
 // ---- Scroll ----
 const hasAnyConnection = computed(() =>
-  ["twitch", "youtube", "kick"].some(
-    (p) => props.statuses.get(p)?.status === "connected",
-  ),
-);
+  ['twitch', 'youtube', 'kick'].some((p) => props.statuses.get(p)?.status === 'connected'),
+)
 
 function onScroll() {
-  if (!listEl.value) return;
-  const { scrollTop, scrollHeight, clientHeight } = listEl.value;
-  isAtBottom.value = scrollHeight - scrollTop - clientHeight < 40;
+  if (!listEl.value) {
+    return
+  }
+  const { scrollTop, scrollHeight, clientHeight } = listEl.value
+  isAtBottom.value = scrollHeight - scrollTop - clientHeight < 40
 }
 
 watch(
   () => activeMessages.value.length,
   async () => {
     if (isAtBottom.value) {
-      await nextTick();
+      await nextTick()
       listEl.value?.scrollTo({
+        behavior: 'smooth',
         top: listEl.value.scrollHeight,
-        behavior: "smooth",
-      });
+      })
     }
   },
-);
+)
 
 function scrollToBottom() {
   listEl.value?.scrollTo({
+    behavior: 'smooth',
     top: listEl.value.scrollHeight,
-    behavior: "smooth",
-  });
-  isAtBottom.value = true;
+  })
+  isAtBottom.value = true
 }
 
 function platformColor(platform: string): string {
   switch (platform) {
-    case "twitch": return "#9146ff";
-    case "youtube": return "#ff0000";
-    case "kick": return "#53fc18";
-    default: return "#a78bfa";
+    case 'twitch': {
+      return '#9146ff'
+    }
+    case 'youtube': {
+      return '#ff0000'
+    }
+    case 'kick': {
+      return '#53fc18'
+    }
+    default: {
+      return '#a78bfa'
+    }
   }
 }
 
 function platformName(platform: string): string {
   switch (platform) {
-    case "twitch": return "Twitch";
-    case "youtube": return "YouTube";
-    case "kick": return "Kick";
-    default: return platform;
+    case 'twitch': {
+      return 'Twitch'
+    }
+    case 'youtube': {
+      return 'YouTube'
+    }
+    case 'kick': {
+      return 'Kick'
+    }
+    default: {
+      return platform
+    }
   }
 }
 
 function formatViewers(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
+  if (n >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(1)}M`
+  }
+  if (n >= 1000) {
+    return `${(n / 1_000).toFixed(1)}K`
+  }
+  return String(n)
 }
 
-async function onSend(targets: Array<{ platform: string; channelLogin: string; text: string }>) {
+async function onSend(targets: { platform: string; channelLogin: string; text: string }[]) {
   await Promise.allSettled(
     targets.map((t) =>
-      rpc.request.sendMessage({ platform: t.platform as import("@twirchat/shared/types").Platform, channelId: t.channelLogin, text: t.text })
-        .catch((err) => console.warn(`[ChatInput] send failed on ${t.platform}:`, err))
-    )
-  );
+      rpc.request
+        .sendMessage({
+          channelId: t.channelLogin,
+          platform: t.platform as import('@twirchat/shared/types').Platform,
+          text: t.text,
+        })
+        .catch((error) => console.warn(`[ChatInput] send failed on ${t.platform}:`, error)),
+    ),
+  )
 }
 
 function onSendWatched(text: string) {
-  emit("send-watched", text);
+  emit('send-watched', text)
 }
 
-function onAppearanceChange(s: import("@twirchat/shared/types").AppSettings) {
-  emit("settings-change", s);
-  rpc.request.saveSettings(s).catch((err) => console.warn("[ChatList] saveSettings failed:", err));
+function onAppearanceChange(s: import('@twirchat/shared/types').AppSettings) {
+  emit('settings-change', s)
+  rpc.request
+    .saveSettings(s)
+    .catch((error) => console.warn('[ChatList] saveSettings failed:', error))
 }
 </script>
 
@@ -227,7 +264,11 @@ function onAppearanceChange(s: import("@twirchat/shared/types").AppSettings) {
         <span class="watched-platform" :style="{ color: platformColor(watchedChannel.platform) }">
           {{ watchedChannel.platform }}
         </span>
-        <span v-if="watchedChannelStatus" class="watched-mode" :class="{ anon: watchedChannelStatus.mode !== 'authenticated' }">
+        <span
+          v-if="watchedChannelStatus"
+          class="watched-mode"
+          :class="{ anon: watchedChannelStatus.mode !== 'authenticated' }"
+        >
           {{ watchedChannelStatus.mode === 'authenticated' ? 'authenticated' : 'read-only' }}
         </span>
       </template>
@@ -277,7 +318,9 @@ function onAppearanceChange(s: import("@twirchat/shared/types").AppSettings) {
         </div>
       </template>
 
-      <span class="chat-count" v-if="activeMessages.length > 0">{{ activeMessages.length }} messages</span>
+      <span class="chat-count" v-if="activeMessages.length > 0"
+        >{{ activeMessages.length }} messages</span
+      >
 
       <!-- Appearance popup button — only in home tab -->
       <ChatAppearancePopover
@@ -289,117 +332,117 @@ function onAppearanceChange(s: import("@twirchat/shared/types").AppSettings) {
 
     <!-- Messages + scroll pill wrapper -->
     <div class="chat-list-wrapper">
-    <div ref="listEl" class="chat-list" @scroll="onScroll">
-      <template v-if="activeMessages.length > 0">
-        <ChatMessage
-          v-for="msg in [...activeMessages].reverse()"
-          :key="msg.id"
-          :message="msg"
-          :show-platform-color-stripe="settings?.showPlatformColorStripe"
-          :show-platform-icon="settings?.showPlatformIcon"
-          :show-timestamp="settings?.showTimestamp"
-          :show-avatar="settings?.showAvatars"
-          :show-badges="settings?.showBadges"
-          :font-size="settings?.fontSize"
-          :chat-theme="settings?.chatTheme"
-        />
-      </template>
+      <div ref="listEl" class="chat-list" @scroll="onScroll">
+        <template v-if="activeMessages.length > 0">
+          <ChatMessage
+            v-for="msg in [...activeMessages].reverse()"
+            :key="msg.id"
+            :message="msg"
+            :show-platform-color-stripe="settings?.showPlatformColorStripe"
+            :show-platform-icon="settings?.showPlatformIcon"
+            :show-timestamp="settings?.showTimestamp"
+            :show-avatar="settings?.showAvatars"
+            :show-badges="settings?.showBadges"
+            :font-size="settings?.fontSize"
+            :chat-theme="settings?.chatTheme"
+          />
+        </template>
 
-      <!-- Empty state -->
-      <div v-else class="empty-state">
-        <div class="empty-icon">
+        <!-- Empty state -->
+        <div v-else class="empty-state">
+          <div class="empty-icon">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              opacity=".35"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+
+          <!-- Watched channel: just waiting -->
+          <template v-if="watchedChannel">
+            <p class="empty-title">
+              {{
+                watchedChannelStatus?.status === 'connecting'
+                  ? 'Connecting…'
+                  : watchedChannelStatus?.status === 'connected'
+                    ? 'No messages yet'
+                    : 'Connecting…'
+              }}
+            </p>
+            <p class="empty-hint">
+              Messages from <strong>{{ watchedChannel.displayName }}</strong> will appear here.
+            </p>
+          </template>
+
+          <!-- No accounts at all -->
+          <template v-else-if="accounts.length === 0 && !hasAnyConnection">
+            <p class="empty-title">No accounts connected</p>
+            <p class="empty-hint">Connect your streaming accounts to start reading chat.</p>
+            <button class="empty-action" @click="emit('go-to-platforms')">Go to Platforms →</button>
+          </template>
+
+          <!-- Accounts exist, but no active connection yet -->
+          <template v-else-if="!hasAnyConnection">
+            <p class="empty-title">Waiting for connection…</p>
+            <div class="empty-accounts">
+              <div
+                v-for="acc in accounts"
+                :key="acc.id"
+                class="empty-account-chip"
+                :style="{ '--chip-color': platformColor(acc.platform) }"
+              >
+                <img v-if="acc.avatarUrl" :src="acc.avatarUrl" class="chip-avatar" />
+                <span v-else class="chip-avatar-fallback">{{
+                  acc.displayName.charAt(0).toUpperCase()
+                }}</span>
+                <span class="chip-name">{{ acc.displayName }}</span>
+                <span class="chip-platform">{{ acc.platform }}</span>
+              </div>
+            </div>
+            <p class="empty-hint">Join a channel in <strong>Platforms</strong> to see chat.</p>
+          </template>
+
+          <!-- Connected, just no messages yet -->
+          <template v-else>
+            <p class="empty-title">No messages yet</p>
+            <p class="empty-hint">Chat messages will appear here in real time.</p>
+          </template>
+        </div>
+      </div>
+      <!-- /.chat-list -->
+
+      <!-- Scroll-to-bottom pill -->
+      <Transition name="fade">
+        <button
+          v-if="!isAtBottom && activeMessages.length > 0"
+          class="scroll-pill"
+          @click="scrollToBottom"
+        >
           <svg
-            width="48"
-            height="48"
+            width="14"
+            height="14"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="1.2"
+            stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
-            opacity=".35"
           >
-            <path
-              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-            />
+            <polyline points="6 9 12 15 18 9" />
           </svg>
-        </div>
-
-        <!-- Watched channel: just waiting -->
-        <template v-if="watchedChannel">
-          <p class="empty-title">
-            {{
-              watchedChannelStatus?.status === 'connecting'
-                ? 'Connecting…'
-                : watchedChannelStatus?.status === 'connected'
-                  ? 'No messages yet'
-                  : 'Connecting…'
-            }}
-          </p>
-          <p class="empty-hint">
-            Messages from <strong>{{ watchedChannel.displayName }}</strong> will appear here.
-          </p>
-        </template>
-
-        <!-- No accounts at all -->
-        <template v-else-if="accounts.length === 0 && !hasAnyConnection">
-          <p class="empty-title">No accounts connected</p>
-          <p class="empty-hint">Connect your streaming accounts to start reading chat.</p>
-          <button class="empty-action" @click="emit('go-to-platforms')">
-            Go to Platforms →
-          </button>
-        </template>
-
-        <!-- Accounts exist, but no active connection yet -->
-        <template v-else-if="!hasAnyConnection">
-          <p class="empty-title">Waiting for connection…</p>
-          <div class="empty-accounts">
-            <div
-              v-for="acc in accounts"
-              :key="acc.id"
-              class="empty-account-chip"
-              :style="{ '--chip-color': platformColor(acc.platform) }"
-            >
-              <img v-if="acc.avatarUrl" :src="acc.avatarUrl" class="chip-avatar" />
-              <span v-else class="chip-avatar-fallback">{{ acc.displayName.charAt(0).toUpperCase() }}</span>
-              <span class="chip-name">{{ acc.displayName }}</span>
-              <span class="chip-platform">{{ acc.platform }}</span>
-            </div>
-          </div>
-          <p class="empty-hint">Join a channel in <strong>Platforms</strong> to see chat.</p>
-        </template>
-
-        <!-- Connected, just no messages yet -->
-        <template v-else>
-          <p class="empty-title">No messages yet</p>
-          <p class="empty-hint">Chat messages will appear here in real time.</p>
-        </template>
-      </div>
-    </div><!-- /.chat-list -->
-
-    <!-- Scroll-to-bottom pill -->
-    <Transition name="fade">
-      <button
-        v-if="!isAtBottom && activeMessages.length > 0"
-        class="scroll-pill"
-        @click="scrollToBottom"
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-        Scroll to latest
-      </button>
-    </Transition>
-    </div><!-- /.chat-list-wrapper -->
+          Scroll to latest
+        </button>
+      </Transition>
+    </div>
+    <!-- /.chat-list-wrapper -->
 
     <!-- Chat input -->
     <ChatInput
@@ -469,8 +512,8 @@ function onAppearanceChange(s: import("@twirchat/shared/types").AppSettings) {
 }
 .watched-mode.anon {
   color: var(--c-text-2, #8b8b99);
-  background: rgba(255,255,255,0.05);
-  border-color: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .chat-header-title {
@@ -491,7 +534,9 @@ function onAppearanceChange(s: import("@twirchat/shared/types").AppSettings) {
   overflow-x: auto;
   scrollbar-width: none;
 }
-.header-chips::-webkit-scrollbar { display: none; }
+.header-chips::-webkit-scrollbar {
+  display: none;
+}
 
 .header-chip {
   position: relative;
@@ -504,10 +549,12 @@ function onAppearanceChange(s: import("@twirchat/shared/types").AppSettings) {
   font-weight: 500;
   white-space: nowrap;
   cursor: default;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--c-text-2, #aaa);
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 .header-chip.live {
   background: color-mix(in srgb, var(--chip-color) 12%, transparent);
@@ -531,9 +578,15 @@ function onAppearanceChange(s: import("@twirchat/shared/types").AppSettings) {
   animation: chip-pulse 2s infinite;
 }
 @keyframes chip-pulse {
-  0%   { box-shadow: 0 0 0 0   color-mix(in srgb, var(--chip-color) 60%, transparent); }
-  70%  { box-shadow: 0 0 0 5px transparent; }
-  100% { box-shadow: 0 0 0 0   transparent; }
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--chip-color) 60%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 .chip-name {
@@ -629,8 +682,8 @@ function onAppearanceChange(s: import("@twirchat/shared/types").AppSettings) {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
   padding: 4px 10px 4px 4px;
   font-size: 12px;

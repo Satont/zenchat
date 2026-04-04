@@ -1,24 +1,18 @@
 <script setup lang="ts">
-import {
-  TooltipRoot,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipArrow,
-  TooltipProvider,
-} from "reka-ui";
+import { TooltipArrow, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui'
 
 withDefaults(
   defineProps<{
-    side?: "top" | "bottom" | "left" | "right";
-    sideOffset?: number;
-    delayDuration?: number;
+    side?: 'top' | 'bottom' | 'left' | 'right'
+    sideOffset?: number
+    delayDuration?: number
   }>(),
   {
-    side: "bottom",
-    sideOffset: 8,
     delayDuration: 200,
+    side: 'bottom',
+    sideOffset: 8,
   },
-);
+)
 </script>
 
 <template>
@@ -27,11 +21,7 @@ withDefaults(
       <TooltipTrigger as-child>
         <slot />
       </TooltipTrigger>
-      <TooltipContent
-        :side="side"
-        :side-offset="sideOffset"
-        class="twirchat-tooltip"
-      >
+      <TooltipContent :side="side" :side-offset="sideOffset" class="twirchat-tooltip">
         <slot name="content" />
         <TooltipArrow class="twirchat-tooltip-arrow" />
       </TooltipContent>
@@ -57,30 +47,62 @@ withDefaults(
   color: #e8e8f0;
 }
 
-.twirchat-tooltip[data-state="delayed-open"][data-side="top"]    { animation-name: twirchat-tooltip-slide-down; }
-.twirchat-tooltip[data-state="delayed-open"][data-side="bottom"] { animation-name: twirchat-tooltip-slide-up; }
-.twirchat-tooltip[data-state="delayed-open"][data-side="left"]   { animation-name: twirchat-tooltip-slide-right; }
-.twirchat-tooltip[data-state="delayed-open"][data-side="right"]  { animation-name: twirchat-tooltip-slide-left; }
+.twirchat-tooltip[data-state='delayed-open'][data-side='top'] {
+  animation-name: twirchat-tooltip-slide-down;
+}
+.twirchat-tooltip[data-state='delayed-open'][data-side='bottom'] {
+  animation-name: twirchat-tooltip-slide-up;
+}
+.twirchat-tooltip[data-state='delayed-open'][data-side='left'] {
+  animation-name: twirchat-tooltip-slide-right;
+}
+.twirchat-tooltip[data-state='delayed-open'][data-side='right'] {
+  animation-name: twirchat-tooltip-slide-left;
+}
 
 .twirchat-tooltip-arrow {
   fill: #1e1e30;
 }
 
 @keyframes twirchat-tooltip-slide-up {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes twirchat-tooltip-slide-down {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes twirchat-tooltip-slide-right {
-  from { opacity: 0; transform: translateX(-4px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 @keyframes twirchat-tooltip-slide-left {
-  from { opacity: 0; transform: translateX(4px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Slot content styles (also global for the same portal reason) */
@@ -102,7 +124,9 @@ withDefaults(
   letter-spacing: 0.08em;
   color: #888;
 }
-.chip-tooltip-status.live { color: #4ade80; }
+.chip-tooltip-status.live {
+  color: #4ade80;
+}
 
 .chip-tooltip-title {
   font-size: 13px;

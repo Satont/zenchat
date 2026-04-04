@@ -9,151 +9,157 @@
  *
  * On mount it polls for the current status. The user can then edit and save.
  */
-import { ref, onMounted, onUnmounted } from "vue";
-import type { CategorySearchResult } from "@twirchat/shared/protocol";
-import { rpc } from "../main";
+import { onMounted, onUnmounted, ref } from 'vue'
+import type { CategorySearchResult } from '@twirchat/shared/protocol'
+import { rpc } from '../main'
 
 const props = defineProps<{
-  platform: "twitch" | "kick";
-  channelId: string;
-}>();
+  platform: 'twitch' | 'kick'
+  channelId: string
+}>()
 
 // ---------------------------------------------------------------
 // Stream status state
 // ---------------------------------------------------------------
-const isLive = ref(false);
-const title = ref("");
-const categoryId = ref<string | undefined>(undefined);
-const categoryName = ref<string | undefined>(undefined);
-const viewerCount = ref<number | undefined>(undefined);
-const loadError = ref<string | null>(null);
-const loading = ref(false);
+const isLive = ref(false)
+const title = ref('')
+const categoryId = ref<string | undefined>(undefined)
+const categoryName = ref<string | undefined>(undefined)
+const viewerCount = ref<number | undefined>(undefined)
+const loadError = ref<string | null>(null)
+const loading = ref(false)
 
 // ---------------------------------------------------------------
 // Edit state
 // ---------------------------------------------------------------
-const editing = ref(false);
-const editTitle = ref("");
-const editCategoryId = ref<string | undefined>(undefined);
-const editCategoryName = ref<string | undefined>(undefined);
-const saving = ref(false);
-const saveError = ref<string | null>(null);
-const saveSuccess = ref(false);
+const editing = ref(false)
+const editTitle = ref('')
+const editCategoryId = ref<string | undefined>(undefined)
+const editCategoryName = ref<string | undefined>(undefined)
+const saving = ref(false)
+const saveError = ref<string | null>(null)
+const saveSuccess = ref(false)
 
 // ---------------------------------------------------------------
 // Category search
 // ---------------------------------------------------------------
-const categoryQuery = ref("");
-const categoryResults = ref<CategorySearchResult[]>([]);
-const searchLoading = ref(false);
-let searchTimer: ReturnType<typeof setTimeout> | null = null;
+const categoryQuery = ref('')
+const categoryResults = ref<CategorySearchResult[]>([])
+const searchLoading = ref(false)
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 function onCategoryInput() {
-  if (searchTimer) clearTimeout(searchTimer);
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
   if (!categoryQuery.value.trim()) {
-    categoryResults.value = [];
-    return;
+    categoryResults.value = []
+    return
   }
   searchTimer = setTimeout(async () => {
-    searchLoading.value = true;
+    searchLoading.value = true
     try {
       const res = await rpc.request.searchCategories({
         platform: props.platform,
         query: categoryQuery.value,
-      });
-      categoryResults.value = res.categories;
+      })
+      categoryResults.value = res.categories
     } catch {
-      categoryResults.value = [];
+      categoryResults.value = []
     } finally {
-      searchLoading.value = false;
+      searchLoading.value = false
     }
-  }, 350);
+  }, 350)
 }
 
 function selectCategory(cat: CategorySearchResult) {
-  editCategoryId.value = cat.id;
-  editCategoryName.value = cat.name;
-  categoryQuery.value = cat.name;
-  categoryResults.value = [];
+  editCategoryId.value = cat.id
+  editCategoryName.value = cat.name
+  categoryQuery.value = cat.name
+  categoryResults.value = []
 }
 
 // ---------------------------------------------------------------
 // Load current status
 // ---------------------------------------------------------------
 async function loadStatus() {
-  loading.value = true;
-  loadError.value = null;
+  loading.value = true
+  loadError.value = null
   try {
     const s = await rpc.request.getStreamStatus({
-      platform: props.platform,
       channelId: props.channelId,
-    });
-    isLive.value = s.isLive;
-    title.value = s.title;
-    categoryId.value = s.categoryId;
-    categoryName.value = s.categoryName;
-    viewerCount.value = s.viewerCount;
-  } catch (e) {
-    loadError.value = String(e);
+      platform: props.platform,
+    })
+    isLive.value = s.isLive
+    title.value = s.title
+    categoryId.value = s.categoryId
+    categoryName.value = s.categoryName
+    viewerCount.value = s.viewerCount
+  } catch (error) {
+    loadError.value = String(error)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
 // Poll every 60 seconds
-let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
-  void loadStatus();
-  pollTimer = setInterval(() => void loadStatus(), 60_000);
-});
+  void loadStatus()
+  pollTimer = setInterval(() => void loadStatus(), 60_000)
+})
 
 onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer);
-  if (searchTimer) clearTimeout(searchTimer);
-});
+  if (pollTimer) {
+    clearInterval(pollTimer)
+  }
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+})
 
 // ---------------------------------------------------------------
 // Edit / Save
 // ---------------------------------------------------------------
 function startEdit() {
-  editTitle.value = title.value;
-  editCategoryId.value = categoryId.value;
-  editCategoryName.value = categoryName.value;
-  categoryQuery.value = categoryName.value ?? "";
-  categoryResults.value = [];
-  saveError.value = null;
-  saveSuccess.value = false;
-  editing.value = true;
+  editTitle.value = title.value
+  editCategoryId.value = categoryId.value
+  editCategoryName.value = categoryName.value
+  categoryQuery.value = categoryName.value ?? ''
+  categoryResults.value = []
+  saveError.value = null
+  saveSuccess.value = false
+  editing.value = true
 }
 
 function cancelEdit() {
-  editing.value = false;
+  editing.value = false
 }
 
 async function save() {
-  saving.value = true;
-  saveError.value = null;
+  saving.value = true
+  saveError.value = null
   try {
     await rpc.request.updateStream({
-      platform: props.platform,
-      channelId: props.channelId,
-      title: editTitle.value,
       categoryId: editCategoryId.value,
-    });
+      channelId: props.channelId,
+      platform: props.platform,
+      title: editTitle.value,
+    })
     // Reflect changes locally immediately
-    title.value = editTitle.value;
-    categoryId.value = editCategoryId.value;
-    categoryName.value = editCategoryName.value;
-    saveSuccess.value = true;
+    title.value = editTitle.value
+    categoryId.value = editCategoryId.value
+    categoryName.value = editCategoryName.value
+    saveSuccess.value = true
     setTimeout(() => {
-      saveSuccess.value = false;
-      editing.value = false;
-    }, 1500);
-  } catch (e) {
-    saveError.value = String(e);
+      saveSuccess.value = false
+      editing.value = false
+    }, 1500)
+  } catch (error) {
+    saveError.value = String(error)
   } finally {
-    saving.value = false;
+    saving.value = false
   }
 }
 </script>
@@ -174,9 +180,18 @@ async function save() {
           {{ viewerCount.toLocaleString() }} viewers
         </span>
         <button class="se-edit-btn" title="Edit stream info" @click="startEdit">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
           </svg>
           Edit
         </button>
@@ -189,12 +204,7 @@ async function save() {
     <template v-else>
       <div class="se-form">
         <label class="se-label">Title</label>
-        <input
-          v-model="editTitle"
-          class="se-input"
-          maxlength="140"
-          placeholder="Stream title…"
-        />
+        <input v-model="editTitle" class="se-input" maxlength="140" placeholder="Stream title…" />
 
         <label class="se-label">Category / Game</label>
         <div class="se-search-wrap">
@@ -226,12 +236,20 @@ async function save() {
         <div v-if="saveError" class="se-save-error">{{ saveError }}</div>
 
         <div class="se-actions">
-          <button class="se-btn se-btn-ghost" :disabled="saving" @click="cancelEdit">
-            Cancel
-          </button>
+          <button class="se-btn se-btn-ghost" :disabled="saving" @click="cancelEdit">Cancel</button>
           <button class="se-btn se-btn-primary" :disabled="saving" @click="save">
-            <svg v-if="saveSuccess" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
+            <svg
+              v-if="saveSuccess"
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
             </svg>
             {{ saveSuccess ? 'Saved!' : saving ? 'Saving…' : 'Save' }}
           </button>
@@ -429,7 +447,9 @@ async function save() {
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: opacity 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
 }
 .se-btn:disabled {
   opacity: 0.45;

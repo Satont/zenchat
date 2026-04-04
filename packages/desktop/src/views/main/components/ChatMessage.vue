@@ -1,225 +1,243 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from "vue";
-import { rpc } from "../main";
-import type { NormalizedChatMessage, Emote } from "@twirchat/shared/types";
-import EmoteTooltip from "./EmoteTooltip.vue";
+import { computed, onMounted, reactive, ref } from 'vue'
+import { rpc } from '../main'
+import type { Emote, NormalizedChatMessage } from '@twirchat/shared/types'
+import EmoteTooltip from './EmoteTooltip.vue'
 
 const props = defineProps<{
-  message: NormalizedChatMessage;
-  showPlatformColorStripe?: boolean;
-  showPlatformIcon?: boolean;
-  showTimestamp?: boolean;
-  showAvatar?: boolean;
-  showBadges?: boolean;
-  fontSize?: number;
-  chatTheme?: "modern" | "compact";
-}>();
+  message: NormalizedChatMessage
+  showPlatformColorStripe?: boolean
+  showPlatformIcon?: boolean
+  showTimestamp?: boolean
+  showAvatar?: boolean
+  showBadges?: boolean
+  fontSize?: number
+  chatTheme?: 'modern' | 'compact'
+}>()
 
-const isSystemMessage = computed(() => props.message.type === "system");
+const isSystemMessage = computed(() => props.message.type === 'system')
 
-const systemAction = computed<"added" | "removed" | "renamed">(() => {
-  const t = props.message.text;
-  if (t.includes(" added ")) return "added";
-  if (t.includes(" removed ")) return "removed";
-  return "renamed";
-});
+const systemAction = computed<'added' | 'removed' | 'renamed'>(() => {
+  const t = props.message.text
+  if (t.includes(' added ')) {
+    return 'added'
+  }
+  if (t.includes(' removed ')) {
+    return 'removed'
+  }
+  return 'renamed'
+})
 
 // In-memory cache for platform:username -> color (shared across all message instances via module scope)
 // Key format: "platform:lowercase_username"
-const mentionColorCache = reactive(new Map<string, string | null>());
+const mentionColorCache = reactive(new Map<string, string | null>())
 
 function makeMentionKey(platform: string, username: string): string {
-  return `${platform}:${username.toLowerCase()}`;
+  return `${platform}:${username.toLowerCase()}`
 }
 
 async function fetchMentionColor(platform: string, username: string): Promise<void> {
-  const key = makeMentionKey(platform, username);
-  if (mentionColorCache.has(key)) return;
-  
+  const key = makeMentionKey(platform, username)
+  if (mentionColorCache.has(key)) {
+    return
+  }
+
   try {
-    const color = await rpc.request.getUsernameColor({ 
-      platform: platform as import("@twirchat/shared/types").Platform, 
-      username 
-    });
-    mentionColorCache.set(key, color);
-  } catch (e) {
-    console.warn("[ChatMessage] Failed to fetch color for:", platform, username, e);
-    mentionColorCache.set(key, null);
+    const color = await rpc.request.getUsernameColor({
+      platform: platform as import('@twirchat/shared/types').Platform,
+      username,
+    })
+    mentionColorCache.set(key, color)
+  } catch (error) {
+    console.warn('[ChatMessage] Failed to fetch color for:', platform, username, error)
+    mentionColorCache.set(key, null)
   }
 }
 
 function platformColor(platform: string): string {
   switch (platform) {
-    case "twitch":
-      return "#9146ff";
-    case "youtube":
-      return "#ff0000";
-    case "kick":
-      return "#53fc18";
-    default:
-      return "#888";
+    case 'twitch': {
+      return '#9146ff'
+    }
+    case 'youtube': {
+      return '#ff0000'
+    }
+    case 'kick': {
+      return '#53fc18'
+    }
+    default: {
+      return '#888'
+    }
   }
 }
 
 function platformIconSvg(platform: string): string {
   switch (platform) {
-    case "twitch":
+    case 'twitch': {
       // Twitch glitch logo
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
         <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
-      </svg>`;
-    case "youtube":
+      </svg>`
+    }
+    case 'youtube': {
       // YouTube play button logo
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-      </svg>`;
-    case "kick":
+      </svg>`
+    }
+    case 'kick': {
       // Kick "K" wordmark simplified
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
         <path d="M3 2h4v8l6-8h5l-7 9 7 11h-5l-6-9v9H3Z"/>
-      </svg>`;
-    default:
+      </svg>`
+    }
+    default: {
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
         <circle cx="12" cy="12" r="10"/>
-      </svg>`;
+      </svg>`
+    }
   }
 }
 
-const URL_REGEX = /https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]]/g;
-const MENTION_REGEX = /@([a-zA-Z0-9_]+)/g;
+const URL_REGEX = /https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]]/g
+const MENTION_REGEX = /@([a-zA-Z0-9_]+)/g
 
 interface MessagePart {
-  type: "text" | "emote";
-  content?: string;
-  emote?: Emote;
+  type: 'text' | 'emote'
+  content?: string
+  emote?: Emote
 }
 
 /** Parse message into parts (text and emotes) */
 const messageParts = computed((): MessagePart[] => {
-  const msg = props.message;
-  const parts: MessagePart[] = [];
-  
+  const msg = props.message
+  const parts: MessagePart[] = []
+
   if (!msg.emotes.length) {
-    return [{ type: "text", content: msg.text }];
+    return [{ content: msg.text, type: 'text' }]
   }
 
-  const chars = [...msg.text];
-  let i = 0;
+  const chars = [...msg.text]
+  let i = 0
 
-  const ranges: Array<{ start: number; end: number; emote: Emote }> = [];
+  const ranges: { start: number; end: number; emote: Emote }[] = []
   for (const emote of msg.emotes) {
     for (const pos of emote.positions) {
-      ranges.push({ ...pos, emote });
+      ranges.push({ ...pos, emote })
     }
   }
-  ranges.sort((a, b) => a.start - b.start);
+  ranges.sort((a, b) => a.start - b.start)
 
   for (const range of ranges) {
     if (i < range.start) {
-      parts.push({ type: "text", content: chars.slice(i, range.start).join("") });
+      parts.push({ content: chars.slice(i, range.start).join(''), type: 'text' })
     }
-    parts.push({ 
-      type: "emote", 
-      emote: range.emote
-    });
-    i = range.end + 1;
+    parts.push({
+      emote: range.emote,
+      type: 'emote',
+    })
+    i = range.end + 1
   }
 
   if (i < chars.length) {
-    parts.push({ type: "text", content: chars.slice(i).join("") });
+    parts.push({ content: chars.slice(i).join(''), type: 'text' })
   }
 
-  return parts;
-});
+  return parts
+})
 
 /** Process text to highlight mentions and linkify URLs */
 function processText(text: string): string {
-  let result = escapeHtml(text);
-  result = linkifyText(result);
-  result = highlightMentions(result, props.message.platform);
-  return result;
+  let result = escapeHtml(text)
+  result = linkifyText(result)
+  result = highlightMentions(result, props.message.platform)
+  return result
 }
 
 /** Linkify plain-text segment (already HTML-escaped) */
 function linkifyText(escaped: string): string {
   return escaped.replace(URL_REGEX, (url) => {
-    const safeUrl = url.replace(/"/g, "&quot;");
-    return `<a class="msg-link" href="#" data-href="${safeUrl}" title="${safeUrl}">${url}</a>`;
-  });
+    const safeUrl = url.replace(/"/g, '&quot;')
+    return `<a class="msg-link" href="#" data-href="${safeUrl}" title="${safeUrl}">${url}</a>`
+  })
 }
 
 /** Highlight @mentions with colors from cache (platform-specific) */
 function highlightMentions(escaped: string, platform: string): string {
   return escaped.replace(MENTION_REGEX, (match, username) => {
-    const key = makeMentionKey(platform, username);
-    const color = mentionColorCache.get(key);
+    const key = makeMentionKey(platform, username)
+    const color = mentionColorCache.get(key)
     if (color) {
-      return `<span class="mention" style="color: ${color}; font-weight: 600;">${match}</span>`;
+      return `<span class="mention" style="color: ${color}; font-weight: 600;">${match}</span>`
     }
     // Fetch color for next time (platform-specific)
-    void fetchMentionColor(platform, username);
-    return match;
-  });
+    void fetchMentionColor(platform, username)
+    return match
+  })
 }
 
 function escapeHtml(str: string): string {
   return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
-const brokenBadges = ref(new Set<string>());
+const brokenBadges = ref(new Set<string>())
 
 function onBadgeError(id: string): void {
-  brokenBadges.value = new Set([...brokenBadges.value, id]);
+  brokenBadges.value = new Set([...brokenBadges.value, id])
 }
 
 function formatTime(ts: Date): string {
   return new Date(ts).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function initials(name: string): string {
-  return name.slice(0, 1).toUpperCase();
+  return name.slice(0, 1).toUpperCase()
 }
 
 function onMsgClick(e: MouseEvent): void {
-  const target = e.target as HTMLElement;
-  const anchor = target.closest<HTMLAnchorElement>("a.msg-link");
-  if (!anchor) return;
-  e.preventDefault();
-  const url = anchor.dataset.href;
-  if (url) void rpc.request.openExternalUrl({ url });
+  const target = e.target as HTMLElement
+  const anchor = target.closest<HTMLAnchorElement>('a.msg-link')
+  if (!anchor) {
+    return
+  }
+  e.preventDefault()
+  const url = anchor.dataset.href
+  if (url) {
+    void rpc.request.openExternalUrl({ url })
+  }
 }
 
 // Copy functionality
-const showCopyButton = ref(false);
-const copySuccess = ref(false);
+const showCopyButton = ref(false)
+const copySuccess = ref(false)
 
 function copyMessage(): void {
   navigator.clipboard.writeText(props.message.text).then(() => {
-    copySuccess.value = true;
+    copySuccess.value = true
     setTimeout(() => {
-      copySuccess.value = false;
-    }, 1500);
-  });
+      copySuccess.value = false
+    }, 1500)
+  })
 }
 
 // Pre-fetch colors for any @mentions in this message (platform-specific)
 onMounted(() => {
-  const platform = props.message.platform;
-  const mentions = props.message.text.match(MENTION_REGEX);
+  const { platform } = props.message
+  const mentions = props.message.text.match(MENTION_REGEX)
   if (mentions) {
-    const uniqueUsers = new Set(mentions.map(m => m.slice(1)));
+    const uniqueUsers = new Set(mentions.map((m) => m.slice(1)))
     for (const username of uniqueUsers) {
-      void fetchMentionColor(platform, username);
+      void fetchMentionColor(platform, username)
     }
   }
-});
+})
 </script>
 
 <template>
@@ -240,10 +258,7 @@ onMounted(() => {
 
     <span class="msg-text system-text">
       <template v-for="(part, index) in messageParts" :key="index">
-        <EmoteTooltip
-          v-if="part.type === 'emote' && part.emote"
-          :emote="part.emote"
-        >
+        <EmoteTooltip v-if="part.type === 'emote' && part.emote" :emote="part.emote">
           <img
             class="emote system-emote"
             :src="part.emote.imageUrl"
@@ -251,10 +266,7 @@ onMounted(() => {
             :title="part.emote.name"
           />
         </EmoteTooltip>
-        <span
-          v-else-if="part.type === 'text' && part.content"
-          v-html="processText(part.content)"
-        />
+        <span v-else-if="part.type === 'text' && part.content" v-html="processText(part.content)" />
       </template>
     </span>
 
@@ -289,10 +301,7 @@ onMounted(() => {
     />
 
     <!-- Badges inline -->
-    <span
-      v-if="props.showBadges !== false && message.author.badges.length"
-      class="badges"
-    >
+    <span v-if="props.showBadges !== false && message.author.badges.length" class="badges">
       <span
         v-for="badge in message.author.badges"
         :key="badge.id"
@@ -314,19 +323,13 @@ onMounted(() => {
       </span>
     </span>
 
-    <span
-      class="author"
-      :style="message.author.color ? { color: message.author.color } : {}"
-      >{{ message.author.displayName }}</span
-    ><span class="compact-sep">:</span><span
-      class="msg-text"
-      :class="{ italic: message.type === 'action' }"
-    >
+    <span class="author" :style="message.author.color ? { color: message.author.color } : {}">{{
+      message.author.displayName
+    }}</span
+    ><span class="compact-sep">:</span
+    ><span class="msg-text" :class="{ italic: message.type === 'action' }">
       <template v-for="(part, index) in messageParts" :key="index">
-        <EmoteTooltip
-          v-if="part.type === 'emote' && part.emote"
-          :emote="part.emote"
-        >
+        <EmoteTooltip v-if="part.type === 'emote' && part.emote" :emote="part.emote">
           <img
             class="emote"
             :src="part.emote.imageUrl"
@@ -341,10 +344,7 @@ onMounted(() => {
           :alt="part.emote.name"
           :title="part.emote.name"
         />
-        <span
-          v-else-if="part.type === 'text' && part.content"
-          v-html="processText(part.content)"
-        />
+        <span v-else-if="part.type === 'text' && part.content" v-html="processText(part.content)" />
       </template>
     </span>
     <span v-if="props.showTimestamp" class="timestamp compact-time">{{
@@ -359,11 +359,33 @@ onMounted(() => {
       @click.stop="copyMessage"
       title="Copy message"
     >
-      <svg v-if="!copySuccess" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        v-if="!copySuccess"
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
       </svg>
-      <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        v-else
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
     </button>
@@ -372,10 +394,7 @@ onMounted(() => {
   <div
     v-else
     class="msg"
-    :class="[
-      `platform-${message.platform}`,
-      message.type === 'action' ? 'is-action' : '',
-    ]"
+    :class="[`platform-${message.platform}`, message.type === 'action' ? 'is-action' : '']"
     :style="{ '--font-size': `${props.fontSize ?? 14}px` }"
     @click="onMsgClick"
     @mouseenter="showCopyButton = true"
@@ -419,10 +438,7 @@ onMounted(() => {
     <div class="msg-body">
       <div class="msg-meta">
         <!-- Badges -->
-        <span
-          v-if="props.showBadges !== false && message.author.badges.length"
-          class="badges"
-        >
+        <span v-if="props.showBadges !== false && message.author.badges.length" class="badges">
           <span
             v-for="badge in message.author.badges"
             :key="badge.id"
@@ -445,11 +461,9 @@ onMounted(() => {
         </span>
 
         <!-- Author name -->
-        <span
-          class="author"
-          :style="message.author.color ? { color: message.author.color } : {}"
-          >{{ message.author.displayName }}</span
-        >
+        <span class="author" :style="message.author.color ? { color: message.author.color } : {}">{{
+          message.author.displayName
+        }}</span>
 
         <span v-if="props.showTimestamp" class="timestamp">{{
           formatTime(message.timestamp)
@@ -457,15 +471,9 @@ onMounted(() => {
       </div>
 
       <!-- Message text -->
-      <span
-        class="msg-text"
-        :class="{ italic: message.type === 'action' }"
-      >
+      <span class="msg-text" :class="{ italic: message.type === 'action' }">
         <template v-for="(part, index) in messageParts" :key="index">
-          <EmoteTooltip
-            v-if="part.type === 'emote' && part.emote"
-            :emote="part.emote"
-          >
+          <EmoteTooltip v-if="part.type === 'emote' && part.emote" :emote="part.emote">
             <img
               class="emote"
               :src="part.emote.imageUrl"
@@ -489,11 +497,33 @@ onMounted(() => {
       @click.stop="copyMessage"
       title="Copy message"
     >
-      <svg v-if="!copySuccess" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        v-if="!copySuccess"
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
       </svg>
-      <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        v-else
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
     </button>
@@ -689,7 +719,10 @@ onMounted(() => {
   cursor: pointer;
   color: var(--c-text-2, #8b8b99);
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  transition:
+    opacity 0.15s,
+    background 0.15s,
+    color 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -800,7 +833,7 @@ onMounted(() => {
   border-left-color: #6441a5;
 }
 .msg-system.action-renamed:hover {
-  background: rgba(100, 65, 165, 0.10);
+  background: rgba(100, 65, 165, 0.1);
 }
 
 /* Action icon: small coloured circle with +/−/~ */

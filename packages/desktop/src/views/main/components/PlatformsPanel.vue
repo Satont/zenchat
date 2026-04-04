@@ -1,160 +1,178 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
-import type {
-  Account,
-  PlatformStatusInfo,
-  Platform,
-} from "@twirchat/shared/types";
-import { rpc } from "../main";
-import StreamEditor from "./StreamEditor.vue";
+import { onMounted, onUnmounted, ref } from 'vue'
+import type { Account, Platform, PlatformStatusInfo } from '@twirchat/shared/types'
+import { rpc } from '../main'
+import StreamEditor from './StreamEditor.vue'
 
 const props = defineProps<{
-  accounts: Account[];
-  statuses: Map<string, PlatformStatusInfo>;
-}>();
+  accounts: Account[]
+  statuses: Map<string, PlatformStatusInfo>
+}>()
 
 const emit = defineEmits<{
-  "accounts-updated": [accounts: Account[]];
-}>();
+  'accounts-updated': [accounts: Account[]]
+}>()
 
 // ----------------------------------------------------------------
 // Per-platform channel input state
 // ----------------------------------------------------------------
 
 const channelInputs = ref<Record<string, string>>({
-  twitch: "",
-  youtube: "",
-  kick: "",
-});
-const joiningChannel = ref<Record<string, boolean>>({});
-const authLoading = ref<Record<string, boolean>>({});
+  kick: '',
+  twitch: '',
+  youtube: '',
+})
+const joiningChannel = ref<Record<string, boolean>>({})
+const authLoading = ref<Record<string, boolean>>({})
 const joinedChannels = ref<Record<string, string[]>>({
+  kick: [],
   twitch: [],
   youtube: [],
-  kick: [],
-});
+})
 
 // ----------------------------------------------------------------
 // Toast notifications
 // ----------------------------------------------------------------
 
 interface Toast {
-  id: number;
-  platform: Platform;
-  type: "success" | "error";
-  message: string;
+  id: number
+  platform: Platform
+  type: 'success' | 'error'
+  message: string
 }
 
-let toastId = 0;
-const toasts = ref<Toast[]>([]);
+let toastId = 0
+const toasts = ref<Toast[]>([])
 
-function addToast(platform: Platform, type: Toast["type"], message: string) {
-  const id = ++toastId;
-  toasts.value.push({ id, platform, type, message });
+function addToast(platform: Platform, type: Toast['type'], message: string) {
+  const id = ++toastId
+  toasts.value.push({ id, message, platform, type })
   setTimeout(() => {
-    toasts.value = toasts.value.filter((t) => t.id !== id);
-  }, 4000);
+    toasts.value = toasts.value.filter((t) => t.id !== id)
+  }, 4000)
 }
 
 // ----------------------------------------------------------------
 // RPC listeners
 // ----------------------------------------------------------------
 
-const unsubscribers: Array<() => void> = [];
+const unsubscribers: (() => void)[] = []
 
 onMounted(async () => {
-  const onAuthSuccess = async ({ platform, displayName }: { platform: string; username: string; displayName: string }) => {
-    const updated = await rpc.request.getAccounts();
-    emit("accounts-updated", updated);
-    addToast(platform as Platform, "success", `Connected as ${displayName}`);
-  };
+  const onAuthSuccess = async ({
+    platform,
+    displayName,
+  }: {
+    platform: string
+    username: string
+    displayName: string
+  }) => {
+    const updated = await rpc.request.getAccounts()
+    emit('accounts-updated', updated)
+    addToast(platform as Platform, 'success', `Connected as ${displayName}`)
+  }
   const onAuthError = ({ platform, error }: { platform: string; error: string }) => {
-    addToast(platform as Platform, "error", error);
-  };
+    addToast(platform as Platform, 'error', error)
+  }
 
-  rpc.addMessageListener("auth_success", onAuthSuccess);
-  rpc.addMessageListener("auth_error", onAuthError);
+  rpc.addMessageListener('auth_success', onAuthSuccess)
+  rpc.addMessageListener('auth_error', onAuthError)
 
   unsubscribers.push(
-    () => rpc.removeMessageListener("auth_success", onAuthSuccess),
-    () => rpc.removeMessageListener("auth_error", onAuthError),
-  );
+    () => rpc.removeMessageListener('auth_success', onAuthSuccess),
+    () => rpc.removeMessageListener('auth_error', onAuthError),
+  )
 
   // Load persisted channels from the backend
   try {
-    const saved = await rpc.request.getChannels();
+    const saved = await rpc.request.getChannels()
     if (saved) {
-      for (const platform of ["twitch", "youtube", "kick"] as Platform[]) {
-        const slugs = saved[platform];
+      for (const platform of ['twitch', 'youtube', 'kick'] as Platform[]) {
+        const slugs = saved[platform]
         if (slugs && slugs.length > 0) {
-          joinedChannels.value[platform] = slugs;
+          joinedChannels.value[platform] = slugs
         }
       }
     }
-  } catch (err) {
-    console.warn("[PlatformsPanel] Failed to load persisted channels:", err);
+  } catch (error) {
+    console.warn('[PlatformsPanel] Failed to load persisted channels:', error)
   }
-});
+})
 
 onUnmounted(() => {
-  unsubscribers.forEach((u) => u());
-});
+  unsubscribers.forEach((u) => u())
+})
 
 // ----------------------------------------------------------------
 // Platform metadata
 // ----------------------------------------------------------------
 
-const platforms: Platform[] = ["twitch", "youtube", "kick"];
+const platforms: Platform[] = ['twitch', 'youtube', 'kick']
 
 function account(platform: Platform): Account | undefined {
-  return props.accounts.find((a) => a.platform === platform);
+  return props.accounts.find((a) => a.platform === platform)
 }
 
 function status(platform: Platform): PlatformStatusInfo | undefined {
-  return props.statuses.get(platform);
+  return props.statuses.get(platform)
 }
 
 function platformMeta(platform: Platform) {
   switch (platform) {
-    case "twitch":
-      return { label: "Twitch", color: "#9146ff", textColor: "#fff" };
-    case "youtube":
-      return { label: "YouTube", color: "#ff0000", textColor: "#fff" };
-    case "kick":
-      return { label: "Kick", color: "#53fc18", textColor: "#000" };
+    case 'twitch': {
+      return { label: 'Twitch', color: '#9146ff', textColor: '#fff' }
+    }
+    case 'youtube': {
+      return { label: 'YouTube', color: '#ff0000', textColor: '#fff' }
+    }
+    case 'kick': {
+      return { label: 'Kick', color: '#53fc18', textColor: '#000' }
+    }
   }
 }
 
 function statusLabel(s?: PlatformStatusInfo): string {
-  if (!s) return "Not connected";
+  if (!s) {
+    return 'Not connected'
+  }
   switch (s.status) {
-    case "connected":
-      return s.mode === "authenticated" ? "Connected" : "Connected (anonymous)";
-    case "connecting":
-      return "Connecting…";
-    case "error":
-      return s.error ?? "Error";
-    default:
-      return "Disconnected";
+    case 'connected': {
+      return s.mode === 'authenticated' ? 'Connected' : 'Connected (anonymous)'
+    }
+    case 'connecting': {
+      return 'Connecting…'
+    }
+    case 'error': {
+      return s.error ?? 'Error'
+    }
+    default: {
+      return 'Disconnected'
+    }
   }
 }
 
 function statusClass(s?: PlatformStatusInfo): string {
-  if (!s) return "dot-off";
+  if (!s) {
+    return 'dot-off'
+  }
   switch (s.status) {
-    case "connected":
-      return "dot-on";
-    case "connecting":
-      return "dot-wait";
-    case "error":
-      return "dot-err";
-    default:
-      return "dot-off";
+    case 'connected': {
+      return 'dot-on'
+    }
+    case 'connecting': {
+      return 'dot-wait'
+    }
+    case 'error': {
+      return 'dot-err'
+    }
+    default: {
+      return 'dot-off'
+    }
   }
 }
 
 function avatarInitials(name: string): string {
-  return name.charAt(0).toUpperCase();
+  return name.charAt(0).toUpperCase()
 }
 
 // ----------------------------------------------------------------
@@ -162,47 +180,53 @@ function avatarInitials(name: string): string {
 // ----------------------------------------------------------------
 
 async function startAuth(platform: Platform) {
-  authLoading.value[platform] = true;
+  authLoading.value[platform] = true
   try {
-    await rpc.request.authStart({ platform });
+    await rpc.request.authStart({ platform })
   } finally {
-    authLoading.value[platform] = false;
+    authLoading.value[platform] = false
   }
 }
 
 async function logout(platform: Platform) {
-  await rpc.request.authLogout({ platform });
-  const updated = await rpc.request.getAccounts();
-  emit("accounts-updated", updated);
+  await rpc.request.authLogout({ platform })
+  const updated = await rpc.request.getAccounts()
+  emit('accounts-updated', updated)
 }
 
 async function joinChannel(platform: Platform) {
-  const slug = (channelInputs.value[platform] ?? "").trim();
-  if (!slug) return;
-  joiningChannel.value[platform] = true;
+  const slug = (channelInputs.value[platform] ?? '').trim()
+  if (!slug) {
+    return
+  }
+  joiningChannel.value[platform] = true
   try {
-    await rpc.request.joinChannel({ platform, channelSlug: slug });
+    await rpc.request.joinChannel({ channelSlug: slug, platform })
     if (!(joinedChannels.value[platform] ?? []).includes(slug)) {
-      joinedChannels.value[platform] = [...(joinedChannels.value[platform] ?? []), slug];
+      joinedChannels.value[platform] = [...(joinedChannels.value[platform] ?? []), slug]
     }
-    channelInputs.value[platform] = "";
-  } catch (err) {
-    console.error(`[PlatformsPanel] joinChannel failed for ${platform}:`, err);
-    addToast(platform, "error", `Failed to join channel: ${err instanceof Error ? err.message : String(err)}`);
+    channelInputs.value[platform] = ''
+  } catch (error) {
+    console.error(`[PlatformsPanel] joinChannel failed for ${platform}:`, error)
+    addToast(
+      platform,
+      'error',
+      `Failed to join channel: ${error instanceof Error ? error.message : String(error)}`,
+    )
   } finally {
-    joiningChannel.value[platform] = false;
+    joiningChannel.value[platform] = false
   }
 }
 
 async function leaveChannel(platform: Platform, slug: string) {
-  await rpc.request.leaveChannel({ platform, channelSlug: slug });
-  joinedChannels.value[platform] = (joinedChannels.value[platform] ?? []).filter(
-    (c) => c !== slug,
-  );
+  await rpc.request.leaveChannel({ channelSlug: slug, platform })
+  joinedChannels.value[platform] = (joinedChannels.value[platform] ?? []).filter((c) => c !== slug)
 }
 
 function onInputKeydown(e: KeyboardEvent, platform: Platform) {
-  if (e.key === "Enter") joinChannel(platform);
+  if (e.key === 'Enter') {
+    joinChannel(platform)
+  }
 }
 </script>
 
@@ -210,29 +234,46 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
   <div class="platforms-panel">
     <div class="panel-header">
       <h2 class="panel-title">Platforms</h2>
-      <p class="panel-subtitle">
-        Connect your streaming accounts and join channels
-      </p>
+      <p class="panel-subtitle">Connect your streaming accounts and join channels</p>
     </div>
 
     <div class="platforms-list">
       <div v-for="platform in platforms" :key="platform" class="platform-card">
         <!-- Card header -->
         <div class="card-header">
-          <div
-            class="platform-logo"
-            :style="{ background: platformMeta(platform).color }"
-          >
+          <div class="platform-logo" :style="{ background: platformMeta(platform).color }">
             <!-- Twitch -->
-            <svg v-if="platform === 'twitch'" width="20" height="20" viewBox="0 0 24 24" fill="white">
-              <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+            <svg
+              v-if="platform === 'twitch'"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="white"
+            >
+              <path
+                d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"
+              />
             </svg>
             <!-- YouTube -->
-            <svg v-else-if="platform === 'youtube'" width="20" height="20" viewBox="0 0 24 24" fill="white">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+            <svg
+              v-else-if="platform === 'youtube'"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="white"
+            >
+              <path
+                d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+              />
             </svg>
             <!-- Kick -->
-            <svg v-else-if="platform === 'kick'" width="20" height="20" viewBox="0 0 24 24" fill="black">
+            <svg
+              v-else-if="platform === 'kick'"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="black"
+            >
               <path d="M2 2h4v8l6-8h5l-7 9 7 11h-5l-6-9v9H2z" />
             </svg>
           </div>
@@ -267,9 +308,7 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
                   <span class="account-name">{{ account(platform)?.displayName }}</span>
                   <span class="account-username">@{{ account(platform)?.username }}</span>
                 </div>
-                <button class="btn btn-ghost btn-sm" @click="logout(platform)">
-                  Disconnect
-                </button>
+                <button class="btn btn-ghost btn-sm" @click="logout(platform)">Disconnect</button>
               </div>
 
               <button
@@ -282,10 +321,22 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
                 :disabled="authLoading[platform]"
                 @click="startAuth(platform)"
               >
-                <svg v-if="authLoading[platform]" class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-linecap="round"/>
+                <svg
+                  v-if="authLoading[platform]"
+                  class="spinner"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <path
+                    d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+                    stroke-linecap="round"
+                  />
                 </svg>
-                {{ authLoading[platform] ? "Opening…" : "Connect account" }}
+                {{ authLoading[platform] ? 'Opening…' : 'Connect account' }}
               </button>
             </Transition>
           </div>
@@ -309,12 +360,15 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
               :disabled="!(channelInputs[platform] ?? '').trim() || joiningChannel[platform]"
               @click="joinChannel(platform)"
             >
-              {{ joiningChannel[platform] ? "…" : "Join" }}
+              {{ joiningChannel[platform] ? '…' : 'Join' }}
             </button>
           </div>
 
           <!-- Show auto-connected message for YouTube/Kick when authenticated -->
-          <div v-else-if="account(platform) && (platform === 'youtube' || platform === 'kick')" class="auto-connected-info">
+          <div
+            v-else-if="account(platform) && (platform === 'youtube' || platform === 'kick')"
+            class="auto-connected-info"
+          >
             <span class="auto-connected-text">Connected to your channel</span>
           </div>
         </div>
@@ -339,11 +393,31 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
             :class="toast.type === 'success' ? 'toast-success' : 'toast-error'"
           >
             <div class="toast-icon">
-              <svg v-if="toast.type === 'success'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <svg
+                v-if="toast.type === 'success'"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              <svg
+                v-else
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
             </div>
             <div class="toast-body">
@@ -442,10 +516,19 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.dot-on  { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,.6); }
-.dot-wait { background: #f59e0b; }
-.dot-err  { background: #ef4444; }
-.dot-off  { background: #4b5563; }
+.dot-on {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+.dot-wait {
+  background: #f59e0b;
+}
+.dot-err {
+  background: #ef4444;
+}
+.dot-off {
+  background: #4b5563;
+}
 
 .status-text {
   font-size: 12px;
@@ -606,7 +689,9 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
   padding: 3px 6px 3px 8px;
 }
 
-.chip-hash { opacity: 0.6; }
+.chip-hash {
+  opacity: 0.6;
+}
 
 .chip-remove {
   background: none;
@@ -619,7 +704,9 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
   border-radius: 50%;
   transition: color 0.15s;
 }
-.chip-remove:hover { color: #ef4444; }
+.chip-remove:hover {
+  color: #ef4444;
+}
 
 /* Buttons */
 .btn {
@@ -628,22 +715,31 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
   font-family: inherit;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
-.btn-sm { padding: 7px 14px; }
+.btn-sm {
+  padding: 7px 14px;
+}
 
 .btn-primary {
   background: var(--btn-color, #a78bfa);
   color: var(--btn-text, #fff);
 }
-.btn-primary:not(:disabled):hover { opacity: 0.88; }
+.btn-primary:not(:disabled):hover {
+  opacity: 0.88;
+}
 
 .btn-ghost {
   background: rgba(255, 255, 255, 0.06);
@@ -662,7 +758,9 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
   border: 1px solid rgba(167, 139, 250, 0.3);
   padding: 8px 18px;
 }
-.btn-join:not(:disabled):hover { background: rgba(167, 139, 250, 0.25); }
+.btn-join:not(:disabled):hover {
+  background: rgba(167, 139, 250, 0.25);
+}
 
 /* Auto-connected info */
 .auto-connected-info {
@@ -707,7 +805,9 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Toasts */
@@ -734,7 +834,7 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
   max-width: 320px;
   backdrop-filter: blur(10px);
   pointer-events: auto;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .toast-success {
@@ -778,8 +878,18 @@ function onInputKeydown(e: KeyboardEvent, platform: Platform) {
   white-space: nowrap;
 }
 
-.toast-enter-active { transition: all 0.25s ease; }
-.toast-leave-active { transition: all 0.2s ease; }
-.toast-enter-from   { opacity: 0; transform: translateX(20px); }
-.toast-leave-to     { opacity: 0; transform: translateX(20px); }
+.toast-enter-active {
+  transition: all 0.25s ease;
+}
+.toast-leave-active {
+  transition: all 0.2s ease;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
 </style>

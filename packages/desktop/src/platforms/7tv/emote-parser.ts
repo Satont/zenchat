@@ -1,21 +1,21 @@
-import { sevenTVService } from "../../seventv";
-import type { Platform } from "@twirchat/shared";
+import { sevenTVService } from '../../seventv'
+import type { Platform } from '@twirchat/shared'
 
 export interface ParsedEmote {
-  id: string;
-  name: string;
-  imageUrl: string;
-  animated: boolean;
-  zeroWidth: boolean;
-  aspectRatio: number;
-  start: number;
-  end: number;
+  id: string
+  name: string
+  imageUrl: string
+  animated: boolean
+  zeroWidth: boolean
+  aspectRatio: number
+  start: number
+  end: number
 }
 
 export interface ParsedMessage {
-  text: string;
-  parts: Array<{ type: "text"; content: string } | { type: "emote"; emote: ParsedEmote }>;
-  emotes: ParsedEmote[];
+  text: string
+  parts: ({ type: 'text'; content: string } | { type: 'emote'; emote: ParsedEmote })[]
+  emotes: ParsedEmote[]
 }
 
 export function parseMessageWithEmotes(
@@ -23,56 +23,56 @@ export function parseMessageWithEmotes(
   platform: Platform,
   channelId: string,
 ): ParsedMessage {
-  const parts: ParsedMessage["parts"] = [];
-  const emotes: ParsedEmote[] = [];
+  const parts: ParsedMessage['parts'] = []
+  const emotes: ParsedEmote[] = []
 
-  const tokens = messageText.split(/(\s+)/);
-  let currentPosition = 0;
+  const tokens = messageText.split(/(\s+)/)
+  let currentPosition = 0
 
   for (const token of tokens) {
     if (/^\s+$/.test(token)) {
-      parts.push({ type: "text", content: token });
-      currentPosition += token.length;
-      continue;
+      parts.push({ content: token, type: 'text' })
+      currentPosition += token.length
+      continue
     }
 
-    const emote = sevenTVService.getEmote(platform, channelId, token);
+    const emote = sevenTVService.getEmote(platform, channelId, token)
     if (emote) {
       const parsedEmote: ParsedEmote = {
-        id: emote.id,
-        name: emote.name,
-        imageUrl: sevenTVService.getImageUrl(emote.id),
         animated: emote.animated,
-        zeroWidth: emote.zeroWidth,
         aspectRatio: emote.aspectRatio,
-        start: currentPosition,
         end: currentPosition + token.length,
-      };
+        id: emote.id,
+        imageUrl: sevenTVService.getImageUrl(emote.id),
+        name: emote.name,
+        start: currentPosition,
+        zeroWidth: emote.zeroWidth,
+      }
 
-      parts.push({ type: "emote", emote: parsedEmote });
-      emotes.push(parsedEmote);
+      parts.push({ emote: parsedEmote, type: 'emote' })
+      emotes.push(parsedEmote)
     } else {
-      parts.push({ type: "text", content: token });
+      parts.push({ content: token, type: 'text' })
     }
 
-    currentPosition += token.length;
+    currentPosition += token.length
   }
 
   return {
-    text: messageText,
-    parts,
     emotes,
-  };
+    parts,
+    text: messageText,
+  }
 }
 
 export function hasEmotes(messageText: string, platform: Platform, channelId: string): boolean {
-  const tokens = messageText.split(/\s+/);
+  const tokens = messageText.split(/\s+/)
   for (const token of tokens) {
     if (sevenTVService.getEmote(platform, channelId, token)) {
-      return true;
+      return true
     }
   }
-  return false;
+  return false
 }
 
 export function getEmotesInMessage(
@@ -80,32 +80,32 @@ export function getEmotesInMessage(
   platform: Platform,
   channelId: string,
 ): ParsedEmote[] {
-  const emotes: ParsedEmote[] = [];
-  const tokens = messageText.split(/(\s+)/);
-  let currentPosition = 0;
+  const emotes: ParsedEmote[] = []
+  const tokens = messageText.split(/(\s+)/)
+  let currentPosition = 0
 
   for (const token of tokens) {
     if (/^\s+$/.test(token)) {
-      currentPosition += token.length;
-      continue;
+      currentPosition += token.length
+      continue
     }
 
-    const emote = sevenTVService.getEmote(platform, channelId, token);
+    const emote = sevenTVService.getEmote(platform, channelId, token)
     if (emote) {
       emotes.push({
-        id: emote.id,
-        name: emote.name,
-        imageUrl: sevenTVService.getImageUrl(emote.id),
         animated: emote.animated,
-        zeroWidth: emote.zeroWidth,
         aspectRatio: emote.aspectRatio,
-        start: currentPosition,
         end: currentPosition + token.length,
-      });
+        id: emote.id,
+        imageUrl: sevenTVService.getImageUrl(emote.id),
+        name: emote.name,
+        start: currentPosition,
+        zeroWidth: emote.zeroWidth,
+      })
     }
 
-    currentPosition += token.length;
+    currentPosition += token.length
   }
 
-  return emotes;
+  return emotes
 }

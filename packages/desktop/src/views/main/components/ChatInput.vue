@@ -1,131 +1,160 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from "vue";
-import type { PlatformStatusInfo, WatchedChannel } from "@twirchat/shared/types";
+import { computed, nextTick, ref, watch } from 'vue'
+import type { PlatformStatusInfo, WatchedChannel } from '@twirchat/shared/types'
 
 const props = defineProps<{
-  statuses: Map<string, PlatformStatusInfo>;
+  statuses: Map<string, PlatformStatusInfo>
   /** When set, input is scoped to this watched channel */
-  watchedChannel?: WatchedChannel | null;
+  watchedChannel?: WatchedChannel | null
   /** Connection status for the watched channel */
-  watchedChannelStatus?: PlatformStatusInfo | null;
-}>();
+  watchedChannelStatus?: PlatformStatusInfo | null
+}>()
 
 const emit = defineEmits<{
-  send: [payload: Array<{ platform: string; channelLogin: string; text: string }>];
-  "send-watched": [text: string];
-}>();
+  send: [payload: { platform: string; channelLogin: string; text: string }[]]
+  'send-watched': [text: string]
+}>()
 
-const text = ref("");
-const textareaEl = ref<HTMLTextAreaElement | null>(null);
+const text = ref('')
+const textareaEl = ref<HTMLTextAreaElement | null>(null)
 
 function resizeTextarea() {
-  const el = textareaEl.value;
-  if (!el) return;
-  el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  const el = textareaEl.value
+  if (!el) {
+    return
+  }
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px'
 }
 
-watch(text, () => nextTick(resizeTextarea));
+watch(text, () => nextTick(resizeTextarea))
 
 // ---- Normal (home tab) mode ----
 
 const connectedPlatforms = computed(() => {
-  if (props.watchedChannel) return [];
-  const result: PlatformStatusInfo[] = [];
+  if (props.watchedChannel) {
+    return []
+  }
+  const result: PlatformStatusInfo[] = []
   for (const info of props.statuses.values()) {
-    if (
-      (info.status === "connected" || info.status === "connecting") &&
-      info.channelLogin
-    ) {
-      result.push(info);
+    if ((info.status === 'connected' || info.status === 'connecting') && info.channelLogin) {
+      result.push(info)
     }
   }
-  return result;
-});
+  return result
+})
 
 const sendablePlatforms = computed(() =>
-  connectedPlatforms.value.filter((p) => p.mode === "authenticated"),
-);
+  connectedPlatforms.value.filter((p) => p.mode === 'authenticated'),
+)
 
 const hasAnything = computed(() => {
-  if (props.watchedChannel) return true;
-  return connectedPlatforms.value.length > 0;
-});
+  if (props.watchedChannel) {
+    return true
+  }
+  return connectedPlatforms.value.length > 0
+})
 
 const isDisabled = computed(() => {
   if (props.watchedChannel) {
     // Can send if authenticated, or even anon for watched we allow read-only still
-    return props.watchedChannelStatus?.mode !== "authenticated";
+    return props.watchedChannelStatus?.mode !== 'authenticated'
   }
-  return sendablePlatforms.value.length === 0;
-});
+  return sendablePlatforms.value.length === 0
+})
 
-const enabled = ref<Record<string, boolean>>({});
+const enabled = ref<Record<string, boolean>>({})
 
 function isEnabled(platform: string): boolean {
-  const info = connectedPlatforms.value.find((p) => p.platform === platform);
-  if (!info || info.mode !== "authenticated") return false;
-  return enabled.value[platform] !== false;
+  const info = connectedPlatforms.value.find((p) => p.platform === platform)
+  if (!info || info.mode !== 'authenticated') {
+    return false
+  }
+  return enabled.value[platform] !== false
 }
 
 function toggle(platform: string) {
-  const info = connectedPlatforms.value.find((p) => p.platform === platform);
-  if (!info || info.mode !== "authenticated") return;
-  enabled.value = { ...enabled.value, [platform]: !isEnabled(platform) };
+  const info = connectedPlatforms.value.find((p) => p.platform === platform)
+  if (!info || info.mode !== 'authenticated') {
+    return
+  }
+  enabled.value = { ...enabled.value, [platform]: !isEnabled(platform) }
 }
 
 const canSend = computed(() => {
-  if (!text.value.trim()) return false;
-  if (props.watchedChannel) return !isDisabled.value;
-  return sendablePlatforms.value.some((p) => isEnabled(p.platform));
-});
+  if (!text.value.trim()) {
+    return false
+  }
+  if (props.watchedChannel) {
+    return !isDisabled.value
+  }
+  return sendablePlatforms.value.some((p) => isEnabled(p.platform))
+})
 
 function send() {
-  const trimmed = text.value.trim();
-  if (!trimmed) return;
+  const trimmed = text.value.trim()
+  if (!trimmed) {
+    return
+  }
 
   if (props.watchedChannel) {
-    emit("send-watched", trimmed);
+    emit('send-watched', trimmed)
   } else {
     const targets = sendablePlatforms.value
       .filter((p) => isEnabled(p.platform))
-      .map((p) => ({ platform: p.platform, channelLogin: p.channelLogin!, text: trimmed }));
-    if (targets.length === 0) return;
-    emit("send", targets);
+      .map((p) => ({ channelLogin: p.channelLogin!, platform: p.platform, text: trimmed }))
+    if (targets.length === 0) {
+      return
+    }
+    emit('send', targets)
   }
 
-  text.value = "";
+  text.value = ''
   nextTick(() => {
-    if (textareaEl.value) textareaEl.value.style.height = "auto";
-  });
+    if (textareaEl.value) {
+      textareaEl.value.style.height = 'auto'
+    }
+  })
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    send();
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    send()
   }
 }
 
 function platformColor(platform: string): string {
   switch (platform) {
-    case "twitch": return "#9146ff";
-    case "kick":   return "#53fc18";
-    case "youtube": return "#ff0000";
-    default:       return "#a78bfa";
+    case 'twitch': {
+      return '#9146ff'
+    }
+    case 'kick': {
+      return '#53fc18'
+    }
+    case 'youtube': {
+      return '#ff0000'
+    }
+    default: {
+      return '#a78bfa'
+    }
   }
 }
 
 function placeholderText(): string {
   if (props.watchedChannel) {
-    if (props.watchedChannelStatus?.mode !== "authenticated") {
-      return "Log in to send messages…";
+    if (props.watchedChannelStatus?.mode !== 'authenticated') {
+      return 'Log in to send messages…'
     }
-    return `Message ${props.watchedChannel.displayName}…`;
+    return `Message ${props.watchedChannel.displayName}…`
   }
-  if (!hasAnything.value) return "Connect a channel to send messages…";
-  if (isDisabled.value) return "Log in to send messages…";
-  return "Send a message… (Enter ↵ to send, Shift+Enter for newline)";
+  if (!hasAnything.value) {
+    return 'Connect a channel to send messages…'
+  }
+  if (isDisabled.value) {
+    return 'Log in to send messages…'
+  }
+  return 'Send a message… (Enter ↵ to send, Shift+Enter for newline)'
 }
 </script>
 
@@ -135,22 +164,58 @@ function placeholderText(): string {
     <div v-if="watchedChannel" class="input-targets">
       <div
         class="target-btn"
-        :class="{ active: watchedChannelStatus?.mode === 'authenticated', anon: watchedChannelStatus?.mode !== 'authenticated' }"
+        :class="{
+          active: watchedChannelStatus?.mode === 'authenticated',
+          anon: watchedChannelStatus?.mode !== 'authenticated',
+        }"
         :style="{ '--p-color': platformColor(watchedChannel.platform) }"
       >
-        <svg v-if="watchedChannel.platform === 'twitch'" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
+        <svg
+          v-if="watchedChannel.platform === 'twitch'"
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path
+            d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"
+          />
         </svg>
-        <svg v-else-if="watchedChannel.platform === 'kick'" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 2h4v7.5l5-7.5h5l-6 9 6 11h-5l-5-8V22H3z"/>
+        <svg
+          v-else-if="watchedChannel.platform === 'kick'"
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M3 2h4v7.5l5-7.5h5l-6 9 6 11h-5l-5-8V22H3z" />
         </svg>
-        <svg v-else-if="watchedChannel.platform === 'youtube'" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        <svg
+          v-else-if="watchedChannel.platform === 'youtube'"
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path
+            d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+          />
         </svg>
         <span class="target-name">{{ watchedChannel.displayName }}</span>
-        <svg v-if="watchedChannelStatus?.mode !== 'authenticated'" class="anon-lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        <svg
+          v-if="watchedChannelStatus?.mode !== 'authenticated'"
+          class="anon-lock"
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
       </div>
     </div>
@@ -166,27 +231,66 @@ function placeholderText(): string {
           anon: p.mode !== 'authenticated',
         }"
         :style="{ '--p-color': platformColor(p.platform) }"
-        :title="p.mode !== 'authenticated'
-          ? `${p.platform} — anonymous (log in to send)`
-          : isEnabled(p.platform) ? `Disable ${p.platform}` : `Enable ${p.platform}`"
+        :title="
+          p.mode !== 'authenticated'
+            ? `${p.platform} — anonymous (log in to send)`
+            : isEnabled(p.platform)
+              ? `Disable ${p.platform}`
+              : `Enable ${p.platform}`
+        "
         @click="toggle(p.platform)"
       >
-        <svg v-if="p.platform === 'twitch'" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
+        <svg
+          v-if="p.platform === 'twitch'"
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path
+            d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"
+          />
         </svg>
-        <svg v-else-if="p.platform === 'kick'" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 2h4v7.5l5-7.5h5l-6 9 6 11h-5l-5-8V22H3z"/>
+        <svg
+          v-else-if="p.platform === 'kick'"
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M3 2h4v7.5l5-7.5h5l-6 9 6 11h-5l-5-8V22H3z" />
         </svg>
-        <svg v-else-if="p.platform === 'youtube'" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        <svg
+          v-else-if="p.platform === 'youtube'"
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path
+            d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+          />
         </svg>
-        <span v-else class="target-letter">{{ (p.platform as string).charAt(0).toUpperCase() }}</span>
+        <span v-else class="target-letter">{{
+          (p.platform as string).charAt(0).toUpperCase()
+        }}</span>
 
         <span class="target-name">{{ p.channelLogin }}</span>
 
-        <svg v-if="p.mode !== 'authenticated'" class="anon-lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        <svg
+          v-if="p.mode !== 'authenticated'"
+          class="anon-lock"
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
       </button>
     </div>
@@ -202,13 +306,17 @@ function placeholderText(): string {
         rows="1"
         @keydown="onKeydown"
       />
-      <button
-        class="send-btn"
-        :disabled="!canSend"
-        @click="send"
-        title="Send"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <button class="send-btn" :disabled="!canSend" @click="send" title="Send">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <line x1="22" y1="2" x2="11" y2="13" />
           <polygon points="22 2 15 22 11 13 2 9 22 2" />
         </svg>
@@ -241,14 +349,18 @@ function placeholderText(): string {
   gap: 5px;
   padding: 3px 9px 3px 7px;
   border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--c-text-2, #8b8b99);
   font-size: 12px;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    opacity 0.15s;
   user-select: none;
 }
 .target-btn.active {
@@ -333,7 +445,9 @@ function placeholderText(): string {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
 }
 .send-btn:hover:not(:disabled) {
   background: #6d28d9;

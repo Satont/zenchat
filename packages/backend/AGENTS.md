@@ -43,29 +43,30 @@ src/
 
 ## WHERE TO LOOK
 
-| Task | Location | Notes |
-|------|----------|-------|
-| Add HTTP route | `src/routes/*.ts` | Register in `src/index.ts` |
-| Add WS handler | `src/ws/handlers.ts` | Add to handlers object |
-| DB schema change | `src/db/migrations.ts` | Add migration, runs on startup |
-| Add platform OAuth | `src/auth/{platform}.ts` | Follow PKCE pattern |
-| Kick webhook handling | `src/auth/kick-webhook.ts` | Verify HMAC signature |
-| Query database | `src/db/store.ts` | Use `sql` template tag |
-| Send WS to desktop | `src/ws/connection-manager.ts` | `sendToClient()` |
+| Task                  | Location                       | Notes                          |
+| --------------------- | ------------------------------ | ------------------------------ |
+| Add HTTP route        | `src/routes/*.ts`              | Register in `src/index.ts`     |
+| Add WS handler        | `src/ws/handlers.ts`           | Add to handlers object         |
+| DB schema change      | `src/db/migrations.ts`         | Add migration, runs on startup |
+| Add platform OAuth    | `src/auth/{platform}.ts`       | Follow PKCE pattern            |
+| Kick webhook handling | `src/auth/kick-webhook.ts`     | Verify HMAC signature          |
+| Query database        | `src/db/store.ts`              | Use `sql` template tag         |
+| Send WS to desktop    | `src/ws/connection-manager.ts` | `sendToClient()`               |
 
 ## ENTRY POINTS
 
-| File | Purpose | When It Runs |
-|------|---------|--------------|
-| `src/index.ts` | Bun.serve server | Always |
-| `src/db/migrations.ts` | DB schema | Runs automatically on startup |
+| File                   | Purpose          | When It Runs                  |
+| ---------------------- | ---------------- | ----------------------------- |
+| `src/index.ts`         | Bun.serve server | Always                        |
+| `src/db/migrations.ts` | DB schema        | Runs automatically on startup |
 
 ## CONVENTIONS
 
 **Database Access**
+
 ```typescript
 // Use Bun.sql template tag for safe parameterization
-const result = await sql`SELECT * FROM platform_accounts WHERE platform = ${platform}`;
+const result = await sql`SELECT * FROM platform_accounts WHERE platform = ${platform}`
 
 // Upsert pattern
 await sql`
@@ -73,31 +74,34 @@ await sql`
   VALUES (${platform}, ${userId}, ...)
   ON CONFLICT (desktop_client_id, platform) 
   DO UPDATE SET access_token = ${token}, ...
-`;
+`
 
 // Map snake_case DB to camelCase JS
 const mapAccount = (row: any): Account => ({
   platform: row.platform,
   platformUserId: row.platform_user_id,
   // ...
-});
+})
 ```
 
 **WebSocket Protocol**
+
 - Desktop connects to `/ws` with `X-Client-Secret` header
 - Server upserts client in `desktop_clients` table
 - Messages follow `@twirchat/shared/protocol.ts` types
 
 **Error Handling**
+
 ```typescript
 // Return structured HTTP errors
-return Response.json({ error: "Invalid platform" }, { status: 400 });
+return Response.json({ error: 'Invalid platform' }, { status: 400 })
 
 // Log with context
-log.error("Auth failed", { platform, error: String(err) });
+log.error('Auth failed', { platform, error: String(err) })
 ```
 
 **Type Checking**
+
 - Use `tsgo --noEmit` (native TypeScript compiler preview)
 - NOT `vue-tsc` - this is backend code
 - Suppressions: `// @ts-ignore — false positive in tsgo for workspace packages`
@@ -113,16 +117,19 @@ log.error("Auth failed", { platform, error: String(err) });
 ## SECURITY
 
 **Kick Webhooks**
+
 - Verify HMAC-SHA256 signature using `KICK_WEBHOOK_SECRET`
 - Reject requests with invalid signatures
 - Secret generated via: `openssl rand -hex 32`
 
 **Client Authentication**
+
 - Desktop generates random secret on first launch
 - All requests (except OAuth callbacks/webhooks) require `X-Client-Secret` header
 - Secret stored in `desktop_clients` table, auto-registered on first use
 
 **OAuth Flows**
+
 - PKCE for all platforms (Twitch, YouTube, Kick)
 - Tokens stored encrypted (desktop) or in DB (backend)
 - Refresh tokens used for long-lived access
@@ -152,11 +159,13 @@ bun test tests/
 ## ENVIRONMENT VARIABLES
 
 Required:
+
 - `DATABASE_URL` — PostgreSQL connection string
 - `KICK_CLIENT_ID` — From Kick developer settings
 - `KICK_CLIENT_SECRET` — From Kick developer settings
 
 Optional:
+
 - `PORT` — Server port (default: 3000)
 - `KICK_REDIRECT_URI` — OAuth callback URL
 - `KICK_WEBHOOK_URL` — Public HTTPS URL for webhooks
@@ -169,11 +178,13 @@ See `src/config.ts` for all options.
 ## LOCAL DEVELOPMENT
 
 **Database**
+
 ```bash
 docker compose up -d  # PostgreSQL on port 5432
 ```
 
 **Webhooks (ngrok)**
+
 ```bash
 ngrok http 3000
 # Set KICK_WEBHOOK_URL=https://xxx.ngrok.io/webhook/kick
@@ -184,28 +195,31 @@ Run automatically on startup. Manual run not needed.
 
 ## HTTP ENDPOINTS
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/ws` | X-Client-Secret | WebSocket upgrade |
-| GET | `/health` | — | Health check |
-| GET | `/api/accounts` | X-Client-Secret | List connected accounts |
-| DELETE | `/api/accounts/:platform` | X-Client-Secret | Disconnect account |
-| POST | `/api/auth/kick/start` | body secret | Start Kick OAuth |
-| GET | `/auth/kick/callback` | — | Kick OAuth callback |
-| POST | `/webhook/kick` | HMAC | Kick event webhooks |
+| Method | Path                      | Auth            | Description             |
+| ------ | ------------------------- | --------------- | ----------------------- |
+| GET    | `/ws`                     | X-Client-Secret | WebSocket upgrade       |
+| GET    | `/health`                 | —               | Health check            |
+| GET    | `/api/accounts`           | X-Client-Secret | List connected accounts |
+| DELETE | `/api/accounts/:platform` | X-Client-Secret | Disconnect account      |
+| POST   | `/api/auth/kick/start`    | body secret     | Start Kick OAuth        |
+| GET    | `/auth/kick/callback`     | —               | Kick OAuth callback     |
+| POST   | `/webhook/kick`           | HMAC            | Kick event webhooks     |
 
 ## NOTES
 
 **Kick EventSub**
+
 - Subscriptions managed in `kick-subscriptions.ts`
 - Webhook events normalized and broadcast to all connected desktop clients
 
 **7TV Integration**
+
 - GraphQL API client in `src/seventv/`
 - Generated types in `src/seventv/gql/`
 - Bundle warning: documents map not tree-shakeable (production: use babel/swc plugin)
 
 **Twitch Badges**
+
 - Prefetched at backend startup
 - Served to desktop via API
 

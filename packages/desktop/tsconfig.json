@@ -21,9 +21,9 @@
     "paths": {
       "@desktop/*": ["./src/*"],
       "@twirchat/shared": ["../shared/index.ts"],
-      "@twirchat/shared/*": ["../shared/*"],
-    },
+      "@twirchat/shared/*": ["../shared/*"]
+    }
   },
   "include": ["src/**/*", "index.ts", "electrobun.config.ts"],
-  "exclude": ["overlay", "node_modules"],
+  "exclude": ["overlay", "node_modules"]
 }

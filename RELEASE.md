@@ -5,29 +5,35 @@ This document describes the automated release pipeline for TwirChat.
 ## Overview
 
 The release pipeline is fully automated via GitHub Actions and triggers on:
+
 - Pushing a version tag (e.g., `v1.0.0`)
 - Manual workflow dispatch with a version input
 
 ## What Gets Released
 
 ### Desktop Application
+
 - **Linux**: x64 and ARM64 binaries + AppImage
 - **macOS**: ARM64 (Apple Silicon) and x64 (Intel) binaries
 - **Windows**: x64 binary
 
 ### Backend
+
 - Compiled binary for Linux x64
 - Docker image (published to GitHub Container Registry)
 
 ## Release Features
 
 ### Automatic Changelog
+
 - Generated using conventional commits
 - Categorized by commit types (features, fixes, etc.)
 - Included in GitHub Release notes
 
 ### Environment Configuration
+
 Production builds use environment variables from GitHub Secrets:
+
 - `BACKEND_URL` - Backend HTTP URL
 - `BACKEND_WS_URL` - Backend WebSocket URL
 
@@ -42,6 +48,7 @@ git push origin v1.0.0
 ```
 
 The workflow will automatically:
+
 1. Generate changelog from commits
 2. Build desktop apps for all platforms
 3. Build backend binary and Docker image
@@ -63,10 +70,12 @@ cp .env.example .env
 ```
 
 Required variables for production:
+
 - `CHATRIX_BACKEND_URL` - Backend HTTP endpoint
 - `CHATRIX_BACKEND_WS_URL` - Backend WebSocket endpoint
 
 Optional variables:
+
 - `AUTH_SERVER_PORT` - Local auth callback port (default: 45821)
 - `OVERLAY_SERVER_PORT` - Overlay server port (default: 45823)
 - `DB_PATH` - SQLite database path
@@ -102,6 +111,7 @@ docker compose up -d
 ```
 
 Caddy will automatically:
+
 - Obtain Let's Encrypt certificates
 - Handle HTTP → HTTPS redirect
 - Proxy WebSocket connections
@@ -143,6 +153,7 @@ docker build -t twirchat-backend .
 ## AppImage (Linux)
 
 The Linux build automatically creates an AppImage for easy distribution:
+
 - Self-contained executable
 - Works on most Linux distributions
 - No installation required
@@ -159,6 +170,7 @@ The Linux build automatically creates an AppImage for easy distribution:
 ### Missing Artifacts
 
 If artifacts are missing from the release:
+
 1. Check the workflow logs for specific platform failures
 2. Verify the artifact upload step completed successfully
 3. Check artifact retention settings (default: 90 days)
@@ -166,5 +178,6 @@ If artifacts are missing from the release:
 ### Docker Push Failures
 
 Ensure the GitHub token has proper permissions:
+
 - Go to Settings → Actions → General
 - Enable "Read and write permissions" for workflows

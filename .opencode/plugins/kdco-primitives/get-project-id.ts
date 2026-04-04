@@ -8,12 +8,12 @@
  * @module kdco-primitives/get-project-id
  */
 
-import * as crypto from "node:crypto"
-import { stat } from "node:fs/promises"
-import * as path from "node:path"
-import { logWarn } from "./log-warn"
-import type { OpencodeClient } from "./types"
-import { TimeoutError, withTimeout } from "./with-timeout"
+import * as crypto from 'node:crypto'
+import { stat } from 'node:fs/promises'
+import * as path from 'node:path'
+import { logWarn } from './log-warn'
+import type { OpencodeClient } from './types'
+import { TimeoutError, withTimeout } from './with-timeout'
 
 /**
  * Generate a short hash from a path for project ID fallback.
@@ -25,8 +25,8 @@ import { TimeoutError, withTimeout } from "./with-timeout"
  * @returns 16-char hex hash
  */
 function hashPath(projectRoot: string): string {
-	const hash = crypto.createHash("sha256").update(projectRoot).digest("hex")
-	return hash.slice(0, 16)
+  const hash = crypto.createHash('sha256').update(projectRoot).digest('hex')
+  return hash.slice(0, 16)
 }
 
 /**
@@ -57,116 +57,116 @@ function hashPath(projectRoot: string): string {
  * ```
  */
 export async function getProjectId(projectRoot: string, client?: OpencodeClient): Promise<string> {
-	// Guard: Validate projectRoot (Law 1: Early Exit, Law 4: Fail Fast)
-	if (!projectRoot || typeof projectRoot !== "string") {
-		throw new Error("getProjectId: projectRoot is required and must be a string")
-	}
+  // Guard: Validate projectRoot (Law 1: Early Exit, Law 4: Fail Fast)
+  if (!projectRoot || typeof projectRoot !== 'string') {
+    throw new Error('getProjectId: projectRoot is required and must be a string')
+  }
 
-	const gitPath = path.join(projectRoot, ".git")
+  const gitPath = path.join(projectRoot, '.git')
 
-	// Check if .git exists and what type it is
-	const gitStat = await stat(gitPath).catch(() => null)
+  // Check if .git exists and what type it is
+  const gitStat = await stat(gitPath).catch(() => null)
 
-	// Guard: No .git directory - not a git repo (Law 1: Early Exit)
-	if (!gitStat) {
-		logWarn(client, "project-id", `No .git found at ${projectRoot}, using path hash`)
-		return hashPath(projectRoot)
-	}
+  // Guard: No .git directory - not a git repo (Law 1: Early Exit)
+  if (!gitStat) {
+    logWarn(client, 'project-id', `No .git found at ${projectRoot}, using path hash`)
+    return hashPath(projectRoot)
+  }
 
-	let gitDir = gitPath
+  let gitDir = gitPath
 
-	// Handle worktree case: .git is a file containing gitdir reference
-	if (gitStat.isFile()) {
-		const content = await Bun.file(gitPath).text()
-		const match = content.match(/^gitdir:\s*(.+)$/m)
+  // Handle worktree case: .git is a file containing gitdir reference
+  if (gitStat.isFile()) {
+    const content = await Bun.file(gitPath).text()
+    const match = content.match(/^gitdir:\s*(.+)$/m)
 
-		// Guard: Invalid .git file format (Law 4: Fail Fast)
-		if (!match) {
-			throw new Error(`getProjectId: .git file exists but has invalid format at ${gitPath}`)
-		}
+    // Guard: Invalid .git file format (Law 4: Fail Fast)
+    if (!match) {
+      throw new Error(`getProjectId: .git file exists but has invalid format at ${gitPath}`)
+    }
 
-		// Resolve path (handles both relative and absolute)
-		const gitdirPath = match[1].trim()
-		const resolvedGitdir = path.resolve(projectRoot, gitdirPath)
+    // Resolve path (handles both relative and absolute)
+    const gitdirPath = match[1].trim()
+    const resolvedGitdir = path.resolve(projectRoot, gitdirPath)
 
-		// The gitdir contains a 'commondir' file pointing to shared .git
-		const commondirPath = path.join(resolvedGitdir, "commondir")
-		const commondirFile = Bun.file(commondirPath)
+    // The gitdir contains a 'commondir' file pointing to shared .git
+    const commondirPath = path.join(resolvedGitdir, 'commondir')
+    const commondirFile = Bun.file(commondirPath)
 
-		if (await commondirFile.exists()) {
-			const commondirContent = (await commondirFile.text()).trim()
-			gitDir = path.resolve(resolvedGitdir, commondirContent)
-		} else {
-			// Fallback to ../.. assumption for older git or unusual setups
-			gitDir = path.resolve(resolvedGitdir, "../..")
-		}
+    if (await commondirFile.exists()) {
+      const commondirContent = (await commondirFile.text()).trim()
+      gitDir = path.resolve(resolvedGitdir, commondirContent)
+    } else {
+      // Fallback to ../.. assumption for older git or unusual setups
+      gitDir = path.resolve(resolvedGitdir, '../..')
+    }
 
-		// Guard: Resolved gitdir must be a directory (Law 4: Fail Fast)
-		const gitDirStat = await stat(gitDir).catch(() => null)
-		if (!gitDirStat?.isDirectory()) {
-			throw new Error(`getProjectId: Resolved gitdir ${gitDir} is not a directory`)
-		}
-	}
+    // Guard: Resolved gitdir must be a directory (Law 4: Fail Fast)
+    const gitDirStat = await stat(gitDir).catch(() => null)
+    if (!gitDirStat?.isDirectory()) {
+      throw new Error(`getProjectId: Resolved gitdir ${gitDir} is not a directory`)
+    }
+  }
 
-	// Check cache in .git/opencode
-	const cacheFile = path.join(gitDir, "opencode")
-	const cache = Bun.file(cacheFile)
+  // Check cache in .git/opencode
+  const cacheFile = path.join(gitDir, 'opencode')
+  const cache = Bun.file(cacheFile)
 
-	if (await cache.exists()) {
-		const cached = (await cache.text()).trim()
-		// Validate cache content (40-char hex for git hash, or 16-char for path hash)
-		if (/^[a-f0-9]{40}$/i.test(cached) || /^[a-f0-9]{16}$/i.test(cached)) {
-			return cached
-		}
-		logWarn(client, "project-id", `Invalid cache content at ${cacheFile}, regenerating`)
-	}
+  if (await cache.exists()) {
+    const cached = (await cache.text()).trim()
+    // Validate cache content (40-char hex for git hash, or 16-char for path hash)
+    if (/^[a-f0-9]{40}$/i.test(cached) || /^[a-f0-9]{16}$/i.test(cached)) {
+      return cached
+    }
+    logWarn(client, 'project-id', `Invalid cache content at ${cacheFile}, regenerating`)
+  }
 
-	// Generate project ID from git root commit
-	try {
-		const proc = Bun.spawn(["git", "rev-list", "--max-parents=0", "--all"], {
-			cwd: projectRoot,
-			stdout: "pipe",
-			stderr: "pipe",
-			env: { ...process.env, GIT_DIR: undefined, GIT_WORK_TREE: undefined },
-		})
+  // Generate project ID from git root commit
+  try {
+    const proc = Bun.spawn(['git', 'rev-list', '--max-parents=0', '--all'], {
+      cwd: projectRoot,
+      env: { ...process.env, GIT_DIR: undefined, GIT_WORK_TREE: undefined },
+      stderr: 'pipe',
+      stdout: 'pipe',
+    })
 
-		// 5 second timeout to prevent hangs on network filesystems
-		const timeoutMs = 5000
-		const exitCode = await withTimeout(proc.exited, timeoutMs, `git rev-list timed out`).catch(
-			(e) => {
-				if (e instanceof TimeoutError) {
-					proc.kill()
-				}
-				return 1 // Treat timeout/errors as failure, fall back to path hash
-			},
-		)
+    // 5 second timeout to prevent hangs on network filesystems
+    const timeoutMs = 5000
+    const exitCode = await withTimeout(proc.exited, timeoutMs, `git rev-list timed out`).catch(
+      (error) => {
+        if (error instanceof TimeoutError) {
+          proc.kill()
+        }
+        return 1 // Treat timeout/errors as failure, fall back to path hash
+      },
+    )
 
-		if (exitCode === 0) {
-			const output = await new Response(proc.stdout).text()
-			const roots = output
-				.split("\n")
-				.filter(Boolean)
-				.map((x) => x.trim())
-				.sort()
+    if (exitCode === 0) {
+      const output = await new Response(proc.stdout).text()
+      const roots = output
+        .split('\n')
+        .filter(Boolean)
+        .map((x) => x.trim())
+        .toSorted()
 
-			if (roots.length > 0 && /^[a-f0-9]{40}$/i.test(roots[0])) {
-				const projectId = roots[0]
-				// Cache the result
-				try {
-					await Bun.write(cacheFile, projectId)
-				} catch (e) {
-					logWarn(client, "project-id", `Failed to cache project ID: ${e}`)
-				}
-				return projectId
-			}
-		} else {
-			const stderr = await new Response(proc.stderr).text()
-			logWarn(client, "project-id", `git rev-list failed (${exitCode}): ${stderr.trim()}`)
-		}
-	} catch (error) {
-		logWarn(client, "project-id", `git command failed: ${error}`)
-	}
+      if (roots.length > 0 && /^[a-f0-9]{40}$/i.test(roots[0])) {
+        const projectId = roots[0]
+        // Cache the result
+        try {
+          await Bun.write(cacheFile, projectId)
+        } catch (error) {
+          logWarn(client, 'project-id', `Failed to cache project ID: ${error}`)
+        }
+        return projectId
+      }
+    } else {
+      const stderr = await new Response(proc.stderr).text()
+      logWarn(client, 'project-id', `git rev-list failed (${exitCode}): ${stderr.trim()}`)
+    }
+  } catch (error) {
+    logWarn(client, 'project-id', `git command failed: ${error}`)
+  }
 
-	// Fallback to path hash
-	return hashPath(projectRoot)
+  // Fallback to path hash
+  return hashPath(projectRoot)
 }

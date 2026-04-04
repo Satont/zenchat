@@ -1,31 +1,31 @@
-import { Database } from "bun:sqlite";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { getDbPath } from "../runtime-config";
-import { logger } from "@twirchat/shared/logger";
+import { Database } from 'bun:sqlite'
+import { mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { getDbPath } from '../runtime-config'
+import { logger } from '@twirchat/shared/logger'
 
-const log = logger("db");
+const log = logger('db')
 
-let _db: Database | null = null;
+let _db: Database | null = null
 
 export function getDb(): Database {
   if (!_db) {
-    throw new Error("Database not initialized. Call initDb() first.");
+    throw new Error('Database not initialized. Call initDb() first.')
   }
-  return _db;
+  return _db
 }
 
 export function initDb(path: string = getDbPath()): Database {
-  mkdirSync(dirname(path), { recursive: true });
+  mkdirSync(dirname(path), { recursive: true })
 
-  const db = new Database(path, { create: true });
-  db.run("PRAGMA journal_mode = WAL");
-  db.run("PRAGMA foreign_keys = ON");
+  const db = new Database(path, { create: true })
+  db.run('PRAGMA journal_mode = WAL')
+  db.run('PRAGMA foreign_keys = ON')
 
-  runMigrations(db);
+  runMigrations(db)
 
-  _db = db;
-  return db;
+  _db = db
+  return db
 }
 
 function runMigrations(db: Database): void {
@@ -34,7 +34,7 @@ function runMigrations(db: Database): void {
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     )
-  `);
+  `)
 
   db.run(`
     CREATE TABLE IF NOT EXISTS accounts (
@@ -51,14 +51,14 @@ function runMigrations(db: Database): void {
       created_at INTEGER DEFAULT (unixepoch()),
       updated_at INTEGER DEFAULT (unixepoch())
     )
-  `);
+  `)
 
   db.run(`
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     )
-  `);
+  `)
 
   db.run(`
     CREATE TABLE IF NOT EXISTS chat_messages (
@@ -72,11 +72,11 @@ function runMigrations(db: Database): void {
       created_at INTEGER NOT NULL,
       data TEXT
     )
-  `);
+  `)
 
   // Migration: add data column to existing installations
   try {
-    db.run(`ALTER TABLE chat_messages ADD COLUMN data TEXT`);
+    db.run(`ALTER TABLE chat_messages ADD COLUMN data TEXT`)
   } catch {
     // Column already exists — ignore
   }
@@ -87,7 +87,7 @@ function runMigrations(db: Database): void {
       channel_slug TEXT NOT NULL,
       PRIMARY KEY (platform, channel_slug)
     )
-  `);
+  `)
 
   db.run(`
     CREATE TABLE IF NOT EXISTS watched_channels (
@@ -98,7 +98,7 @@ function runMigrations(db: Database): void {
       created_at INTEGER DEFAULT (unixepoch()),
       UNIQUE (platform, channel_slug)
     )
-  `);
+  `)
 
-  log.info("Migrations applied");
+  log.info('Migrations applied')
 }

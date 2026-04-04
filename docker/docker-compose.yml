@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   twirchat-backend:
@@ -17,11 +17,11 @@ services:
       POSTGRES_PASSWORD: twirchat
       POSTGRES_DB: twirchat
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - twirchat-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U twirchat -d twirchat"]
+      test: ['CMD-SHELL', 'pg_isready -U twirchat -d twirchat']
       interval: 5s
       timeout: 5s
 

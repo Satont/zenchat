@@ -1,10 +1,24 @@
 {
   "languages": {
     "TypeScript": {
-      "language_servers": ["tsgo", "vtsls"]
+      "language_servers": ["tsgo", "vtsls", "oxc"],
+      "formatter": "language_server",
+      "format_on_save": "on"
+    },
+    "JavaScript": {
+      "language_servers": ["oxc"],
+      "formatter": "language_server",
+      "format_on_save": "on"
     },
     "Vue": {
-      "language_servers": ["vue-language-server", "vtsls"]
+      "language_servers": ["vue-language-server", "vtsls", "oxc"],
+      "format_on_save": "on"
+    },
+    "JSON": {
+      "formatter": "language_server"
+    },
+    "JSONC": {
+      "formatter": "language_server"
     }
   },
   "lsp": {
@@ -19,9 +33,22 @@
       "binary": {
         "path": "node_modules/.bin/tsgo"
       }
+    },
+    "oxc": {
+      "binary": {
+        "path": "node_modules/.bin/oxlint",
+        "arguments": ["--lsp"]
+      },
+      "settings": {
+        "configPath": ".oxlintrc.json"
+      }
     }
   },
   "file_types": {
     "Vue": ["vue"]
+  },
+  "code_actions_on_format": {
+    "source.fixAll.oxc": true,
+    "source.organizeImports": false
   }
 }

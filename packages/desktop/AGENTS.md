@@ -42,46 +42,48 @@ src/
 
 ## WHERE TO LOOK
 
-| Task | Location | Notes |
-|------|----------|-------|
-| Add platform adapter | `src/platforms/{name}/adapter.ts` | Extend BasePlatformAdapter |
-| Register adapter | `src/bun/index.ts` | Add to `adapterRegistry` |
-| Add RPC method | `src/shared/rpc.ts` + `src/bun/index.ts` | Update schema + implement handler |
-| Change main UI | `src/views/main/components/*.vue` | Vue SFC components |
-| Change overlay | `src/views/overlay/App.vue` | OBS overlay display |
-| Fix auth flow | `src/auth/server.ts` | PKCE callback handling |
-| DB schema change | `src/store/db.ts` | Run migrations in `initDb()` |
-| Add overlay message | `src/overlay-server.ts` | `pushOverlayMessage()` |
+| Task                 | Location                                 | Notes                             |
+| -------------------- | ---------------------------------------- | --------------------------------- |
+| Add platform adapter | `src/platforms/{name}/adapter.ts`        | Extend BasePlatformAdapter        |
+| Register adapter     | `src/bun/index.ts`                       | Add to `adapterRegistry`          |
+| Add RPC method       | `src/shared/rpc.ts` + `src/bun/index.ts` | Update schema + implement handler |
+| Change main UI       | `src/views/main/components/*.vue`        | Vue SFC components                |
+| Change overlay       | `src/views/overlay/App.vue`              | OBS overlay display               |
+| Fix auth flow        | `src/auth/server.ts`                     | PKCE callback handling            |
+| DB schema change     | `src/store/db.ts`                        | Run migrations in `initDb()`      |
+| Add overlay message  | `src/overlay-server.ts`                  | `pushOverlayMessage()`            |
 
 ## ENTRY POINTS
 
-| File | Purpose | When It Runs |
-|------|---------|--------------|
-| `src/bun/index.ts` | Electrobun main process | Production & `bun run start` |
-| `src/views/main/main.ts` | Main window webview | HMR dev (port 5173) or built |
-| `src/views/overlay/main.ts` | Overlay webview | Built + served by overlay-server |
-| `src/overlay-server.ts` | Overlay HTTP+WS server | Started from bun/index.ts |
+| File                        | Purpose                 | When It Runs                     |
+| --------------------------- | ----------------------- | -------------------------------- |
+| `src/bun/index.ts`          | Electrobun main process | Production & `bun run start`     |
+| `src/views/main/main.ts`    | Main window webview     | HMR dev (port 5173) or built     |
+| `src/views/overlay/main.ts` | Overlay webview         | Built + served by overlay-server |
+| `src/overlay-server.ts`     | Overlay HTTP+WS server  | Started from bun/index.ts        |
 
 ## CONVENTIONS
 
 **Electrobun RPC**
+
 - Schema defined in `src/shared/rpc.ts`
 - Bun side: `defineElectrobunRPC<TwirChatRPCSchema>("bun", { handlers: { requests: {...} }})`
 - View side: `Electroview.defineRPC<TwirChatRPCSchema>()`
 - Cast workaround: `const sendToView = rpc.send as unknown as WebviewSender`
 
 **Platform Adapters**
+
 ```typescript
 class MyAdapter extends BasePlatformAdapter {
-  readonly platform = "myplatform" as const;
-  
+  readonly platform = 'myplatform' as const
+
   async connect(channelSlug: string): Promise<void> {
     // Connect to platform
-    this.emit("status", { platform: this.platform, state: "connected" });
+    this.emit('status', { platform: this.platform, state: 'connected' })
   }
-  
+
   async disconnect(): Promise<void> {}
-  
+
   async sendMessage(channelId: string, text: string): Promise<void> {
     // Optional: implement sending
   }
@@ -89,21 +91,23 @@ class MyAdapter extends BasePlatformAdapter {
 ```
 
 **Error Handling**
+
 ```typescript
 // Log and rethrow for RPC handlers
 try {
-  const result = await fetchData();
-  return result;
+  const result = await fetchData()
+  return result
 } catch (err) {
-  log.error("Failed to fetch", { error: String(err) });
-  throw err; // Let RPC catch and return error
+  log.error('Failed to fetch', { error: String(err) })
+  throw err // Let RPC catch and return error
 }
 
 // Fire-and-forget background tasks
-void backgroundTask().catch(e => log.error("Task failed", { error: String(e) }));
+void backgroundTask().catch((e) => log.error('Task failed', { error: String(e) }))
 ```
 
 **Type Checking**
+
 - Use `vue-tsc --noEmit` (NOT `tsgo`) for Vue SFC compatibility
 - Configured in `package.json` script
 
@@ -137,22 +141,26 @@ cd src/platforms/youtube && bunx @bufbuild/buf generate
 ## NOTES
 
 **Overlay Server**
+
 - Runs on `OVERLAY_SERVER_PORT` (45823)
 - OBS URL: `http://localhost:45823/?bg=transparent&fontSize=14`
 - Built files served from `dist/overlay/` (no HMR)
 
 **Client Secret**
+
 - Generated on first launch, stored in `client-secret.ts`
 - Sent to backend via `X-Client-Secret` header
 - Partial logging: `secret.slice(0, 8)` for debugging
 
 **Platform-Specific**
+
 - Linux: CEF bundling required (WebKitGTK lacks crypto.subtle)
 - YouTube: Requires authentication (no anonymous mode currently)
 
 ## DEPENDENCIES
 
 Key dependencies and why:
+
 - `electrobun` - Desktop framework (Bun + Webview)
 - `vue` - UI framework
 - `@twurple/*` - Twitch API/chat

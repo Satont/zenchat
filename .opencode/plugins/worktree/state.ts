@@ -8,14 +8,14 @@
  * Project ID is the first git root commit SHA (40-char hex), with SHA-256 path hash fallback (16-char).
  */
 
-import { Database } from "bun:sqlite"
-import { mkdirSync } from "node:fs"
-import * as os from "node:os"
-import * as path from "node:path"
-import { z } from "zod"
-import type { OpencodeClient } from "../kdco-primitives"
-import { getProjectId, logWarn } from "../kdco-primitives"
-import { parsePersistedLaunchMetadata, serializePersistedLaunchMetadata } from "./launch-context"
+import { Database } from 'bun:sqlite'
+import { mkdirSync } from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import { z } from 'zod'
+import type { OpencodeClient } from '../kdco-primitives'
+import { getProjectId, logWarn } from '../kdco-primitives'
+import { parsePersistedLaunchMetadata, serializePersistedLaunchMetadata } from './launch-context'
 
 // =============================================================================
 // TYPES
@@ -23,32 +23,32 @@ import { parsePersistedLaunchMetadata, serializePersistedLaunchMetadata } from "
 
 /** Represents an active worktree session */
 export interface Session {
-	id: string
-	branch: string
-	path: string
-	createdAt: string
-	launchMode: "plain" | "ocx"
-	profile: string | null
-	ocxBin: string | null
+  id: string
+  branch: string
+  path: string
+  createdAt: string
+  launchMode: 'plain' | 'ocx'
+  profile: string | null
+  ocxBin: string | null
 }
 
-export type SessionInput = Omit<Session, "launchMode" | "profile" | "ocxBin"> & {
-	launchMode?: "plain" | "ocx"
-	profile?: string | null
-	ocxBin?: string | null
+export type SessionInput = Omit<Session, 'launchMode' | 'profile' | 'ocxBin'> & {
+  launchMode?: 'plain' | 'ocx'
+  profile?: string | null
+  ocxBin?: string | null
 }
 
 /** Pending spawn operation to be processed on session.idle */
 export interface PendingSpawn {
-	branch: string
-	path: string
-	sessionId: string
+  branch: string
+  path: string
+  sessionId: string
 }
 
 /** Pending delete operation to be processed on session.idle */
 export interface PendingDelete {
-	branch: string
-	path: string
+  branch: string
+  path: string
 }
 
 // =============================================================================
@@ -56,24 +56,24 @@ export interface PendingDelete {
 // =============================================================================
 
 const sessionSchema = z.object({
-	id: z.string().min(1),
-	branch: z.string().min(1),
-	path: z.string().min(1),
-	createdAt: z.string().min(1),
-	launchMode: z.enum(["plain", "ocx"]).optional(),
-	profile: z.string().nullable().optional(),
-	ocxBin: z.string().nullable().optional(),
+  branch: z.string().min(1),
+  createdAt: z.string().min(1),
+  id: z.string().min(1),
+  launchMode: z.enum(['plain', 'ocx']).optional(),
+  ocxBin: z.string().nullable().optional(),
+  path: z.string().min(1),
+  profile: z.string().nullable().optional(),
 })
 
 const pendingSpawnSchema = z.object({
-	branch: z.string().min(1),
-	path: z.string().min(1),
-	sessionId: z.string().min(1),
+  branch: z.string().min(1),
+  path: z.string().min(1),
+  sessionId: z.string().min(1),
 })
 
 const pendingDeleteSchema = z.object({
-	branch: z.string().min(1),
-	path: z.string().min(1),
+  branch: z.string().min(1),
+  path: z.string().min(1),
 })
 
 // =============================================================================
@@ -85,7 +85,7 @@ const pendingDeleteSchema = z.object({
  * Location: ~/.local/share/opencode/worktree/
  */
 function getWorktreeBaseDirectory(): string {
-	return path.join(os.homedir(), ".local", "share", "opencode", "worktree")
+  return path.join(os.homedir(), '.local', 'share', 'opencode', 'worktree')
 }
 
 /**
@@ -97,15 +97,15 @@ function getWorktreeBaseDirectory(): string {
  * @returns Absolute path to the worktree directory
  */
 export async function getWorktreePath(
-	projectRoot: string,
-	branch: string,
-	basePath?: string,
+  projectRoot: string,
+  branch: string,
+  basePath?: string,
 ): Promise<string> {
-	if (!branch || typeof branch !== "string") {
-		throw new Error("branch is required")
-	}
-	const projectId = await getProjectId(projectRoot)
-	return path.join(basePath ?? getWorktreeBaseDirectory(), projectId, branch)
+  if (!branch || typeof branch !== 'string') {
+    throw new Error('branch is required')
+  }
+  const projectId = await getProjectId(projectRoot)
+  return path.join(basePath ?? getWorktreeBaseDirectory(), projectId, branch)
 }
 
 /**
@@ -113,8 +113,8 @@ export async function getWorktreePath(
  * Location: ~/.local/share/opencode/plugins/worktree/
  */
 function getDbDirectory(): string {
-	const home = os.homedir()
-	return path.join(home, ".local", "share", "opencode", "plugins", "worktree")
+  const home = os.homedir()
+  return path.join(home, '.local', 'share', 'opencode', 'plugins', 'worktree')
 }
 
 /**
@@ -122,8 +122,8 @@ function getDbDirectory(): string {
  * @param projectRoot - Absolute path to the project root
  */
 async function getDbPath(projectRoot: string): Promise<string> {
-	const projectId = await getProjectId(projectRoot)
-	return path.join(getDbDirectory(), `${projectId}.sqlite`)
+  const projectId = await getProjectId(projectRoot)
+  return path.join(getDbDirectory(), `${projectId}.sqlite`)
 }
 
 /**
@@ -141,26 +141,26 @@ async function getDbPath(projectRoot: string): Promise<string> {
  * ```
  */
 export async function initStateDb(projectRoot: string): Promise<Database> {
-	// Guard: validate project root
-	if (!projectRoot || typeof projectRoot !== "string") {
-		throw new Error("initStateDb requires a valid project root path")
-	}
+  // Guard: validate project root
+  if (!projectRoot || typeof projectRoot !== 'string') {
+    throw new Error('initStateDb requires a valid project root path')
+  }
 
-	const dbPath = await getDbPath(projectRoot)
-	const dbDir = path.dirname(dbPath)
+  const dbPath = await getDbPath(projectRoot)
+  const dbDir = path.dirname(dbPath)
 
-	// Create directory synchronously (required before opening DB)
-	mkdirSync(dbDir, { recursive: true })
+  // Create directory synchronously (required before opening DB)
+  mkdirSync(dbDir, { recursive: true })
 
-	// Open database (creates if doesn't exist)
-	const db = new Database(dbPath)
+  // Open database (creates if doesn't exist)
+  const db = new Database(dbPath)
 
-	// Configure SQLite for concurrent access
-	db.exec("PRAGMA journal_mode=WAL")
-	db.exec("PRAGMA busy_timeout=5000")
+  // Configure SQLite for concurrent access
+  db.exec('PRAGMA journal_mode=WAL')
+  db.exec('PRAGMA busy_timeout=5000')
 
-	// Create tables with schema
-	db.exec(`
+  // Create tables with schema
+  db.exec(`
 		CREATE TABLE IF NOT EXISTS sessions (
 			id TEXT PRIMARY KEY,
 			branch TEXT NOT NULL,
@@ -172,9 +172,9 @@ export async function initStateDb(projectRoot: string): Promise<Database> {
 		)
 	`)
 
-	ensureSessionLaunchMetadataColumns(db)
+  ensureSessionLaunchMetadataColumns(db)
 
-	db.exec(`
+  db.exec(`
 		CREATE TABLE IF NOT EXISTS pending_operations (
 			id INTEGER PRIMARY KEY CHECK (id = 1),
 			type TEXT NOT NULL,
@@ -184,67 +184,67 @@ export async function initStateDb(projectRoot: string): Promise<Database> {
 		)
 	`)
 
-	return db
+  return db
 }
 
 function ensureSessionLaunchMetadataColumns(db: Database): void {
-	const tableInfo = db.prepare("PRAGMA table_info(sessions)").all() as Array<{ name?: string }>
-	const sessionColumns = new Set(tableInfo.map((column) => column.name).filter(Boolean))
+  const tableInfo = db.prepare('PRAGMA table_info(sessions)').all() as { name?: string }[]
+  const sessionColumns = new Set(tableInfo.map((column) => column.name).filter(Boolean))
 
-	if (!sessionColumns.has("launch_mode")) {
-		addSessionColumn(db, "launch_mode", "ALTER TABLE sessions ADD COLUMN launch_mode TEXT")
-	}
+  if (!sessionColumns.has('launch_mode')) {
+    addSessionColumn(db, 'launch_mode', 'ALTER TABLE sessions ADD COLUMN launch_mode TEXT')
+  }
 
-	if (!sessionColumns.has("profile")) {
-		addSessionColumn(db, "profile", "ALTER TABLE sessions ADD COLUMN profile TEXT")
-	}
+  if (!sessionColumns.has('profile')) {
+    addSessionColumn(db, 'profile', 'ALTER TABLE sessions ADD COLUMN profile TEXT')
+  }
 
-	if (!sessionColumns.has("ocx_bin")) {
-		addSessionColumn(db, "ocx_bin", "ALTER TABLE sessions ADD COLUMN ocx_bin TEXT")
-	}
+  if (!sessionColumns.has('ocx_bin')) {
+    addSessionColumn(db, 'ocx_bin', 'ALTER TABLE sessions ADD COLUMN ocx_bin TEXT')
+  }
 }
 
 function addSessionColumn(db: Database, columnName: string, sql: string): void {
-	try {
-		db.exec(sql)
-	} catch (error) {
-		if (isDuplicateColumnError(error, columnName)) {
-			return
-		}
+  try {
+    db.exec(sql)
+  } catch (error) {
+    if (isDuplicateColumnError(error, columnName)) {
+      return
+    }
 
-		throw error
-	}
+    throw error
+  }
 }
 
 function isDuplicateColumnError(error: unknown, columnName: string): boolean {
-	if (!(error instanceof Error)) {
-		return false
-	}
+  if (!(error instanceof Error)) {
+    return false
+  }
 
-	const normalizedMessage = error.message.toLowerCase()
-	return (
-		normalizedMessage.includes("duplicate column name") &&
-		normalizedMessage.includes(columnName.toLowerCase())
-	)
+  const normalizedMessage = error.message.toLowerCase()
+  return (
+    normalizedMessage.includes('duplicate column name') &&
+    normalizedMessage.includes(columnName.toLowerCase())
+  )
 }
 
 function normalizeSessionRow(row: Record<string, string | null>): Session {
-	const launchMetadata = parsePersistedLaunchMetadata({
-		launchMode: row.launchMode,
-		profile: row.profile,
-		ocxBin: row.ocxBin,
-	})
-	const serialized = serializePersistedLaunchMetadata(launchMetadata)
+  const launchMetadata = parsePersistedLaunchMetadata({
+    launchMode: row.launchMode,
+    ocxBin: row.ocxBin,
+    profile: row.profile,
+  })
+  const serialized = serializePersistedLaunchMetadata(launchMetadata)
 
-	return {
-		id: String(row.id),
-		branch: String(row.branch),
-		path: String(row.path),
-		createdAt: String(row.createdAt),
-		launchMode: serialized.launchMode,
-		profile: serialized.profile,
-		ocxBin: serialized.ocxBin,
-	}
+  return {
+    branch: String(row.branch),
+    createdAt: String(row.createdAt),
+    id: String(row.id),
+    launchMode: serialized.launchMode,
+    ocxBin: serialized.ocxBin,
+    path: String(row.path),
+    profile: serialized.profile,
+  }
 }
 
 // =============================================================================
@@ -259,29 +259,29 @@ function normalizeSessionRow(row: Record<string, string | null>): Session {
  * @param session - Session data to persist
  */
 export function addSession(db: Database, session: SessionInput): void {
-	// Parse at boundary for type safety
-	const parsed = sessionSchema.parse(session)
-	const launchMetadata = parsePersistedLaunchMetadata({
-		launchMode: parsed.launchMode,
-		profile: parsed.profile,
-		ocxBin: parsed.ocxBin,
-	})
-	const serializedLaunchMetadata = serializePersistedLaunchMetadata(launchMetadata)
+  // Parse at boundary for type safety
+  const parsed = sessionSchema.parse(session)
+  const launchMetadata = parsePersistedLaunchMetadata({
+    launchMode: parsed.launchMode,
+    ocxBin: parsed.ocxBin,
+    profile: parsed.profile,
+  })
+  const serializedLaunchMetadata = serializePersistedLaunchMetadata(launchMetadata)
 
-	const stmt = db.prepare(`
+  const stmt = db.prepare(`
 		INSERT OR REPLACE INTO sessions (id, branch, path, created_at, launch_mode, profile, ocx_bin)
 		VALUES ($id, $branch, $path, $createdAt, $launchMode, $profile, $ocxBin)
 	`)
 
-	stmt.run({
-		$id: parsed.id,
-		$branch: parsed.branch,
-		$path: parsed.path,
-		$createdAt: parsed.createdAt,
-		$launchMode: serializedLaunchMetadata.launchMode,
-		$profile: serializedLaunchMetadata.profile,
-		$ocxBin: serializedLaunchMetadata.ocxBin,
-	})
+  stmt.run({
+    $branch: parsed.branch,
+    $createdAt: parsed.createdAt,
+    $id: parsed.id,
+    $launchMode: serializedLaunchMetadata.launchMode,
+    $ocxBin: serializedLaunchMetadata.ocxBin,
+    $path: parsed.path,
+    $profile: serializedLaunchMetadata.profile,
+  })
 }
 
 /**
@@ -292,19 +292,23 @@ export function addSession(db: Database, session: SessionInput): void {
  * @returns Session if found, null otherwise
  */
 export function getSession(db: Database, sessionId: string): Session | null {
-	// Guard: empty session ID
-	if (!sessionId) return null
+  // Guard: empty session ID
+  if (!sessionId) {
+    return null
+  }
 
-	const stmt = db.prepare(`
+  const stmt = db.prepare(`
 		SELECT id, branch, path, created_at as createdAt, launch_mode as launchMode, profile, ocx_bin as ocxBin
 		FROM sessions
 		WHERE id = $id
 	`)
 
-	const row = stmt.get({ $id: sessionId }) as Record<string, string | null> | null
-	if (!row) return null
+  const row = stmt.get({ $id: sessionId }) as Record<string, string | null> | null
+  if (!row) {
+    return null
+  }
 
-	return normalizeSessionRow(row)
+  return normalizeSessionRow(row)
 }
 
 /**
@@ -315,11 +319,13 @@ export function getSession(db: Database, sessionId: string): Session | null {
  * @param branch - Branch name to remove
  */
 export function removeSession(db: Database, branch: string): void {
-	// Guard: empty branch
-	if (!branch) return
+  // Guard: empty branch
+  if (!branch) {
+    return
+  }
 
-	const stmt = db.prepare(`DELETE FROM sessions WHERE branch = $branch`)
-	stmt.run({ $branch: branch })
+  const stmt = db.prepare(`DELETE FROM sessions WHERE branch = $branch`)
+  stmt.run({ $branch: branch })
 }
 
 /**
@@ -329,14 +335,14 @@ export function removeSession(db: Database, branch: string): void {
  * @returns Array of all sessions, empty if none
  */
 export function getAllSessions(db: Database): Session[] {
-	const stmt = db.prepare(`
+  const stmt = db.prepare(`
 		SELECT id, branch, path, created_at as createdAt, launch_mode as launchMode, profile, ocx_bin as ocxBin
 		FROM sessions
 		ORDER BY created_at ASC
 	`)
 
-	const rows = stmt.all() as Array<Record<string, string | null>>
-	return rows.map((row) => normalizeSessionRow(row))
+  const rows = stmt.all() as Record<string, string | null>[]
+  return rows.map((row) => normalizeSessionRow(row))
 }
 
 // =============================================================================
@@ -353,38 +359,38 @@ export function getAllSessions(db: Database): Session[] {
  * @param spawn - Spawn operation data
  */
 export function setPendingSpawn(db: Database, spawn: PendingSpawn, client?: OpencodeClient): void {
-	// Parse at boundary for type safety
-	const parsed = pendingSpawnSchema.parse(spawn)
+  // Parse at boundary for type safety
+  const parsed = pendingSpawnSchema.parse(spawn)
 
-	// Check for existing operations and warn about replacement
-	const existingSpawn = getPendingSpawn(db)
-	const existingDelete = getPendingDelete(db)
+  // Check for existing operations and warn about replacement
+  const existingSpawn = getPendingSpawn(db)
+  const existingDelete = getPendingDelete(db)
 
-	if (existingSpawn) {
-		logWarn(
-			client,
-			"worktree",
-			`Replacing pending spawn: "${existingSpawn.branch}" → "${parsed.branch}"`,
-		)
-	} else if (existingDelete) {
-		logWarn(
-			client,
-			"worktree",
-			`Pending spawn replacing pending delete for: "${existingDelete.branch}"`,
-		)
-	}
+  if (existingSpawn) {
+    logWarn(
+      client,
+      'worktree',
+      `Replacing pending spawn: "${existingSpawn.branch}" → "${parsed.branch}"`,
+    )
+  } else if (existingDelete) {
+    logWarn(
+      client,
+      'worktree',
+      `Pending spawn replacing pending delete for: "${existingDelete.branch}"`,
+    )
+  }
 
-	// Atomic: replace any existing pending operation
-	const stmt = db.prepare(`
+  // Atomic: replace any existing pending operation
+  const stmt = db.prepare(`
 		INSERT OR REPLACE INTO pending_operations (id, type, branch, path, session_id)
 		VALUES (1, 'spawn', $branch, $path, $sessionId)
 	`)
 
-	stmt.run({
-		$branch: parsed.branch,
-		$path: parsed.path,
-		$sessionId: parsed.sessionId,
-	})
+  stmt.run({
+    $branch: parsed.branch,
+    $path: parsed.path,
+    $sessionId: parsed.sessionId,
+  })
 }
 
 /**
@@ -394,20 +400,22 @@ export function setPendingSpawn(db: Database, spawn: PendingSpawn, client?: Open
  * @returns PendingSpawn if exists and type is 'spawn', null otherwise
  */
 export function getPendingSpawn(db: Database): PendingSpawn | null {
-	const stmt = db.prepare(`
+  const stmt = db.prepare(`
 		SELECT type, branch, path, session_id as sessionId
 		FROM pending_operations
 		WHERE id = 1 AND type = 'spawn'
 	`)
 
-	const row = stmt.get() as Record<string, string> | null
-	if (!row) return null
+  const row = stmt.get() as Record<string, string> | null
+  if (!row) {
+    return null
+  }
 
-	return {
-		branch: row.branch,
-		path: row.path,
-		sessionId: row.sessionId,
-	}
+  return {
+    branch: row.branch,
+    path: row.path,
+    sessionId: row.sessionId,
+  }
 }
 
 /**
@@ -417,8 +425,8 @@ export function getPendingSpawn(db: Database): PendingSpawn | null {
  * @param db - Database instance from initStateDb
  */
 export function clearPendingSpawn(db: Database): void {
-	const stmt = db.prepare(`DELETE FROM pending_operations WHERE id = 1 AND type = 'spawn'`)
-	stmt.run()
+  const stmt = db.prepare(`DELETE FROM pending_operations WHERE id = 1 AND type = 'spawn'`)
+  stmt.run()
 }
 
 // =============================================================================
@@ -435,37 +443,37 @@ export function clearPendingSpawn(db: Database): void {
  * @param del - Delete operation data
  */
 export function setPendingDelete(db: Database, del: PendingDelete, client?: OpencodeClient): void {
-	// Parse at boundary for type safety
-	const parsed = pendingDeleteSchema.parse(del)
+  // Parse at boundary for type safety
+  const parsed = pendingDeleteSchema.parse(del)
 
-	// Check for existing operations and warn about replacement
-	const existingDelete = getPendingDelete(db)
-	const existingSpawn = getPendingSpawn(db)
+  // Check for existing operations and warn about replacement
+  const existingDelete = getPendingDelete(db)
+  const existingSpawn = getPendingSpawn(db)
 
-	if (existingDelete) {
-		logWarn(
-			client,
-			"worktree",
-			`Replacing pending delete: "${existingDelete.branch}" → "${parsed.branch}"`,
-		)
-	} else if (existingSpawn) {
-		logWarn(
-			client,
-			"worktree",
-			`Pending delete replacing pending spawn for: "${existingSpawn.branch}"`,
-		)
-	}
+  if (existingDelete) {
+    logWarn(
+      client,
+      'worktree',
+      `Replacing pending delete: "${existingDelete.branch}" → "${parsed.branch}"`,
+    )
+  } else if (existingSpawn) {
+    logWarn(
+      client,
+      'worktree',
+      `Pending delete replacing pending spawn for: "${existingSpawn.branch}"`,
+    )
+  }
 
-	// Atomic: replace any existing pending operation
-	const stmt = db.prepare(`
+  // Atomic: replace any existing pending operation
+  const stmt = db.prepare(`
 		INSERT OR REPLACE INTO pending_operations (id, type, branch, path, session_id)
 		VALUES (1, 'delete', $branch, $path, NULL)
 	`)
 
-	stmt.run({
-		$branch: parsed.branch,
-		$path: parsed.path,
-	})
+  stmt.run({
+    $branch: parsed.branch,
+    $path: parsed.path,
+  })
 }
 
 /**
@@ -475,19 +483,21 @@ export function setPendingDelete(db: Database, del: PendingDelete, client?: Open
  * @returns PendingDelete if exists and type is 'delete', null otherwise
  */
 export function getPendingDelete(db: Database): PendingDelete | null {
-	const stmt = db.prepare(`
+  const stmt = db.prepare(`
 		SELECT type, branch, path
 		FROM pending_operations
 		WHERE id = 1 AND type = 'delete'
 	`)
 
-	const row = stmt.get() as Record<string, string> | null
-	if (!row) return null
+  const row = stmt.get() as Record<string, string> | null
+  if (!row) {
+    return null
+  }
 
-	return {
-		branch: row.branch,
-		path: row.path,
-	}
+  return {
+    branch: row.branch,
+    path: row.path,
+  }
 }
 
 /**
@@ -497,6 +507,6 @@ export function getPendingDelete(db: Database): PendingDelete | null {
  * @param db - Database instance from initStateDb
  */
 export function clearPendingDelete(db: Database): void {
-	const stmt = db.prepare(`DELETE FROM pending_operations WHERE id = 1 AND type = 'delete'`)
-	stmt.run()
+  const stmt = db.prepare(`DELETE FROM pending_operations WHERE id = 1 AND type = 'delete'`)
+  stmt.run()
 }

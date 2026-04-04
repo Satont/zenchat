@@ -19,28 +19,31 @@ packages/shared/
 
 ## WHERE TO LOOK
 
-| Task | Location | Notes |
-|------|----------|-------|
-| Add new message type | `types.ts` | Follow NormalizedChatMessage/NormalizedEvent patterns |
-| Add protocol message | `protocol.ts` | Update both BackendToDesktopMessage and DesktopToBackendMessage |
-| Add shared constant | `constants.ts` | Use UPPER_SNAKE_CASE |
-| Change logging format | `logger.ts` | JSON in prod, colored in dev |
+| Task                  | Location       | Notes                                                           |
+| --------------------- | -------------- | --------------------------------------------------------------- |
+| Add new message type  | `types.ts`     | Follow NormalizedChatMessage/NormalizedEvent patterns           |
+| Add protocol message  | `protocol.ts`  | Update both BackendToDesktopMessage and DesktopToBackendMessage |
+| Add shared constant   | `constants.ts` | Use UPPER_SNAKE_CASE                                            |
+| Change logging format | `logger.ts`    | JSON in prod, colored in dev                                    |
 
 ## CONVENTIONS
 
 **Stable Exports Policy**
+
 - Never remove fields from exported types without major version bump
 - Prefer adding optional fields over changing existing ones
 - Normalized event IDs: use platform prefix (`twitch:raid:${userId}:${Date.now()}`)
 
 **Type Naming**
+
 - PascalCase for interfaces/types: `NormalizedChatMessage`, `AppSettings`
 - Use `export type` for type-only exports to enable tree-shaking
 
 **Imports**
+
 ```typescript
 // Prefer type-only imports
-import type { NormalizedChatMessage } from "./types";
+import type { NormalizedChatMessage } from './types'
 ```
 
 ## ANTI-PATTERNS (THIS PACKAGE)

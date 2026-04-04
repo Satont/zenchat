@@ -1,86 +1,77 @@
-import { createHmac } from "node:crypto";
-import type {
-  NormalizedChatMessage,
-  NormalizedEvent,
-  Badge,
-} from "@twirchat/shared";
-import { connectionManager } from "../ws/connection-manager.ts";
-import { AccountStore } from "../db/index.ts";
-import { config } from "../config.ts";
+import { createHmac } from 'node:crypto'
+import type { Badge, NormalizedChatMessage, NormalizedEvent } from '@twirchat/shared'
+import { connectionManager } from '../ws/connection-manager.ts'
+import { AccountStore } from '../db/index.ts'
+import { config } from '../config.ts'
 
 // ============================================================
 // Kick webhook payload types (v1)
 // ============================================================
 
 interface KickUser {
-  is_anonymous: boolean;
-  user_id: number | null;
-  username: string | null;
-  is_verified: boolean | null;
-  profile_picture: string | null;
-  channel_slug: string | null;
+  is_anonymous: boolean
+  user_id: number | null
+  username: string | null
+  is_verified: boolean | null
+  profile_picture: string | null
+  channel_slug: string | null
   identity: {
-    username_color?: string;
-    badges?: Array<{ text: string; type: string; count?: number }>;
-  } | null;
+    username_color?: string
+    badges?: { text: string; type: string; count?: number }[]
+  } | null
 }
 
 interface ChatMessagePayload {
-  message_id: string;
-  broadcaster: KickUser;
-  sender: KickUser;
-  content: string;
-  emotes: Array<{
-    emote_id: string;
-    positions: Array<{ s: number; e: number }>;
-  }>;
-  created_at: string;
+  message_id: string
+  broadcaster: KickUser
+  sender: KickUser
+  content: string
+  emotes: {
+    emote_id: string
+    positions: Array<{ s: number; e: number }>
+  }[]
+  created_at: string
 }
 
 interface ChannelFollowPayload {
-  broadcaster: KickUser;
-  follower: KickUser;
+  broadcaster: KickUser
+  follower: KickUser
 }
 
 interface ChannelSubscriptionPayload {
-  broadcaster: KickUser;
-  subscriber: KickUser;
-  duration: number;
-  created_at: string;
-  expires_at: string;
+  broadcaster: KickUser
+  subscriber: KickUser
+  duration: number
+  created_at: string
+  expires_at: string
 }
 
 interface ChannelSubscriptionGiftsPayload {
-  broadcaster: KickUser;
-  gifter: KickUser;
-  giftees: KickUser[];
-  created_at: string;
+  broadcaster: KickUser
+  gifter: KickUser
+  giftees: KickUser[]
+  created_at: string
 }
 
 // ============================================================
 // HMAC signature verification
 // ============================================================
 
-export async function verifyKickSignature(
-  req: Request,
-  body: string,
-): Promise<boolean> {
+export async function verifyKickSignature(req: Request, body: string): Promise<boolean> {
   if (!config.KICK_WEBHOOK_SECRET) {
-    console.warn(
-      "[Kick webhook] KICK_WEBHOOK_SECRET not set — skipping verification",
-    );
-    return true;
+    console.warn('[Kick webhook] KICK_WEBHOOK_SECRET not set — skipping verification')
+    return true
   }
 
-  const signature = req.headers.get("Kick-Event-Signature");
-  if (!signature) return false;
+  const signature = req.headers.get('Kick-Event-Signature')
+  if (!signature) {
+    return false
+  }
 
-  const expected = createHmac("sha256", config.KICK_WEBHOOK_SECRET)
-    .update(body)
-    .digest("hex");
+  const expected = createHmac('sha256', config.KICK_WEBHOOK_SECRET).update(body).digest('hex')
 
-  // constant-time compare
-  return signature === `sha256=${expected}`;
+  // Constant-time compare
+  return signature === `sha256=${expected}`
 }
 
 // ============================================================
@@ -88,41 +79,39 @@ export async function verifyKickSignature(
 // ============================================================
 
 function normalizeBadges(
-  badges: Array<{ text: string; type: string; count?: number }> | undefined,
+  badges: { text: string; type: string; count?: number }[] | undefined,
 ): Badge[] {
-  if (!badges) return [];
-  return badges.map((b) => ({ id: b.type, type: b.type, text: b.text }));
+  if (!badges) {
+    return []
+  }
+  return badges.map((b) => ({ id: b.type, text: b.text, type: b.type }))
 }
 
-function normalizeChatMessage(
-  payload: ChatMessagePayload,
-): NormalizedChatMessage {
-  const sender = payload.sender;
-  const badges = normalizeBadges(sender.identity?.badges);
+function normalizeChatMessage(payload: ChatMessagePayload): NormalizedChatMessage {
+  const { sender } = payload
+  const badges = normalizeBadges(sender.identity?.badges)
 
   return {
-    id: payload.message_id,
-    platform: "kick",
-    channelId: String(
-      payload.broadcaster.user_id ?? payload.broadcaster.channel_slug ?? "",
-    ),
     author: {
-      id: String(sender.user_id ?? "anon"),
-      displayName: sender.username ?? "anonymous",
-      color: sender.identity?.username_color ?? undefined,
       avatarUrl: sender.profile_picture ?? undefined,
       badges,
+      color: sender.identity?.username_color ?? undefined,
+      displayName: sender.username ?? 'anonymous',
+      id: String(sender.user_id ?? 'anon'),
     },
-    text: payload.content,
+    channelId: String(payload.broadcaster.user_id ?? payload.broadcaster.channel_slug ?? ''),
     emotes: payload.emotes.map((e) => ({
       id: e.emote_id,
       name: e.emote_id,
       imageUrl: `https://files.kick.com/emotes/${e.emote_id}/fullsize`,
       positions: e.positions.map((p) => ({ start: p.s, end: p.e })),
     })),
+    id: payload.message_id,
+    platform: 'kick',
+    text: payload.content,
     timestamp: new Date(payload.created_at),
-    type: "message",
-  };
+    type: 'message',
+  }
 }
 
 // ============================================================
@@ -130,109 +119,107 @@ function normalizeChatMessage(
 // ============================================================
 
 export async function handleKickWebhook(req: Request): Promise<Response> {
-  const body = await req.text();
+  const body = await req.text()
 
-  const valid = await verifyKickSignature(req, body);
+  const valid = await verifyKickSignature(req, body)
   if (!valid) {
-    return new Response("Invalid signature", { status: 401 });
+    return new Response('Invalid signature', { status: 401 })
   }
 
-  const eventType = req.headers.get("Kick-Event-Type") ?? "";
-  let parsed: unknown;
+  const eventType = req.headers.get('Kick-Event-Type') ?? ''
+  let parsed: unknown
   try {
-    parsed = JSON.parse(body);
+    parsed = JSON.parse(body)
   } catch {
-    return new Response("Invalid JSON", { status: 400 });
+    return new Response('Invalid JSON', { status: 400 })
   }
 
   try {
-    await dispatchKickEvent(eventType, parsed);
-  } catch (err) {
-    console.error(`[Kick webhook] Error dispatching ${eventType}:`, err);
+    await dispatchKickEvent(eventType, parsed)
+  } catch (error) {
+    console.error(`[Kick webhook] Error dispatching ${eventType}:`, error)
   }
 
-  return new Response("OK", { status: 200 });
+  return new Response('OK', { status: 200 })
 }
 
-async function dispatchKickEvent(
-  eventType: string,
-  payload: unknown,
-): Promise<void> {
+async function dispatchKickEvent(eventType: string, payload: unknown): Promise<void> {
   switch (eventType) {
-    case "chat.message.sent": {
-      const msg = normalizeChatMessage(payload as ChatMessagePayload);
+    case 'chat.message.sent': {
+      const msg = normalizeChatMessage(payload as ChatMessagePayload)
       // Find the client that owns this broadcaster's channel and push the message
       await pushToChannelOwner(payload as ChatMessagePayload, {
-        type: "chat_message",
         data: msg,
-      });
-      break;
+        type: 'chat_message',
+      })
+      break
     }
 
-    case "channel.followed": {
-      const p = payload as ChannelFollowPayload;
+    case 'channel.followed': {
+      const p = payload as ChannelFollowPayload
       const event: NormalizedEvent = {
-        id: `kick:follow:${p.follower.user_id}:${Date.now()}`,
-        platform: "kick",
-        type: "follow",
-        user: {
-          id: String(p.follower.user_id ?? "anon"),
-          displayName: p.follower.username ?? "anonymous",
-          avatarUrl: p.follower.profile_picture ?? undefined,
-        },
         data: { channelSlug: p.broadcaster.channel_slug },
+        id: `kick:follow:${p.follower.user_id}:${Date.now()}`,
+        platform: 'kick',
         timestamp: new Date(),
-      };
-      await pushToChannelOwner(p, { type: "chat_event", data: event });
-      break;
-    }
-
-    case "channel.subscription.new":
-    case "channel.subscription.renewal": {
-      const p = payload as ChannelSubscriptionPayload;
-      const event: NormalizedEvent = {
-        id: `kick:sub:${p.subscriber.user_id}:${p.created_at}`,
-        platform: "kick",
-        type: eventType === "channel.subscription.renewal" ? "resub" : "sub",
+        type: 'follow',
         user: {
-          id: String(p.subscriber.user_id ?? "anon"),
-          displayName: p.subscriber.username ?? "anonymous",
-          avatarUrl: p.subscriber.profile_picture ?? undefined,
+          avatarUrl: p.follower.profile_picture ?? undefined,
+          displayName: p.follower.username ?? 'anonymous',
+          id: String(p.follower.user_id ?? 'anon'),
         },
-        data: { duration: p.duration, channelSlug: p.broadcaster.channel_slug },
-        timestamp: new Date(p.created_at),
-      };
-      await pushToChannelOwner(p, { type: "chat_event", data: event });
-      break;
+      }
+      await pushToChannelOwner(p, { data: event, type: 'chat_event' })
+      break
     }
 
-    case "channel.subscription.gifts": {
-      const p = payload as ChannelSubscriptionGiftsPayload;
+    case 'channel.subscription.new':
+    case 'channel.subscription.renewal': {
+      const p = payload as ChannelSubscriptionPayload
+      const event: NormalizedEvent = {
+        data: { channelSlug: p.broadcaster.channel_slug, duration: p.duration },
+        id: `kick:sub:${p.subscriber.user_id}:${p.created_at}`,
+        platform: 'kick',
+        timestamp: new Date(p.created_at),
+        type: eventType === 'channel.subscription.renewal' ? 'resub' : 'sub',
+        user: {
+          avatarUrl: p.subscriber.profile_picture ?? undefined,
+          displayName: p.subscriber.username ?? 'anonymous',
+          id: String(p.subscriber.user_id ?? 'anon'),
+        },
+      }
+      await pushToChannelOwner(p, { data: event, type: 'chat_event' })
+      break
+    }
+
+    case 'channel.subscription.gifts': {
+      const p = payload as ChannelSubscriptionGiftsPayload
       // One event per giftee
       for (const giftee of p.giftees) {
         const event: NormalizedEvent = {
-          id: `kick:giftsub:${p.gifter.user_id}:${giftee.user_id}:${p.created_at}`,
-          platform: "kick",
-          type: "gift_sub",
-          user: {
-            id: String(p.gifter.user_id ?? "anon"),
-            displayName: p.gifter.username ?? "anonymous",
-            avatarUrl: p.gifter.profile_picture ?? undefined,
-          },
           data: {
+            channelSlug: p.broadcaster.channel_slug,
             gifteeId: giftee.user_id,
             gifteeUsername: giftee.username,
-            channelSlug: p.broadcaster.channel_slug,
           },
+          id: `kick:giftsub:${p.gifter.user_id}:${giftee.user_id}:${p.created_at}`,
+          platform: 'kick',
           timestamp: new Date(p.created_at),
-        };
-        await pushToChannelOwner(p, { type: "chat_event", data: event });
+          type: 'gift_sub',
+          user: {
+            avatarUrl: p.gifter.profile_picture ?? undefined,
+            displayName: p.gifter.username ?? 'anonymous',
+            id: String(p.gifter.user_id ?? 'anon'),
+          },
+        }
+        await pushToChannelOwner(p, { data: event, type: 'chat_event' })
       }
-      break;
+      break
     }
 
-    default:
-      console.log(`[Kick webhook] Unhandled event type: ${eventType}`);
+    default: {
+      console.log(`[Kick webhook] Unhandled event type: ${eventType}`)
+    }
   }
 }
 
@@ -242,27 +229,25 @@ async function pushToChannelOwner(
   payload: { broadcaster: KickUser },
   message: Parameters<typeof connectionManager.send>[1],
 ): Promise<void> {
-  const broadcasterId = payload.broadcaster.user_id;
+  const broadcasterId = payload.broadcaster.user_id
   if (!broadcasterId) {
     // Fallback: broadcast to all connected clients (shouldn't happen in practice)
-    connectionManager.broadcast(message);
-    return;
+    connectionManager.broadcast(message)
+    return
   }
 
-  const { sql } = Bun;
+  const { sql } = Bun
   const rows = await sql<{ client_secret: string }[]>`
     SELECT client_secret FROM platform_accounts
     WHERE platform = 'kick' AND platform_user_id = ${String(broadcasterId)}
-  `;
+  `
 
   if (rows.length === 0) {
-    console.warn(
-      `[Kick webhook] No client found for broadcaster ${broadcasterId}`,
-    );
-    return;
+    console.warn(`[Kick webhook] No client found for broadcaster ${broadcasterId}`)
+    return
   }
 
   for (const row of rows) {
-    connectionManager.send(row.client_secret, message);
+    connectionManager.send(row.client_secret, message)
   }
 }

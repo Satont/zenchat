@@ -5,7 +5,7 @@
 // source: stream_list.proto
 
 /* eslint-disable */
-import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
+import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire'
 import {
   type CallOptions,
   type ChannelCredentials,
@@ -16,51 +16,41 @@ import {
   makeGenericClientConstructor,
   type Metadata,
   type UntypedServiceImplementation,
-} from "@grpc/grpc-js";
+} from '@grpc/grpc-js'
 
 export interface LiveChatMessageListRequest {
   /** The ID of the live chat for which comments should be returned. */
-  liveChatId?:
-    | string
-    | undefined;
+  liveChatId?: string | undefined
   /**
    * Specifies the localization language in which the system messages
    * should be returned.
    */
-  hl?:
-    | string
-    | undefined;
+  hl?: string | undefined
   /**
    * Specifies the size of the profile image that should be
    * returned for each user.
    */
-  profileImageSize?:
-    | number
-    | undefined;
+  profileImageSize?: number | undefined
   /**
    * The <code><strong>maxResults</strong></code> parameter specifies the
    * maximum number of items that should be returned in the result set.
    * Not used in the streaming RPC.
    */
-  maxResults?:
-    | number
-    | undefined;
+  maxResults?: number | undefined
   /**
    * The <code><strong>pageToken</strong></code> parameter identifies a specific
    * page in the result set that should be returned. In an API response, the
    * <code>nextPageToken</code> property identify other pages that could be
    * retrieved.
    */
-  pageToken?:
-    | string
-    | undefined;
+  pageToken?: string | undefined
   /**
    * The <code><strong>part</strong></code> parameter specifies the
    * <code>liveChatComment</code> resource parts that the API response will
    * include. Supported values are <code>id</code>, <code>snippet</code>, and
    * <code>authorDetails</code>.
    */
-  part: string[];
+  part: string[]
 }
 
 export interface LiveChatMessageListResponse {
@@ -68,27 +58,21 @@ export interface LiveChatMessageListResponse {
    * Identifies what kind of resource this is. Value: the fixed string
    * <code>"youtube#liveChatMessageListResponse"</code>.
    */
-  kind?:
-    | string
-    | undefined;
+  kind?: string | undefined
   /** Etag of this resource. */
-  etag?:
-    | string
-    | undefined;
+  etag?: string | undefined
   /**
    * The date and time when the underlying stream went offline. The value is
    * specified in <a href="//www.w3.org/TR/NOTE-datetime">ISO 8601</a>
    * format.
    */
-  offlineAt?:
-    | string
-    | undefined;
+  offlineAt?: string | undefined
   /** General pagination information. */
-  pageInfo?: PageInfo | undefined;
-  nextPageToken?: string | undefined;
-  items: LiveChatMessage[];
+  pageInfo?: PageInfo | undefined
+  nextPageToken?: string | undefined
+  items: LiveChatMessage[]
   /** Set when there is an active poll. */
-  activePollItem?: LiveChatMessage | undefined;
+  activePollItem?: LiveChatMessage | undefined
 }
 
 export interface LiveChatMessage {
@@ -96,59 +80,37 @@ export interface LiveChatMessage {
    * Identifies what kind of resource this is. Value: the fixed string
    * <code>"youtube#liveChatMessage"</code>.
    */
-  kind?:
-    | string
-    | undefined;
+  kind?: string | undefined
   /** Etag of this resource. */
-  etag?:
-    | string
-    | undefined;
+  etag?: string | undefined
   /** The ID that YouTube assigns to uniquely identify the message. */
-  id?:
-    | string
-    | undefined;
+  id?: string | undefined
   /** The <code>snippet</code> object contains basic details about the message. */
-  snippet?:
-    | LiveChatMessageSnippet
-    | undefined;
+  snippet?: LiveChatMessageSnippet | undefined
   /**
    * The <code>authorDetails</code> object contains basic details about the
    * user that posted this message.
    */
-  authorDetails?: LiveChatMessageAuthorDetails | undefined;
+  authorDetails?: LiveChatMessageAuthorDetails | undefined
 }
 
 export interface LiveChatMessageAuthorDetails {
   /** The YouTube channel ID. */
-  channelId?:
-    | string
-    | undefined;
+  channelId?: string | undefined
   /** The channel's URL. */
-  channelUrl?:
-    | string
-    | undefined;
+  channelUrl?: string | undefined
   /** The channel's display name. */
-  displayName?:
-    | string
-    | undefined;
+  displayName?: string | undefined
   /** The channels's avatar URL. */
-  profileImageUrl?:
-    | string
-    | undefined;
+  profileImageUrl?: string | undefined
   /** Whether the author's identity has been verified by YouTube. */
-  isVerified?:
-    | boolean
-    | undefined;
+  isVerified?: boolean | undefined
   /** Whether the author is the owner of the live chat. */
-  isChatOwner?:
-    | boolean
-    | undefined;
+  isChatOwner?: boolean | undefined
   /** Whether the author is a sponsor of the live chat. */
-  isChatSponsor?:
-    | boolean
-    | undefined;
+  isChatSponsor?: boolean | undefined
   /** Whether the author is a moderator of the live chat. */
-  isChatModerator?: boolean | undefined;
+  isChatModerator?: boolean | undefined
 }
 
 export interface LiveChatMessageSnippet {
@@ -156,10 +118,8 @@ export interface LiveChatMessageSnippet {
    * The type of message, this will always be present, it determines the
    * contents of the message as well as which fields will be present.
    */
-  type?: LiveChatMessageSnippet_TypeWrapper_Type | undefined;
-  liveChatId?:
-    | string
-    | undefined;
+  type?: LiveChatMessageSnippet_TypeWrapper_Type | undefined
+  liveChatId?: string | undefined
   /**
    * The ID of the user that authored this message, this field is not always
    * filled.
@@ -176,91 +136,68 @@ export interface LiveChatMessageSnippet {
    * superStickerEvent - the user that made the purchase
    * pollEvent - the user that created the poll
    */
-  authorChannelId?:
-    | string
-    | undefined;
+  authorChannelId?: string | undefined
   /**
    * The date and time when the message was orignally published. The value is
    * specified in <a href="//www.w3.org/TR/NOTE-datetime">ISO 8601</a>
    * format.
    */
-  publishedAt?:
-    | string
-    | undefined;
+  publishedAt?: string | undefined
   /** Whether the message has display content that should be displayed to users. */
-  hasDisplayContent?:
-    | boolean
-    | undefined;
+  hasDisplayContent?: boolean | undefined
   /**
    * Contains a string that can be displayed to the user.
    * If this field is not present the message is silent, at the moment only
    * messages of type TOMBSTONE and CHAT_ENDED_EVENT are silent.
    */
-  displayMessage?:
-    | string
-    | undefined;
+  displayMessage?: string | undefined
   /**
    * Details about the text message, this is only set if the type is
    * 'textMessageEvent'.
    */
-  textMessageDetails?: LiveChatTextMessageDetails | undefined;
-  messageDeletedDetails?: LiveChatMessageDeletedDetails | undefined;
-  messageRetractedDetails?: LiveChatMessageRetractedDetails | undefined;
-  userBannedDetails?:
-    | LiveChatUserBannedMessageDetails
-    | undefined;
+  textMessageDetails?: LiveChatTextMessageDetails | undefined
+  messageDeletedDetails?: LiveChatMessageDeletedDetails | undefined
+  messageRetractedDetails?: LiveChatMessageRetractedDetails | undefined
+  userBannedDetails?: LiveChatUserBannedMessageDetails | undefined
   /**
    * Details about the Super Chat event, this is only set if the type is
    * 'superChatEvent'.
    */
-  superChatDetails?:
-    | LiveChatSuperChatDetails
-    | undefined;
+  superChatDetails?: LiveChatSuperChatDetails | undefined
   /**
    * Details about the Super Sticker event, this is only set if the type is
    * 'superStickerEvent'.
    */
-  superStickerDetails?:
-    | LiveChatSuperStickerDetails
-    | undefined;
+  superStickerDetails?: LiveChatSuperStickerDetails | undefined
   /**
    * Details about the New Member Announcement event, this is only set if
    * the type is 'newSponsorEvent'. Note that "member" is the new term for
    * "sponsor".
    */
-  newSponsorDetails?:
-    | LiveChatNewSponsorDetails
-    | undefined;
+  newSponsorDetails?: LiveChatNewSponsorDetails | undefined
   /**
    * Details about the Member Milestone Chat event, this is only set if
    * the type is 'memberMilestoneChatEvent'.
    */
-  memberMilestoneChatDetails?:
-    | LiveChatMemberMilestoneChatDetails
-    | undefined;
+  memberMilestoneChatDetails?: LiveChatMemberMilestoneChatDetails | undefined
   /**
    * Details about the Membership Gifting event, this is only set if the type
    * is 'membershipGiftingEvent'.
    */
-  membershipGiftingDetails?:
-    | LiveChatMembershipGiftingDetails
-    | undefined;
+  membershipGiftingDetails?: LiveChatMembershipGiftingDetails | undefined
   /**
    * Details about the Gift Membership Received event, this is only set if the
    * type is 'giftMembershipReceivedEvent'.
    */
-  giftMembershipReceivedDetails?:
-    | LiveChatGiftMembershipReceivedDetails
-    | undefined;
+  giftMembershipReceivedDetails?: LiveChatGiftMembershipReceivedDetails | undefined
   /**
    * Details about the poll event, this is only set if the type is
    * 'pollEvent'.
    */
-  pollDetails?: LiveChatPollDetails | undefined;
+  pollDetails?: LiveChatPollDetails | undefined
 }
 
-export interface LiveChatMessageSnippet_TypeWrapper {
-}
+export interface LiveChatMessageSnippet_TypeWrapper {}
 
 export enum LiveChatMessageSnippet_TypeWrapper_Type {
   INVALID_TYPE = 0,
@@ -283,139 +220,138 @@ export enum LiveChatMessageSnippet_TypeWrapper_Type {
   UNRECOGNIZED = -1,
 }
 
-export function liveChatMessageSnippet_TypeWrapper_TypeFromJSON(object: any): LiveChatMessageSnippet_TypeWrapper_Type {
+export function liveChatMessageSnippet_TypeWrapper_TypeFromJSON(
+  object: any,
+): LiveChatMessageSnippet_TypeWrapper_Type {
   switch (object) {
     case 0:
-    case "INVALID_TYPE":
-      return LiveChatMessageSnippet_TypeWrapper_Type.INVALID_TYPE;
+    case 'INVALID_TYPE':
+      return LiveChatMessageSnippet_TypeWrapper_Type.INVALID_TYPE
     case 1:
-    case "TEXT_MESSAGE_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.TEXT_MESSAGE_EVENT;
+    case 'TEXT_MESSAGE_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.TEXT_MESSAGE_EVENT
     case 2:
-    case "TOMBSTONE":
-      return LiveChatMessageSnippet_TypeWrapper_Type.TOMBSTONE;
+    case 'TOMBSTONE':
+      return LiveChatMessageSnippet_TypeWrapper_Type.TOMBSTONE
     case 3:
-    case "FAN_FUNDING_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.FAN_FUNDING_EVENT;
+    case 'FAN_FUNDING_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.FAN_FUNDING_EVENT
     case 4:
-    case "CHAT_ENDED_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.CHAT_ENDED_EVENT;
+    case 'CHAT_ENDED_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.CHAT_ENDED_EVENT
     case 5:
-    case "SPONSOR_ONLY_MODE_STARTED_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.SPONSOR_ONLY_MODE_STARTED_EVENT;
+    case 'SPONSOR_ONLY_MODE_STARTED_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.SPONSOR_ONLY_MODE_STARTED_EVENT
     case 6:
-    case "SPONSOR_ONLY_MODE_ENDED_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.SPONSOR_ONLY_MODE_ENDED_EVENT;
+    case 'SPONSOR_ONLY_MODE_ENDED_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.SPONSOR_ONLY_MODE_ENDED_EVENT
     case 7:
-    case "NEW_SPONSOR_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.NEW_SPONSOR_EVENT;
+    case 'NEW_SPONSOR_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.NEW_SPONSOR_EVENT
     case 17:
-    case "MEMBER_MILESTONE_CHAT_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.MEMBER_MILESTONE_CHAT_EVENT;
+    case 'MEMBER_MILESTONE_CHAT_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.MEMBER_MILESTONE_CHAT_EVENT
     case 18:
-    case "MEMBERSHIP_GIFTING_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.MEMBERSHIP_GIFTING_EVENT;
+    case 'MEMBERSHIP_GIFTING_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.MEMBERSHIP_GIFTING_EVENT
     case 19:
-    case "GIFT_MEMBERSHIP_RECEIVED_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.GIFT_MEMBERSHIP_RECEIVED_EVENT;
+    case 'GIFT_MEMBERSHIP_RECEIVED_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.GIFT_MEMBERSHIP_RECEIVED_EVENT
     case 8:
-    case "MESSAGE_DELETED_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.MESSAGE_DELETED_EVENT;
+    case 'MESSAGE_DELETED_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.MESSAGE_DELETED_EVENT
     case 9:
-    case "MESSAGE_RETRACTED_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.MESSAGE_RETRACTED_EVENT;
+    case 'MESSAGE_RETRACTED_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.MESSAGE_RETRACTED_EVENT
     case 10:
-    case "USER_BANNED_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.USER_BANNED_EVENT;
+    case 'USER_BANNED_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.USER_BANNED_EVENT
     case 15:
-    case "SUPER_CHAT_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.SUPER_CHAT_EVENT;
+    case 'SUPER_CHAT_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.SUPER_CHAT_EVENT
     case 16:
-    case "SUPER_STICKER_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.SUPER_STICKER_EVENT;
+    case 'SUPER_STICKER_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.SUPER_STICKER_EVENT
     case 20:
-    case "POLL_EVENT":
-      return LiveChatMessageSnippet_TypeWrapper_Type.POLL_EVENT;
+    case 'POLL_EVENT':
+      return LiveChatMessageSnippet_TypeWrapper_Type.POLL_EVENT
     case -1:
-    case "UNRECOGNIZED":
+    case 'UNRECOGNIZED':
     default:
-      return LiveChatMessageSnippet_TypeWrapper_Type.UNRECOGNIZED;
+      return LiveChatMessageSnippet_TypeWrapper_Type.UNRECOGNIZED
   }
 }
 
-export function liveChatMessageSnippet_TypeWrapper_TypeToJSON(object: LiveChatMessageSnippet_TypeWrapper_Type): string {
+export function liveChatMessageSnippet_TypeWrapper_TypeToJSON(
+  object: LiveChatMessageSnippet_TypeWrapper_Type,
+): string {
   switch (object) {
     case LiveChatMessageSnippet_TypeWrapper_Type.INVALID_TYPE:
-      return "INVALID_TYPE";
+      return 'INVALID_TYPE'
     case LiveChatMessageSnippet_TypeWrapper_Type.TEXT_MESSAGE_EVENT:
-      return "TEXT_MESSAGE_EVENT";
+      return 'TEXT_MESSAGE_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.TOMBSTONE:
-      return "TOMBSTONE";
+      return 'TOMBSTONE'
     case LiveChatMessageSnippet_TypeWrapper_Type.FAN_FUNDING_EVENT:
-      return "FAN_FUNDING_EVENT";
+      return 'FAN_FUNDING_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.CHAT_ENDED_EVENT:
-      return "CHAT_ENDED_EVENT";
+      return 'CHAT_ENDED_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.SPONSOR_ONLY_MODE_STARTED_EVENT:
-      return "SPONSOR_ONLY_MODE_STARTED_EVENT";
+      return 'SPONSOR_ONLY_MODE_STARTED_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.SPONSOR_ONLY_MODE_ENDED_EVENT:
-      return "SPONSOR_ONLY_MODE_ENDED_EVENT";
+      return 'SPONSOR_ONLY_MODE_ENDED_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.NEW_SPONSOR_EVENT:
-      return "NEW_SPONSOR_EVENT";
+      return 'NEW_SPONSOR_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.MEMBER_MILESTONE_CHAT_EVENT:
-      return "MEMBER_MILESTONE_CHAT_EVENT";
+      return 'MEMBER_MILESTONE_CHAT_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.MEMBERSHIP_GIFTING_EVENT:
-      return "MEMBERSHIP_GIFTING_EVENT";
+      return 'MEMBERSHIP_GIFTING_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.GIFT_MEMBERSHIP_RECEIVED_EVENT:
-      return "GIFT_MEMBERSHIP_RECEIVED_EVENT";
+      return 'GIFT_MEMBERSHIP_RECEIVED_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.MESSAGE_DELETED_EVENT:
-      return "MESSAGE_DELETED_EVENT";
+      return 'MESSAGE_DELETED_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.MESSAGE_RETRACTED_EVENT:
-      return "MESSAGE_RETRACTED_EVENT";
+      return 'MESSAGE_RETRACTED_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.USER_BANNED_EVENT:
-      return "USER_BANNED_EVENT";
+      return 'USER_BANNED_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.SUPER_CHAT_EVENT:
-      return "SUPER_CHAT_EVENT";
+      return 'SUPER_CHAT_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.SUPER_STICKER_EVENT:
-      return "SUPER_STICKER_EVENT";
+      return 'SUPER_STICKER_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.POLL_EVENT:
-      return "POLL_EVENT";
+      return 'POLL_EVENT'
     case LiveChatMessageSnippet_TypeWrapper_Type.UNRECOGNIZED:
     default:
-      return "UNRECOGNIZED";
+      return 'UNRECOGNIZED'
   }
 }
 
 export interface LiveChatTextMessageDetails {
   /** The user's message. */
-  messageText?: string | undefined;
+  messageText?: string | undefined
 }
 
 export interface LiveChatMessageDeletedDetails {
-  deletedMessageId?: string | undefined;
+  deletedMessageId?: string | undefined
 }
 
 export interface LiveChatMessageRetractedDetails {
-  retractedMessageId?: string | undefined;
+  retractedMessageId?: string | undefined
 }
 
 export interface LiveChatUserBannedMessageDetails {
   /** The details of the user that was banned. */
-  bannedUserDetails?:
-    | ChannelProfileDetails
-    | undefined;
+  bannedUserDetails?: ChannelProfileDetails | undefined
   /** The type of ban. */
-  banType?:
-    | LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType
-    | undefined;
+  banType?: LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType | undefined
   /**
    * The duration of the ban. This property is only present if the
    * <code>banType</code> is <code>temporary</code>.
    */
-  banDurationSeconds?: number | undefined;
+  banDurationSeconds?: number | undefined
 }
 
-export interface LiveChatUserBannedMessageDetails_BanTypeWrapper {
-}
+export interface LiveChatUserBannedMessageDetails_BanTypeWrapper {}
 
 export enum LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType {
   PERMANENT = 1,
@@ -428,15 +364,15 @@ export function liveChatUserBannedMessageDetails_BanTypeWrapper_BanTypeFromJSON(
 ): LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType {
   switch (object) {
     case 1:
-    case "PERMANENT":
-      return LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType.PERMANENT;
+    case 'PERMANENT':
+      return LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType.PERMANENT
     case 2:
-    case "TEMPORARY":
-      return LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType.TEMPORARY;
+    case 'TEMPORARY':
+      return LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType.TEMPORARY
     case -1:
-    case "UNRECOGNIZED":
+    case 'UNRECOGNIZED':
     default:
-      return LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType.UNRECOGNIZED;
+      return LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType.UNRECOGNIZED
   }
 }
 
@@ -445,78 +381,56 @@ export function liveChatUserBannedMessageDetails_BanTypeWrapper_BanTypeToJSON(
 ): string {
   switch (object) {
     case LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType.PERMANENT:
-      return "PERMANENT";
+      return 'PERMANENT'
     case LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType.TEMPORARY:
-      return "TEMPORARY";
+      return 'TEMPORARY'
     case LiveChatUserBannedMessageDetails_BanTypeWrapper_BanType.UNRECOGNIZED:
     default:
-      return "UNRECOGNIZED";
+      return 'UNRECOGNIZED'
   }
 }
 
 export interface LiveChatSuperChatDetails {
   /** The amount purchased by the user, in micros (1,750,000 micros = 1.75). */
-  amountMicros?:
-    | number
-    | undefined;
+  amountMicros?: number | undefined
   /** The currency in which the purchase was made. */
-  currency?:
-    | string
-    | undefined;
+  currency?: string | undefined
   /** A rendered string that displays the fund amount and currency to the user. */
-  amountDisplayString?:
-    | string
-    | undefined;
+  amountDisplayString?: string | undefined
   /** The comment added by the user to this Super Chat event. */
-  userComment?:
-    | string
-    | undefined;
+  userComment?: string | undefined
   /**
    * The tier in which the amount belongs. Lower amounts belong to lower
    * tiers. The lowest tier is <code>1</code>.
    */
-  tier?: number | undefined;
+  tier?: number | undefined
 }
 
 export interface LiveChatSuperStickerDetails {
   /** The amount purchased by the user, in micros (1,750,000 micros = 1.75). */
-  amountMicros?:
-    | number
-    | undefined;
+  amountMicros?: number | undefined
   /** The currency in which the purchase was made. */
-  currency?:
-    | string
-    | undefined;
+  currency?: string | undefined
   /** A rendered string that displays the fund amount and currency to the user. */
-  amountDisplayString?:
-    | string
-    | undefined;
+  amountDisplayString?: string | undefined
   /**
    * The tier in which the amount belongs. Lower amounts belong to lower
    * tiers. The lowest tier is <code>1</code>.
    */
-  tier?:
-    | number
-    | undefined;
+  tier?: number | undefined
   /** Information about the Super Sticker. */
-  superStickerMetadata?: SuperStickerMetadata | undefined;
+  superStickerMetadata?: SuperStickerMetadata | undefined
 }
 
 export interface LiveChatFanFundingEventDetails {
   /** The amount of the fund. */
-  amountMicros?:
-    | number
-    | undefined;
+  amountMicros?: number | undefined
   /** The currency in which the fund was made. */
-  currency?:
-    | string
-    | undefined;
+  currency?: string | undefined
   /** A rendered string that displays the fund amount and currency to the user. */
-  amountDisplayString?:
-    | string
-    | undefined;
+  amountDisplayString?: string | undefined
   /** The comment added by the user to this fan funding event. */
-  userComment?: string | undefined;
+  userComment?: string | undefined
 }
 
 export interface LiveChatNewSponsorDetails {
@@ -526,14 +440,12 @@ export interface LiveChatNewSponsorDetails {
    *
    * In some situations this field isn't filled.
    */
-  memberLevelName?:
-    | string
-    | undefined;
+  memberLevelName?: string | undefined
   /**
    * If the viewer just had upgraded from a lower level. For viewers that
    * were not members at the time of purchase, this field is false.
    */
-  isUpgrade?: boolean | undefined;
+  isUpgrade?: boolean | undefined
 }
 
 export interface LiveChatMemberMilestoneChatDetails {
@@ -543,37 +455,31 @@ export interface LiveChatMemberMilestoneChatDetails {
    *
    * In some situations this field isn't filled.
    */
-  memberLevelName?:
-    | string
-    | undefined;
+  memberLevelName?: string | undefined
   /**
    * The total amount of months (rounded up) the viewer has been a member
    * that granted them this Member Milestone Chat. This is the same
    * number of months as is being displayed to YouTube users.
    */
-  memberMonth?:
-    | number
-    | undefined;
+  memberMonth?: number | undefined
   /**
    * The comment added by the member to this Member Milestone Chat.
    *
    * This field is empty for messages without a comment from the member.
    */
-  userComment?: string | undefined;
+  userComment?: string | undefined
 }
 
 export interface LiveChatMembershipGiftingDetails {
   /** The number of gift memberships purchased by the user. */
-  giftMembershipsCount?:
-    | number
-    | undefined;
+  giftMembershipsCount?: number | undefined
   /**
    * The name of the level of the gift memberships purchased by the user. The
    * Level names are defined by the YouTube channel offering the Membership.
    *
    * In some situations this field isn't filled.
    */
-  giftMembershipsLevelName?: string | undefined;
+  giftMembershipsLevelName?: string | undefined
 }
 
 export interface LiveChatGiftMembershipReceivedDetails {
@@ -585,45 +491,38 @@ export interface LiveChatGiftMembershipReceivedDetails {
    *
    * In some situations this field isn't filled.
    */
-  memberLevelName?:
-    | string
-    | undefined;
+  memberLevelName?: string | undefined
   /**
    * The ID of the user that made the membership gifting purchase. This matches
    * the `snippet.authorChannelId` of the associated membership gifting message.
    */
-  gifterChannelId?:
-    | string
-    | undefined;
+  gifterChannelId?: string | undefined
   /**
    * The ID of the membership gifting message that is related to this gift
    * membership. This ID will always refer to a message whose type is
    * 'membershipGiftingEvent'.
    */
-  associatedMembershipGiftingMessageId?: string | undefined;
+  associatedMembershipGiftingMessageId?: string | undefined
 }
 
 export interface LiveChatPollDetails {
-  metadata?: LiveChatPollDetails_PollMetadata | undefined;
-  status?: LiveChatPollDetails_PollStatusWrapper_PollStatus | undefined;
+  metadata?: LiveChatPollDetails_PollMetadata | undefined
+  status?: LiveChatPollDetails_PollStatusWrapper_PollStatus | undefined
 }
 
 export interface LiveChatPollDetails_PollMetadata {
-  questionText?:
-    | string
-    | undefined;
+  questionText?: string | undefined
   /** The options will be returned in the order that is displayed in 1P */
-  options: LiveChatPollDetails_PollMetadata_PollOption[];
+  options: LiveChatPollDetails_PollMetadata_PollOption[]
 }
 
 export interface LiveChatPollDetails_PollMetadata_PollOption {
-  optionText?: string | undefined;
-  tally?: number | undefined;
+  optionText?: string | undefined
+  tally?: number | undefined
 }
 
 /** Current point in the polls lifecycle. */
-export interface LiveChatPollDetails_PollStatusWrapper {
-}
+export interface LiveChatPollDetails_PollStatusWrapper {}
 
 export enum LiveChatPollDetails_PollStatusWrapper_PollStatus {
   UNKNOWN = 0,
@@ -637,18 +536,18 @@ export function liveChatPollDetails_PollStatusWrapper_PollStatusFromJSON(
 ): LiveChatPollDetails_PollStatusWrapper_PollStatus {
   switch (object) {
     case 0:
-    case "UNKNOWN":
-      return LiveChatPollDetails_PollStatusWrapper_PollStatus.UNKNOWN;
+    case 'UNKNOWN':
+      return LiveChatPollDetails_PollStatusWrapper_PollStatus.UNKNOWN
     case 1:
-    case "ACTIVE":
-      return LiveChatPollDetails_PollStatusWrapper_PollStatus.ACTIVE;
+    case 'ACTIVE':
+      return LiveChatPollDetails_PollStatusWrapper_PollStatus.ACTIVE
     case 2:
-    case "CLOSED":
-      return LiveChatPollDetails_PollStatusWrapper_PollStatus.CLOSED;
+    case 'CLOSED':
+      return LiveChatPollDetails_PollStatusWrapper_PollStatus.CLOSED
     case -1:
-    case "UNRECOGNIZED":
+    case 'UNRECOGNIZED':
     default:
-      return LiveChatPollDetails_PollStatusWrapper_PollStatus.UNRECOGNIZED;
+      return LiveChatPollDetails_PollStatusWrapper_PollStatus.UNRECOGNIZED
   }
 }
 
@@ -657,72 +556,54 @@ export function liveChatPollDetails_PollStatusWrapper_PollStatusToJSON(
 ): string {
   switch (object) {
     case LiveChatPollDetails_PollStatusWrapper_PollStatus.UNKNOWN:
-      return "UNKNOWN";
+      return 'UNKNOWN'
     case LiveChatPollDetails_PollStatusWrapper_PollStatus.ACTIVE:
-      return "ACTIVE";
+      return 'ACTIVE'
     case LiveChatPollDetails_PollStatusWrapper_PollStatus.CLOSED:
-      return "CLOSED";
+      return 'CLOSED'
     case LiveChatPollDetails_PollStatusWrapper_PollStatus.UNRECOGNIZED:
     default:
-      return "UNRECOGNIZED";
+      return 'UNRECOGNIZED'
   }
 }
 
 export interface SuperChatEventSnippet {
   /** Channel ID where the event occurred. */
-  channelId?:
-    | string
-    | undefined;
+  channelId?: string | undefined
   /** Details about the supporter. */
-  supporterDetails?:
-    | ChannelProfileDetails
-    | undefined;
+  supporterDetails?: ChannelProfileDetails | undefined
   /** The text contents of the comment left by the user. */
-  commentText?:
-    | string
-    | undefined;
+  commentText?: string | undefined
   /**
    * The date and time when the event occurred. The value is
    * specified in <a href="//www.w3.org/TR/NOTE-datetime">ISO 8601</a>
    * format.
    */
-  createdAt?:
-    | string
-    | undefined;
+  createdAt?: string | undefined
   /**
    * The purchase amount, in micros of the purchase currency.  For example, 1 is
    * represented as 1000000.
    */
-  amountMicros?:
-    | number
-    | undefined;
+  amountMicros?: number | undefined
   /** The currency in which the purchase was made.  ISO 4217. */
-  currency?:
-    | string
-    | undefined;
+  currency?: string | undefined
   /**
    * A rendered string that displays the purchase amount and currency
    * (e.g., "$1.00").  The string is rendered for the given language.
    */
-  displayString?:
-    | string
-    | undefined;
+  displayString?: string | undefined
   /**
    * The tier for the paid message, which is based on the amount of money spent
    * to purchase the message.
    */
-  messageType?:
-    | number
-    | undefined;
+  messageType?: number | undefined
   /** True if this event is a Super Sticker event. */
-  isSuperStickerEvent?:
-    | boolean
-    | undefined;
+  isSuperStickerEvent?: boolean | undefined
   /**
    * If this event is a Super Sticker event, this field will contain metadata
    * about the Super Sticker.
    */
-  superStickerMetadata?: SuperStickerMetadata | undefined;
+  superStickerMetadata?: SuperStickerMetadata | undefined
 }
 
 export interface SuperStickerMetadata {
@@ -731,35 +612,25 @@ export interface SuperStickerMetadata {
    * alt_text that includes pack name and a recognizable characteristic of the
    * sticker.
    */
-  stickerId?:
-    | string
-    | undefined;
+  stickerId?: string | undefined
   /**
    * Internationalized alt text that describes the sticker image and any
    * animation associated with it.
    */
-  altText?:
-    | string
-    | undefined;
+  altText?: string | undefined
   /** Specifies the localization language in which the alt text is returned. */
-  altTextLanguage?: string | undefined;
+  altTextLanguage?: string | undefined
 }
 
 export interface ChannelProfileDetails {
   /** The YouTube channel ID. */
-  channelId?:
-    | string
-    | undefined;
+  channelId?: string | undefined
   /** The channel's URL. */
-  channelUrl?:
-    | string
-    | undefined;
+  channelUrl?: string | undefined
   /** The channel's display name. */
-  displayName?:
-    | string
-    | undefined;
+  displayName?: string | undefined
   /** The channels's avatar URL. */
-  profileImageUrl?: string | undefined;
+  profileImageUrl?: string | undefined
 }
 
 /**
@@ -768,102 +639,103 @@ export interface ChannelProfileDetails {
  */
 export interface PageInfo {
   /** The total number of results in the result set. */
-  totalResults?:
-    | number
-    | undefined;
+  totalResults?: number | undefined
   /** The number of results included in the API response. */
-  resultsPerPage?: number | undefined;
+  resultsPerPage?: number | undefined
 }
 
 function createBaseLiveChatMessageListRequest(): LiveChatMessageListRequest {
-  return { liveChatId: "", hl: "", profileImageSize: 0, maxResults: 0, pageToken: "", part: [] };
+  return { liveChatId: '', hl: '', profileImageSize: 0, maxResults: 0, pageToken: '', part: [] }
 }
 
 export const LiveChatMessageListRequest: MessageFns<LiveChatMessageListRequest> = {
-  encode(message: LiveChatMessageListRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.liveChatId !== undefined && message.liveChatId !== "") {
-      writer.uint32(10).string(message.liveChatId);
+  encode(
+    message: LiveChatMessageListRequest,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.liveChatId !== undefined && message.liveChatId !== '') {
+      writer.uint32(10).string(message.liveChatId)
     }
-    if (message.hl !== undefined && message.hl !== "") {
-      writer.uint32(18).string(message.hl);
+    if (message.hl !== undefined && message.hl !== '') {
+      writer.uint32(18).string(message.hl)
     }
     if (message.profileImageSize !== undefined && message.profileImageSize !== 0) {
-      writer.uint32(24).uint32(message.profileImageSize);
+      writer.uint32(24).uint32(message.profileImageSize)
     }
     if (message.maxResults !== undefined && message.maxResults !== 0) {
-      writer.uint32(784).uint32(message.maxResults);
+      writer.uint32(784).uint32(message.maxResults)
     }
-    if (message.pageToken !== undefined && message.pageToken !== "") {
-      writer.uint32(794).string(message.pageToken);
+    if (message.pageToken !== undefined && message.pageToken !== '') {
+      writer.uint32(794).string(message.pageToken)
     }
     for (const v of message.part) {
-      writer.uint32(802).string(v!);
+      writer.uint32(802).string(v!)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMessageListRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMessageListRequest();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMessageListRequest()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.liveChatId = reader.string();
-          continue;
+          message.liveChatId = reader.string()
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.hl = reader.string();
-          continue;
+          message.hl = reader.string()
+          continue
         }
         case 3: {
           if (tag !== 24) {
-            break;
+            break
           }
 
-          message.profileImageSize = reader.uint32();
-          continue;
+          message.profileImageSize = reader.uint32()
+          continue
         }
         case 98: {
           if (tag !== 784) {
-            break;
+            break
           }
 
-          message.maxResults = reader.uint32();
-          continue;
+          message.maxResults = reader.uint32()
+          continue
         }
         case 99: {
           if (tag !== 794) {
-            break;
+            break
           }
 
-          message.pageToken = reader.string();
-          continue;
+          message.pageToken = reader.string()
+          continue
         }
         case 100: {
           if (tag !== 802) {
-            break;
+            break
           }
 
-          message.part.push(reader.string());
-          continue;
+          message.part.push(reader.string())
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatMessageListRequest {
@@ -871,506 +743,524 @@ export const LiveChatMessageListRequest: MessageFns<LiveChatMessageListRequest> 
       liveChatId: isSet(object.liveChatId)
         ? globalThis.String(object.liveChatId)
         : isSet(object.live_chat_id)
-        ? globalThis.String(object.live_chat_id)
-        : "",
-      hl: isSet(object.hl) ? globalThis.String(object.hl) : "",
+          ? globalThis.String(object.live_chat_id)
+          : '',
+      hl: isSet(object.hl) ? globalThis.String(object.hl) : '',
       profileImageSize: isSet(object.profileImageSize)
         ? globalThis.Number(object.profileImageSize)
         : isSet(object.profile_image_size)
-        ? globalThis.Number(object.profile_image_size)
-        : 0,
+          ? globalThis.Number(object.profile_image_size)
+          : 0,
       maxResults: isSet(object.maxResults)
         ? globalThis.Number(object.maxResults)
         : isSet(object.max_results)
-        ? globalThis.Number(object.max_results)
-        : 0,
+          ? globalThis.Number(object.max_results)
+          : 0,
       pageToken: isSet(object.pageToken)
         ? globalThis.String(object.pageToken)
         : isSet(object.page_token)
-        ? globalThis.String(object.page_token)
-        : "",
+          ? globalThis.String(object.page_token)
+          : '',
       part: globalThis.Array.isArray(object?.part)
         ? object.part.map((e: any) => globalThis.String(e))
         : [],
-    };
+    }
   },
 
   toJSON(message: LiveChatMessageListRequest): unknown {
-    const obj: any = {};
-    if (message.liveChatId !== undefined && message.liveChatId !== "") {
-      obj.liveChatId = message.liveChatId;
+    const obj: any = {}
+    if (message.liveChatId !== undefined && message.liveChatId !== '') {
+      obj.liveChatId = message.liveChatId
     }
-    if (message.hl !== undefined && message.hl !== "") {
-      obj.hl = message.hl;
+    if (message.hl !== undefined && message.hl !== '') {
+      obj.hl = message.hl
     }
     if (message.profileImageSize !== undefined && message.profileImageSize !== 0) {
-      obj.profileImageSize = Math.round(message.profileImageSize);
+      obj.profileImageSize = Math.round(message.profileImageSize)
     }
     if (message.maxResults !== undefined && message.maxResults !== 0) {
-      obj.maxResults = Math.round(message.maxResults);
+      obj.maxResults = Math.round(message.maxResults)
     }
-    if (message.pageToken !== undefined && message.pageToken !== "") {
-      obj.pageToken = message.pageToken;
+    if (message.pageToken !== undefined && message.pageToken !== '') {
+      obj.pageToken = message.pageToken
     }
     if (message.part?.length) {
-      obj.part = message.part;
+      obj.part = message.part
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatMessageListRequest>, I>>(base?: I): LiveChatMessageListRequest {
-    return LiveChatMessageListRequest.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatMessageListRequest>, I>>(
+    base?: I,
+  ): LiveChatMessageListRequest {
+    return LiveChatMessageListRequest.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<LiveChatMessageListRequest>, I>>(object: I): LiveChatMessageListRequest {
-    const message = createBaseLiveChatMessageListRequest();
-    message.liveChatId = object.liveChatId ?? "";
-    message.hl = object.hl ?? "";
-    message.profileImageSize = object.profileImageSize ?? 0;
-    message.maxResults = object.maxResults ?? 0;
-    message.pageToken = object.pageToken ?? "";
-    message.part = object.part?.map((e) => e) || [];
-    return message;
+  fromPartial<I extends Exact<DeepPartial<LiveChatMessageListRequest>, I>>(
+    object: I,
+  ): LiveChatMessageListRequest {
+    const message = createBaseLiveChatMessageListRequest()
+    message.liveChatId = object.liveChatId ?? ''
+    message.hl = object.hl ?? ''
+    message.profileImageSize = object.profileImageSize ?? 0
+    message.maxResults = object.maxResults ?? 0
+    message.pageToken = object.pageToken ?? ''
+    message.part = object.part?.map((e) => e) || []
+    return message
   },
-};
+}
 
 function createBaseLiveChatMessageListResponse(): LiveChatMessageListResponse {
   return {
-    kind: "",
-    etag: "",
-    offlineAt: "",
+    kind: '',
+    etag: '',
+    offlineAt: '',
     pageInfo: undefined,
-    nextPageToken: "",
+    nextPageToken: '',
     items: [],
     activePollItem: undefined,
-  };
+  }
 }
 
 export const LiveChatMessageListResponse: MessageFns<LiveChatMessageListResponse> = {
-  encode(message: LiveChatMessageListResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.kind !== undefined && message.kind !== "") {
-      writer.uint32(1602).string(message.kind);
+  encode(
+    message: LiveChatMessageListResponse,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.kind !== undefined && message.kind !== '') {
+      writer.uint32(1602).string(message.kind)
     }
-    if (message.etag !== undefined && message.etag !== "") {
-      writer.uint32(1610).string(message.etag);
+    if (message.etag !== undefined && message.etag !== '') {
+      writer.uint32(1610).string(message.etag)
     }
-    if (message.offlineAt !== undefined && message.offlineAt !== "") {
-      writer.uint32(18).string(message.offlineAt);
+    if (message.offlineAt !== undefined && message.offlineAt !== '') {
+      writer.uint32(18).string(message.offlineAt)
     }
     if (message.pageInfo !== undefined) {
-      PageInfo.encode(message.pageInfo, writer.uint32(8034).fork()).join();
+      PageInfo.encode(message.pageInfo, writer.uint32(8034).fork()).join()
     }
-    if (message.nextPageToken !== undefined && message.nextPageToken !== "") {
-      writer.uint32(804818).string(message.nextPageToken);
+    if (message.nextPageToken !== undefined && message.nextPageToken !== '') {
+      writer.uint32(804818).string(message.nextPageToken)
     }
     for (const v of message.items) {
-      LiveChatMessage.encode(v!, writer.uint32(8058).fork()).join();
+      LiveChatMessage.encode(v!, writer.uint32(8058).fork()).join()
     }
     if (message.activePollItem !== undefined) {
-      LiveChatMessage.encode(message.activePollItem, writer.uint32(8066).fork()).join();
+      LiveChatMessage.encode(message.activePollItem, writer.uint32(8066).fork()).join()
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMessageListResponse {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMessageListResponse();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMessageListResponse()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 200: {
           if (tag !== 1602) {
-            break;
+            break
           }
 
-          message.kind = reader.string();
-          continue;
+          message.kind = reader.string()
+          continue
         }
         case 201: {
           if (tag !== 1610) {
-            break;
+            break
           }
 
-          message.etag = reader.string();
-          continue;
+          message.etag = reader.string()
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.offlineAt = reader.string();
-          continue;
+          message.offlineAt = reader.string()
+          continue
         }
         case 1004: {
           if (tag !== 8034) {
-            break;
+            break
           }
 
-          message.pageInfo = PageInfo.decode(reader, reader.uint32());
-          continue;
+          message.pageInfo = PageInfo.decode(reader, reader.uint32())
+          continue
         }
         case 100602: {
           if (tag !== 804818) {
-            break;
+            break
           }
 
-          message.nextPageToken = reader.string();
-          continue;
+          message.nextPageToken = reader.string()
+          continue
         }
         case 1007: {
           if (tag !== 8058) {
-            break;
+            break
           }
 
-          message.items.push(LiveChatMessage.decode(reader, reader.uint32()));
-          continue;
+          message.items.push(LiveChatMessage.decode(reader, reader.uint32()))
+          continue
         }
         case 1008: {
           if (tag !== 8066) {
-            break;
+            break
           }
 
-          message.activePollItem = LiveChatMessage.decode(reader, reader.uint32());
-          continue;
+          message.activePollItem = LiveChatMessage.decode(reader, reader.uint32())
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatMessageListResponse {
     return {
-      kind: isSet(object.kind) ? globalThis.String(object.kind) : "",
-      etag: isSet(object.etag) ? globalThis.String(object.etag) : "",
+      kind: isSet(object.kind) ? globalThis.String(object.kind) : '',
+      etag: isSet(object.etag) ? globalThis.String(object.etag) : '',
       offlineAt: isSet(object.offlineAt)
         ? globalThis.String(object.offlineAt)
         : isSet(object.offline_at)
-        ? globalThis.String(object.offline_at)
-        : "",
+          ? globalThis.String(object.offline_at)
+          : '',
       pageInfo: isSet(object.pageInfo)
         ? PageInfo.fromJSON(object.pageInfo)
         : isSet(object.page_info)
-        ? PageInfo.fromJSON(object.page_info)
-        : undefined,
+          ? PageInfo.fromJSON(object.page_info)
+          : undefined,
       nextPageToken: isSet(object.nextPageToken)
         ? globalThis.String(object.nextPageToken)
         : isSet(object.next_page_token)
-        ? globalThis.String(object.next_page_token)
-        : "",
+          ? globalThis.String(object.next_page_token)
+          : '',
       items: globalThis.Array.isArray(object?.items)
         ? object.items.map((e: any) => LiveChatMessage.fromJSON(e))
         : [],
       activePollItem: isSet(object.activePollItem)
         ? LiveChatMessage.fromJSON(object.activePollItem)
         : isSet(object.active_poll_item)
-        ? LiveChatMessage.fromJSON(object.active_poll_item)
-        : undefined,
-    };
+          ? LiveChatMessage.fromJSON(object.active_poll_item)
+          : undefined,
+    }
   },
 
   toJSON(message: LiveChatMessageListResponse): unknown {
-    const obj: any = {};
-    if (message.kind !== undefined && message.kind !== "") {
-      obj.kind = message.kind;
+    const obj: any = {}
+    if (message.kind !== undefined && message.kind !== '') {
+      obj.kind = message.kind
     }
-    if (message.etag !== undefined && message.etag !== "") {
-      obj.etag = message.etag;
+    if (message.etag !== undefined && message.etag !== '') {
+      obj.etag = message.etag
     }
-    if (message.offlineAt !== undefined && message.offlineAt !== "") {
-      obj.offlineAt = message.offlineAt;
+    if (message.offlineAt !== undefined && message.offlineAt !== '') {
+      obj.offlineAt = message.offlineAt
     }
     if (message.pageInfo !== undefined) {
-      obj.pageInfo = PageInfo.toJSON(message.pageInfo);
+      obj.pageInfo = PageInfo.toJSON(message.pageInfo)
     }
-    if (message.nextPageToken !== undefined && message.nextPageToken !== "") {
-      obj.nextPageToken = message.nextPageToken;
+    if (message.nextPageToken !== undefined && message.nextPageToken !== '') {
+      obj.nextPageToken = message.nextPageToken
     }
     if (message.items?.length) {
-      obj.items = message.items.map((e) => LiveChatMessage.toJSON(e));
+      obj.items = message.items.map((e) => LiveChatMessage.toJSON(e))
     }
     if (message.activePollItem !== undefined) {
-      obj.activePollItem = LiveChatMessage.toJSON(message.activePollItem);
+      obj.activePollItem = LiveChatMessage.toJSON(message.activePollItem)
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatMessageListResponse>, I>>(base?: I): LiveChatMessageListResponse {
-    return LiveChatMessageListResponse.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatMessageListResponse>, I>>(
+    base?: I,
+  ): LiveChatMessageListResponse {
+    return LiveChatMessageListResponse.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<LiveChatMessageListResponse>, I>>(object: I): LiveChatMessageListResponse {
-    const message = createBaseLiveChatMessageListResponse();
-    message.kind = object.kind ?? "";
-    message.etag = object.etag ?? "";
-    message.offlineAt = object.offlineAt ?? "";
-    message.pageInfo = (object.pageInfo !== undefined && object.pageInfo !== null)
-      ? PageInfo.fromPartial(object.pageInfo)
-      : undefined;
-    message.nextPageToken = object.nextPageToken ?? "";
-    message.items = object.items?.map((e) => LiveChatMessage.fromPartial(e)) || [];
-    message.activePollItem = (object.activePollItem !== undefined && object.activePollItem !== null)
-      ? LiveChatMessage.fromPartial(object.activePollItem)
-      : undefined;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<LiveChatMessageListResponse>, I>>(
+    object: I,
+  ): LiveChatMessageListResponse {
+    const message = createBaseLiveChatMessageListResponse()
+    message.kind = object.kind ?? ''
+    message.etag = object.etag ?? ''
+    message.offlineAt = object.offlineAt ?? ''
+    message.pageInfo =
+      object.pageInfo !== undefined && object.pageInfo !== null
+        ? PageInfo.fromPartial(object.pageInfo)
+        : undefined
+    message.nextPageToken = object.nextPageToken ?? ''
+    message.items = object.items?.map((e) => LiveChatMessage.fromPartial(e)) || []
+    message.activePollItem =
+      object.activePollItem !== undefined && object.activePollItem !== null
+        ? LiveChatMessage.fromPartial(object.activePollItem)
+        : undefined
+    return message
   },
-};
+}
 
 function createBaseLiveChatMessage(): LiveChatMessage {
-  return { kind: "", etag: "", id: "", snippet: undefined, authorDetails: undefined };
+  return { kind: '', etag: '', id: '', snippet: undefined, authorDetails: undefined }
 }
 
 export const LiveChatMessage: MessageFns<LiveChatMessage> = {
   encode(message: LiveChatMessage, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.kind !== undefined && message.kind !== "") {
-      writer.uint32(1602).string(message.kind);
+    if (message.kind !== undefined && message.kind !== '') {
+      writer.uint32(1602).string(message.kind)
     }
-    if (message.etag !== undefined && message.etag !== "") {
-      writer.uint32(1610).string(message.etag);
+    if (message.etag !== undefined && message.etag !== '') {
+      writer.uint32(1610).string(message.etag)
     }
-    if (message.id !== undefined && message.id !== "") {
-      writer.uint32(810).string(message.id);
+    if (message.id !== undefined && message.id !== '') {
+      writer.uint32(810).string(message.id)
     }
     if (message.snippet !== undefined) {
-      LiveChatMessageSnippet.encode(message.snippet, writer.uint32(18).fork()).join();
+      LiveChatMessageSnippet.encode(message.snippet, writer.uint32(18).fork()).join()
     }
     if (message.authorDetails !== undefined) {
-      LiveChatMessageAuthorDetails.encode(message.authorDetails, writer.uint32(26).fork()).join();
+      LiveChatMessageAuthorDetails.encode(message.authorDetails, writer.uint32(26).fork()).join()
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMessage {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMessage();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMessage()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 200: {
           if (tag !== 1602) {
-            break;
+            break
           }
 
-          message.kind = reader.string();
-          continue;
+          message.kind = reader.string()
+          continue
         }
         case 201: {
           if (tag !== 1610) {
-            break;
+            break
           }
 
-          message.etag = reader.string();
-          continue;
+          message.etag = reader.string()
+          continue
         }
         case 101: {
           if (tag !== 810) {
-            break;
+            break
           }
 
-          message.id = reader.string();
-          continue;
+          message.id = reader.string()
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.snippet = LiveChatMessageSnippet.decode(reader, reader.uint32());
-          continue;
+          message.snippet = LiveChatMessageSnippet.decode(reader, reader.uint32())
+          continue
         }
         case 3: {
           if (tag !== 26) {
-            break;
+            break
           }
 
-          message.authorDetails = LiveChatMessageAuthorDetails.decode(reader, reader.uint32());
-          continue;
+          message.authorDetails = LiveChatMessageAuthorDetails.decode(reader, reader.uint32())
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatMessage {
     return {
-      kind: isSet(object.kind) ? globalThis.String(object.kind) : "",
-      etag: isSet(object.etag) ? globalThis.String(object.etag) : "",
-      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      kind: isSet(object.kind) ? globalThis.String(object.kind) : '',
+      etag: isSet(object.etag) ? globalThis.String(object.etag) : '',
+      id: isSet(object.id) ? globalThis.String(object.id) : '',
       snippet: isSet(object.snippet) ? LiveChatMessageSnippet.fromJSON(object.snippet) : undefined,
       authorDetails: isSet(object.authorDetails)
         ? LiveChatMessageAuthorDetails.fromJSON(object.authorDetails)
         : isSet(object.author_details)
-        ? LiveChatMessageAuthorDetails.fromJSON(object.author_details)
-        : undefined,
-    };
+          ? LiveChatMessageAuthorDetails.fromJSON(object.author_details)
+          : undefined,
+    }
   },
 
   toJSON(message: LiveChatMessage): unknown {
-    const obj: any = {};
-    if (message.kind !== undefined && message.kind !== "") {
-      obj.kind = message.kind;
+    const obj: any = {}
+    if (message.kind !== undefined && message.kind !== '') {
+      obj.kind = message.kind
     }
-    if (message.etag !== undefined && message.etag !== "") {
-      obj.etag = message.etag;
+    if (message.etag !== undefined && message.etag !== '') {
+      obj.etag = message.etag
     }
-    if (message.id !== undefined && message.id !== "") {
-      obj.id = message.id;
+    if (message.id !== undefined && message.id !== '') {
+      obj.id = message.id
     }
     if (message.snippet !== undefined) {
-      obj.snippet = LiveChatMessageSnippet.toJSON(message.snippet);
+      obj.snippet = LiveChatMessageSnippet.toJSON(message.snippet)
     }
     if (message.authorDetails !== undefined) {
-      obj.authorDetails = LiveChatMessageAuthorDetails.toJSON(message.authorDetails);
+      obj.authorDetails = LiveChatMessageAuthorDetails.toJSON(message.authorDetails)
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<LiveChatMessage>, I>>(base?: I): LiveChatMessage {
-    return LiveChatMessage.fromPartial(base ?? ({} as any));
+    return LiveChatMessage.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<LiveChatMessage>, I>>(object: I): LiveChatMessage {
-    const message = createBaseLiveChatMessage();
-    message.kind = object.kind ?? "";
-    message.etag = object.etag ?? "";
-    message.id = object.id ?? "";
-    message.snippet = (object.snippet !== undefined && object.snippet !== null)
-      ? LiveChatMessageSnippet.fromPartial(object.snippet)
-      : undefined;
-    message.authorDetails = (object.authorDetails !== undefined && object.authorDetails !== null)
-      ? LiveChatMessageAuthorDetails.fromPartial(object.authorDetails)
-      : undefined;
-    return message;
+    const message = createBaseLiveChatMessage()
+    message.kind = object.kind ?? ''
+    message.etag = object.etag ?? ''
+    message.id = object.id ?? ''
+    message.snippet =
+      object.snippet !== undefined && object.snippet !== null
+        ? LiveChatMessageSnippet.fromPartial(object.snippet)
+        : undefined
+    message.authorDetails =
+      object.authorDetails !== undefined && object.authorDetails !== null
+        ? LiveChatMessageAuthorDetails.fromPartial(object.authorDetails)
+        : undefined
+    return message
   },
-};
+}
 
 function createBaseLiveChatMessageAuthorDetails(): LiveChatMessageAuthorDetails {
   return {
-    channelId: "",
-    channelUrl: "",
-    displayName: "",
-    profileImageUrl: "",
+    channelId: '',
+    channelUrl: '',
+    displayName: '',
+    profileImageUrl: '',
     isVerified: false,
     isChatOwner: false,
     isChatSponsor: false,
     isChatModerator: false,
-  };
+  }
 }
 
 export const LiveChatMessageAuthorDetails: MessageFns<LiveChatMessageAuthorDetails> = {
-  encode(message: LiveChatMessageAuthorDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.channelId !== undefined && message.channelId !== "") {
-      writer.uint32(80810).string(message.channelId);
+  encode(
+    message: LiveChatMessageAuthorDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.channelId !== undefined && message.channelId !== '') {
+      writer.uint32(80810).string(message.channelId)
     }
-    if (message.channelUrl !== undefined && message.channelUrl !== "") {
-      writer.uint32(818).string(message.channelUrl);
+    if (message.channelUrl !== undefined && message.channelUrl !== '') {
+      writer.uint32(818).string(message.channelUrl)
     }
-    if (message.displayName !== undefined && message.displayName !== "") {
-      writer.uint32(826).string(message.displayName);
+    if (message.displayName !== undefined && message.displayName !== '') {
+      writer.uint32(826).string(message.displayName)
     }
-    if (message.profileImageUrl !== undefined && message.profileImageUrl !== "") {
-      writer.uint32(834).string(message.profileImageUrl);
+    if (message.profileImageUrl !== undefined && message.profileImageUrl !== '') {
+      writer.uint32(834).string(message.profileImageUrl)
     }
     if (message.isVerified !== undefined && message.isVerified !== false) {
-      writer.uint32(32).bool(message.isVerified);
+      writer.uint32(32).bool(message.isVerified)
     }
     if (message.isChatOwner !== undefined && message.isChatOwner !== false) {
-      writer.uint32(40).bool(message.isChatOwner);
+      writer.uint32(40).bool(message.isChatOwner)
     }
     if (message.isChatSponsor !== undefined && message.isChatSponsor !== false) {
-      writer.uint32(48).bool(message.isChatSponsor);
+      writer.uint32(48).bool(message.isChatSponsor)
     }
     if (message.isChatModerator !== undefined && message.isChatModerator !== false) {
-      writer.uint32(56).bool(message.isChatModerator);
+      writer.uint32(56).bool(message.isChatModerator)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMessageAuthorDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMessageAuthorDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMessageAuthorDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 10101: {
           if (tag !== 80810) {
-            break;
+            break
           }
 
-          message.channelId = reader.string();
-          continue;
+          message.channelId = reader.string()
+          continue
         }
         case 102: {
           if (tag !== 818) {
-            break;
+            break
           }
 
-          message.channelUrl = reader.string();
-          continue;
+          message.channelUrl = reader.string()
+          continue
         }
         case 103: {
           if (tag !== 826) {
-            break;
+            break
           }
 
-          message.displayName = reader.string();
-          continue;
+          message.displayName = reader.string()
+          continue
         }
         case 104: {
           if (tag !== 834) {
-            break;
+            break
           }
 
-          message.profileImageUrl = reader.string();
-          continue;
+          message.profileImageUrl = reader.string()
+          continue
         }
         case 4: {
           if (tag !== 32) {
-            break;
+            break
           }
 
-          message.isVerified = reader.bool();
-          continue;
+          message.isVerified = reader.bool()
+          continue
         }
         case 5: {
           if (tag !== 40) {
-            break;
+            break
           }
 
-          message.isChatOwner = reader.bool();
-          continue;
+          message.isChatOwner = reader.bool()
+          continue
         }
         case 6: {
           if (tag !== 48) {
-            break;
+            break
           }
 
-          message.isChatSponsor = reader.bool();
-          continue;
+          message.isChatSponsor = reader.bool()
+          continue
         }
         case 7: {
           if (tag !== 56) {
-            break;
+            break
           }
 
-          message.isChatModerator = reader.bool();
-          continue;
+          message.isChatModerator = reader.bool()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatMessageAuthorDetails {
@@ -1378,100 +1268,104 @@ export const LiveChatMessageAuthorDetails: MessageFns<LiveChatMessageAuthorDetai
       channelId: isSet(object.channelId)
         ? globalThis.String(object.channelId)
         : isSet(object.channel_id)
-        ? globalThis.String(object.channel_id)
-        : "",
+          ? globalThis.String(object.channel_id)
+          : '',
       channelUrl: isSet(object.channelUrl)
         ? globalThis.String(object.channelUrl)
         : isSet(object.channel_url)
-        ? globalThis.String(object.channel_url)
-        : "",
+          ? globalThis.String(object.channel_url)
+          : '',
       displayName: isSet(object.displayName)
         ? globalThis.String(object.displayName)
         : isSet(object.display_name)
-        ? globalThis.String(object.display_name)
-        : "",
+          ? globalThis.String(object.display_name)
+          : '',
       profileImageUrl: isSet(object.profileImageUrl)
         ? globalThis.String(object.profileImageUrl)
         : isSet(object.profile_image_url)
-        ? globalThis.String(object.profile_image_url)
-        : "",
+          ? globalThis.String(object.profile_image_url)
+          : '',
       isVerified: isSet(object.isVerified)
         ? globalThis.Boolean(object.isVerified)
         : isSet(object.is_verified)
-        ? globalThis.Boolean(object.is_verified)
-        : false,
+          ? globalThis.Boolean(object.is_verified)
+          : false,
       isChatOwner: isSet(object.isChatOwner)
         ? globalThis.Boolean(object.isChatOwner)
         : isSet(object.is_chat_owner)
-        ? globalThis.Boolean(object.is_chat_owner)
-        : false,
+          ? globalThis.Boolean(object.is_chat_owner)
+          : false,
       isChatSponsor: isSet(object.isChatSponsor)
         ? globalThis.Boolean(object.isChatSponsor)
         : isSet(object.is_chat_sponsor)
-        ? globalThis.Boolean(object.is_chat_sponsor)
-        : false,
+          ? globalThis.Boolean(object.is_chat_sponsor)
+          : false,
       isChatModerator: isSet(object.isChatModerator)
         ? globalThis.Boolean(object.isChatModerator)
         : isSet(object.is_chat_moderator)
-        ? globalThis.Boolean(object.is_chat_moderator)
-        : false,
-    };
+          ? globalThis.Boolean(object.is_chat_moderator)
+          : false,
+    }
   },
 
   toJSON(message: LiveChatMessageAuthorDetails): unknown {
-    const obj: any = {};
-    if (message.channelId !== undefined && message.channelId !== "") {
-      obj.channelId = message.channelId;
+    const obj: any = {}
+    if (message.channelId !== undefined && message.channelId !== '') {
+      obj.channelId = message.channelId
     }
-    if (message.channelUrl !== undefined && message.channelUrl !== "") {
-      obj.channelUrl = message.channelUrl;
+    if (message.channelUrl !== undefined && message.channelUrl !== '') {
+      obj.channelUrl = message.channelUrl
     }
-    if (message.displayName !== undefined && message.displayName !== "") {
-      obj.displayName = message.displayName;
+    if (message.displayName !== undefined && message.displayName !== '') {
+      obj.displayName = message.displayName
     }
-    if (message.profileImageUrl !== undefined && message.profileImageUrl !== "") {
-      obj.profileImageUrl = message.profileImageUrl;
+    if (message.profileImageUrl !== undefined && message.profileImageUrl !== '') {
+      obj.profileImageUrl = message.profileImageUrl
     }
     if (message.isVerified !== undefined && message.isVerified !== false) {
-      obj.isVerified = message.isVerified;
+      obj.isVerified = message.isVerified
     }
     if (message.isChatOwner !== undefined && message.isChatOwner !== false) {
-      obj.isChatOwner = message.isChatOwner;
+      obj.isChatOwner = message.isChatOwner
     }
     if (message.isChatSponsor !== undefined && message.isChatSponsor !== false) {
-      obj.isChatSponsor = message.isChatSponsor;
+      obj.isChatSponsor = message.isChatSponsor
     }
     if (message.isChatModerator !== undefined && message.isChatModerator !== false) {
-      obj.isChatModerator = message.isChatModerator;
+      obj.isChatModerator = message.isChatModerator
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatMessageAuthorDetails>, I>>(base?: I): LiveChatMessageAuthorDetails {
-    return LiveChatMessageAuthorDetails.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatMessageAuthorDetails>, I>>(
+    base?: I,
+  ): LiveChatMessageAuthorDetails {
+    return LiveChatMessageAuthorDetails.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<LiveChatMessageAuthorDetails>, I>>(object: I): LiveChatMessageAuthorDetails {
-    const message = createBaseLiveChatMessageAuthorDetails();
-    message.channelId = object.channelId ?? "";
-    message.channelUrl = object.channelUrl ?? "";
-    message.displayName = object.displayName ?? "";
-    message.profileImageUrl = object.profileImageUrl ?? "";
-    message.isVerified = object.isVerified ?? false;
-    message.isChatOwner = object.isChatOwner ?? false;
-    message.isChatSponsor = object.isChatSponsor ?? false;
-    message.isChatModerator = object.isChatModerator ?? false;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<LiveChatMessageAuthorDetails>, I>>(
+    object: I,
+  ): LiveChatMessageAuthorDetails {
+    const message = createBaseLiveChatMessageAuthorDetails()
+    message.channelId = object.channelId ?? ''
+    message.channelUrl = object.channelUrl ?? ''
+    message.displayName = object.displayName ?? ''
+    message.profileImageUrl = object.profileImageUrl ?? ''
+    message.isVerified = object.isVerified ?? false
+    message.isChatOwner = object.isChatOwner ?? false
+    message.isChatSponsor = object.isChatSponsor ?? false
+    message.isChatModerator = object.isChatModerator ?? false
+    return message
   },
-};
+}
 
 function createBaseLiveChatMessageSnippet(): LiveChatMessageSnippet {
   return {
     type: 0,
-    liveChatId: "",
-    authorChannelId: "",
-    publishedAt: "",
+    liveChatId: '',
+    authorChannelId: '',
+    publishedAt: '',
     hasDisplayContent: false,
-    displayMessage: "",
+    displayMessage: '',
     textMessageDetails: undefined,
     messageDeletedDetails: undefined,
     messageRetractedDetails: undefined,
@@ -1483,216 +1377,257 @@ function createBaseLiveChatMessageSnippet(): LiveChatMessageSnippet {
     membershipGiftingDetails: undefined,
     giftMembershipReceivedDetails: undefined,
     pollDetails: undefined,
-  };
+  }
 }
 
 export const LiveChatMessageSnippet: MessageFns<LiveChatMessageSnippet> = {
   encode(message: LiveChatMessageSnippet, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.type !== undefined && message.type !== 0) {
-      writer.uint32(8).int32(message.type);
+      writer.uint32(8).int32(message.type)
     }
-    if (message.liveChatId !== undefined && message.liveChatId !== "") {
-      writer.uint32(1610).string(message.liveChatId);
+    if (message.liveChatId !== undefined && message.liveChatId !== '') {
+      writer.uint32(1610).string(message.liveChatId)
     }
-    if (message.authorChannelId !== undefined && message.authorChannelId !== "") {
-      writer.uint32(2410).string(message.authorChannelId);
+    if (message.authorChannelId !== undefined && message.authorChannelId !== '') {
+      writer.uint32(2410).string(message.authorChannelId)
     }
-    if (message.publishedAt !== undefined && message.publishedAt !== "") {
-      writer.uint32(34).string(message.publishedAt);
+    if (message.publishedAt !== undefined && message.publishedAt !== '') {
+      writer.uint32(34).string(message.publishedAt)
     }
     if (message.hasDisplayContent !== undefined && message.hasDisplayContent !== false) {
-      writer.uint32(136).bool(message.hasDisplayContent);
+      writer.uint32(136).bool(message.hasDisplayContent)
     }
-    if (message.displayMessage !== undefined && message.displayMessage !== "") {
-      writer.uint32(130).string(message.displayMessage);
+    if (message.displayMessage !== undefined && message.displayMessage !== '') {
+      writer.uint32(130).string(message.displayMessage)
     }
     if (message.textMessageDetails !== undefined) {
-      LiveChatTextMessageDetails.encode(message.textMessageDetails, writer.uint32(154).fork()).join();
+      LiveChatTextMessageDetails.encode(
+        message.textMessageDetails,
+        writer.uint32(154).fork(),
+      ).join()
     }
     if (message.messageDeletedDetails !== undefined) {
-      LiveChatMessageDeletedDetails.encode(message.messageDeletedDetails, writer.uint32(162).fork()).join();
+      LiveChatMessageDeletedDetails.encode(
+        message.messageDeletedDetails,
+        writer.uint32(162).fork(),
+      ).join()
     }
     if (message.messageRetractedDetails !== undefined) {
-      LiveChatMessageRetractedDetails.encode(message.messageRetractedDetails, writer.uint32(170).fork()).join();
+      LiveChatMessageRetractedDetails.encode(
+        message.messageRetractedDetails,
+        writer.uint32(170).fork(),
+      ).join()
     }
     if (message.userBannedDetails !== undefined) {
-      LiveChatUserBannedMessageDetails.encode(message.userBannedDetails, writer.uint32(178).fork()).join();
+      LiveChatUserBannedMessageDetails.encode(
+        message.userBannedDetails,
+        writer.uint32(178).fork(),
+      ).join()
     }
     if (message.superChatDetails !== undefined) {
-      LiveChatSuperChatDetails.encode(message.superChatDetails, writer.uint32(218).fork()).join();
+      LiveChatSuperChatDetails.encode(message.superChatDetails, writer.uint32(218).fork()).join()
     }
     if (message.superStickerDetails !== undefined) {
-      LiveChatSuperStickerDetails.encode(message.superStickerDetails, writer.uint32(226).fork()).join();
+      LiveChatSuperStickerDetails.encode(
+        message.superStickerDetails,
+        writer.uint32(226).fork(),
+      ).join()
     }
     if (message.newSponsorDetails !== undefined) {
-      LiveChatNewSponsorDetails.encode(message.newSponsorDetails, writer.uint32(234).fork()).join();
+      LiveChatNewSponsorDetails.encode(message.newSponsorDetails, writer.uint32(234).fork()).join()
     }
     if (message.memberMilestoneChatDetails !== undefined) {
-      LiveChatMemberMilestoneChatDetails.encode(message.memberMilestoneChatDetails, writer.uint32(242).fork()).join();
+      LiveChatMemberMilestoneChatDetails.encode(
+        message.memberMilestoneChatDetails,
+        writer.uint32(242).fork(),
+      ).join()
     }
     if (message.membershipGiftingDetails !== undefined) {
-      LiveChatMembershipGiftingDetails.encode(message.membershipGiftingDetails, writer.uint32(250).fork()).join();
+      LiveChatMembershipGiftingDetails.encode(
+        message.membershipGiftingDetails,
+        writer.uint32(250).fork(),
+      ).join()
     }
     if (message.giftMembershipReceivedDetails !== undefined) {
-      LiveChatGiftMembershipReceivedDetails.encode(message.giftMembershipReceivedDetails, writer.uint32(258).fork())
-        .join();
+      LiveChatGiftMembershipReceivedDetails.encode(
+        message.giftMembershipReceivedDetails,
+        writer.uint32(258).fork(),
+      ).join()
     }
     if (message.pollDetails !== undefined) {
-      LiveChatPollDetails.encode(message.pollDetails, writer.uint32(266).fork()).join();
+      LiveChatPollDetails.encode(message.pollDetails, writer.uint32(266).fork()).join()
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMessageSnippet {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMessageSnippet();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMessageSnippet()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 8) {
-            break;
+            break
           }
 
-          message.type = reader.int32() as any;
-          continue;
+          message.type = reader.int32() as any
+          continue
         }
         case 201: {
           if (tag !== 1610) {
-            break;
+            break
           }
 
-          message.liveChatId = reader.string();
-          continue;
+          message.liveChatId = reader.string()
+          continue
         }
         case 301: {
           if (tag !== 2410) {
-            break;
+            break
           }
 
-          message.authorChannelId = reader.string();
-          continue;
+          message.authorChannelId = reader.string()
+          continue
         }
         case 4: {
           if (tag !== 34) {
-            break;
+            break
           }
 
-          message.publishedAt = reader.string();
-          continue;
+          message.publishedAt = reader.string()
+          continue
         }
         case 17: {
           if (tag !== 136) {
-            break;
+            break
           }
 
-          message.hasDisplayContent = reader.bool();
-          continue;
+          message.hasDisplayContent = reader.bool()
+          continue
         }
         case 16: {
           if (tag !== 130) {
-            break;
+            break
           }
 
-          message.displayMessage = reader.string();
-          continue;
+          message.displayMessage = reader.string()
+          continue
         }
         case 19: {
           if (tag !== 154) {
-            break;
+            break
           }
 
-          message.textMessageDetails = LiveChatTextMessageDetails.decode(reader, reader.uint32());
-          continue;
+          message.textMessageDetails = LiveChatTextMessageDetails.decode(reader, reader.uint32())
+          continue
         }
         case 20: {
           if (tag !== 162) {
-            break;
+            break
           }
 
-          message.messageDeletedDetails = LiveChatMessageDeletedDetails.decode(reader, reader.uint32());
-          continue;
+          message.messageDeletedDetails = LiveChatMessageDeletedDetails.decode(
+            reader,
+            reader.uint32(),
+          )
+          continue
         }
         case 21: {
           if (tag !== 170) {
-            break;
+            break
           }
 
-          message.messageRetractedDetails = LiveChatMessageRetractedDetails.decode(reader, reader.uint32());
-          continue;
+          message.messageRetractedDetails = LiveChatMessageRetractedDetails.decode(
+            reader,
+            reader.uint32(),
+          )
+          continue
         }
         case 22: {
           if (tag !== 178) {
-            break;
+            break
           }
 
-          message.userBannedDetails = LiveChatUserBannedMessageDetails.decode(reader, reader.uint32());
-          continue;
+          message.userBannedDetails = LiveChatUserBannedMessageDetails.decode(
+            reader,
+            reader.uint32(),
+          )
+          continue
         }
         case 27: {
           if (tag !== 218) {
-            break;
+            break
           }
 
-          message.superChatDetails = LiveChatSuperChatDetails.decode(reader, reader.uint32());
-          continue;
+          message.superChatDetails = LiveChatSuperChatDetails.decode(reader, reader.uint32())
+          continue
         }
         case 28: {
           if (tag !== 226) {
-            break;
+            break
           }
 
-          message.superStickerDetails = LiveChatSuperStickerDetails.decode(reader, reader.uint32());
-          continue;
+          message.superStickerDetails = LiveChatSuperStickerDetails.decode(reader, reader.uint32())
+          continue
         }
         case 29: {
           if (tag !== 234) {
-            break;
+            break
           }
 
-          message.newSponsorDetails = LiveChatNewSponsorDetails.decode(reader, reader.uint32());
-          continue;
+          message.newSponsorDetails = LiveChatNewSponsorDetails.decode(reader, reader.uint32())
+          continue
         }
         case 30: {
           if (tag !== 242) {
-            break;
+            break
           }
 
-          message.memberMilestoneChatDetails = LiveChatMemberMilestoneChatDetails.decode(reader, reader.uint32());
-          continue;
+          message.memberMilestoneChatDetails = LiveChatMemberMilestoneChatDetails.decode(
+            reader,
+            reader.uint32(),
+          )
+          continue
         }
         case 31: {
           if (tag !== 250) {
-            break;
+            break
           }
 
-          message.membershipGiftingDetails = LiveChatMembershipGiftingDetails.decode(reader, reader.uint32());
-          continue;
+          message.membershipGiftingDetails = LiveChatMembershipGiftingDetails.decode(
+            reader,
+            reader.uint32(),
+          )
+          continue
         }
         case 32: {
           if (tag !== 258) {
-            break;
+            break
           }
 
-          message.giftMembershipReceivedDetails = LiveChatGiftMembershipReceivedDetails.decode(reader, reader.uint32());
-          continue;
+          message.giftMembershipReceivedDetails = LiveChatGiftMembershipReceivedDetails.decode(
+            reader,
+            reader.uint32(),
+          )
+          continue
         }
         case 33: {
           if (tag !== 266) {
-            break;
+            break
           }
 
-          message.pollDetails = LiveChatPollDetails.decode(reader, reader.uint32());
-          continue;
+          message.pollDetails = LiveChatPollDetails.decode(reader, reader.uint32())
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatMessageSnippet {
@@ -1701,278 +1636,303 @@ export const LiveChatMessageSnippet: MessageFns<LiveChatMessageSnippet> = {
       liveChatId: isSet(object.liveChatId)
         ? globalThis.String(object.liveChatId)
         : isSet(object.live_chat_id)
-        ? globalThis.String(object.live_chat_id)
-        : "",
+          ? globalThis.String(object.live_chat_id)
+          : '',
       authorChannelId: isSet(object.authorChannelId)
         ? globalThis.String(object.authorChannelId)
         : isSet(object.author_channel_id)
-        ? globalThis.String(object.author_channel_id)
-        : "",
+          ? globalThis.String(object.author_channel_id)
+          : '',
       publishedAt: isSet(object.publishedAt)
         ? globalThis.String(object.publishedAt)
         : isSet(object.published_at)
-        ? globalThis.String(object.published_at)
-        : "",
+          ? globalThis.String(object.published_at)
+          : '',
       hasDisplayContent: isSet(object.hasDisplayContent)
         ? globalThis.Boolean(object.hasDisplayContent)
         : isSet(object.has_display_content)
-        ? globalThis.Boolean(object.has_display_content)
-        : false,
+          ? globalThis.Boolean(object.has_display_content)
+          : false,
       displayMessage: isSet(object.displayMessage)
         ? globalThis.String(object.displayMessage)
         : isSet(object.display_message)
-        ? globalThis.String(object.display_message)
-        : "",
+          ? globalThis.String(object.display_message)
+          : '',
       textMessageDetails: isSet(object.textMessageDetails)
         ? LiveChatTextMessageDetails.fromJSON(object.textMessageDetails)
         : isSet(object.text_message_details)
-        ? LiveChatTextMessageDetails.fromJSON(object.text_message_details)
-        : undefined,
+          ? LiveChatTextMessageDetails.fromJSON(object.text_message_details)
+          : undefined,
       messageDeletedDetails: isSet(object.messageDeletedDetails)
         ? LiveChatMessageDeletedDetails.fromJSON(object.messageDeletedDetails)
         : isSet(object.message_deleted_details)
-        ? LiveChatMessageDeletedDetails.fromJSON(object.message_deleted_details)
-        : undefined,
+          ? LiveChatMessageDeletedDetails.fromJSON(object.message_deleted_details)
+          : undefined,
       messageRetractedDetails: isSet(object.messageRetractedDetails)
         ? LiveChatMessageRetractedDetails.fromJSON(object.messageRetractedDetails)
         : isSet(object.message_retracted_details)
-        ? LiveChatMessageRetractedDetails.fromJSON(object.message_retracted_details)
-        : undefined,
+          ? LiveChatMessageRetractedDetails.fromJSON(object.message_retracted_details)
+          : undefined,
       userBannedDetails: isSet(object.userBannedDetails)
         ? LiveChatUserBannedMessageDetails.fromJSON(object.userBannedDetails)
         : isSet(object.user_banned_details)
-        ? LiveChatUserBannedMessageDetails.fromJSON(object.user_banned_details)
-        : undefined,
+          ? LiveChatUserBannedMessageDetails.fromJSON(object.user_banned_details)
+          : undefined,
       superChatDetails: isSet(object.superChatDetails)
         ? LiveChatSuperChatDetails.fromJSON(object.superChatDetails)
         : isSet(object.super_chat_details)
-        ? LiveChatSuperChatDetails.fromJSON(object.super_chat_details)
-        : undefined,
+          ? LiveChatSuperChatDetails.fromJSON(object.super_chat_details)
+          : undefined,
       superStickerDetails: isSet(object.superStickerDetails)
         ? LiveChatSuperStickerDetails.fromJSON(object.superStickerDetails)
         : isSet(object.super_sticker_details)
-        ? LiveChatSuperStickerDetails.fromJSON(object.super_sticker_details)
-        : undefined,
+          ? LiveChatSuperStickerDetails.fromJSON(object.super_sticker_details)
+          : undefined,
       newSponsorDetails: isSet(object.newSponsorDetails)
         ? LiveChatNewSponsorDetails.fromJSON(object.newSponsorDetails)
         : isSet(object.new_sponsor_details)
-        ? LiveChatNewSponsorDetails.fromJSON(object.new_sponsor_details)
-        : undefined,
+          ? LiveChatNewSponsorDetails.fromJSON(object.new_sponsor_details)
+          : undefined,
       memberMilestoneChatDetails: isSet(object.memberMilestoneChatDetails)
         ? LiveChatMemberMilestoneChatDetails.fromJSON(object.memberMilestoneChatDetails)
         : isSet(object.member_milestone_chat_details)
-        ? LiveChatMemberMilestoneChatDetails.fromJSON(object.member_milestone_chat_details)
-        : undefined,
+          ? LiveChatMemberMilestoneChatDetails.fromJSON(object.member_milestone_chat_details)
+          : undefined,
       membershipGiftingDetails: isSet(object.membershipGiftingDetails)
         ? LiveChatMembershipGiftingDetails.fromJSON(object.membershipGiftingDetails)
         : isSet(object.membership_gifting_details)
-        ? LiveChatMembershipGiftingDetails.fromJSON(object.membership_gifting_details)
-        : undefined,
+          ? LiveChatMembershipGiftingDetails.fromJSON(object.membership_gifting_details)
+          : undefined,
       giftMembershipReceivedDetails: isSet(object.giftMembershipReceivedDetails)
         ? LiveChatGiftMembershipReceivedDetails.fromJSON(object.giftMembershipReceivedDetails)
         : isSet(object.gift_membership_received_details)
-        ? LiveChatGiftMembershipReceivedDetails.fromJSON(object.gift_membership_received_details)
-        : undefined,
+          ? LiveChatGiftMembershipReceivedDetails.fromJSON(object.gift_membership_received_details)
+          : undefined,
       pollDetails: isSet(object.pollDetails)
         ? LiveChatPollDetails.fromJSON(object.pollDetails)
         : isSet(object.poll_details)
-        ? LiveChatPollDetails.fromJSON(object.poll_details)
-        : undefined,
-    };
+          ? LiveChatPollDetails.fromJSON(object.poll_details)
+          : undefined,
+    }
   },
 
   toJSON(message: LiveChatMessageSnippet): unknown {
-    const obj: any = {};
+    const obj: any = {}
     if (message.type !== undefined && message.type !== 0) {
-      obj.type = liveChatMessageSnippet_TypeWrapper_TypeToJSON(message.type);
+      obj.type = liveChatMessageSnippet_TypeWrapper_TypeToJSON(message.type)
     }
-    if (message.liveChatId !== undefined && message.liveChatId !== "") {
-      obj.liveChatId = message.liveChatId;
+    if (message.liveChatId !== undefined && message.liveChatId !== '') {
+      obj.liveChatId = message.liveChatId
     }
-    if (message.authorChannelId !== undefined && message.authorChannelId !== "") {
-      obj.authorChannelId = message.authorChannelId;
+    if (message.authorChannelId !== undefined && message.authorChannelId !== '') {
+      obj.authorChannelId = message.authorChannelId
     }
-    if (message.publishedAt !== undefined && message.publishedAt !== "") {
-      obj.publishedAt = message.publishedAt;
+    if (message.publishedAt !== undefined && message.publishedAt !== '') {
+      obj.publishedAt = message.publishedAt
     }
     if (message.hasDisplayContent !== undefined && message.hasDisplayContent !== false) {
-      obj.hasDisplayContent = message.hasDisplayContent;
+      obj.hasDisplayContent = message.hasDisplayContent
     }
-    if (message.displayMessage !== undefined && message.displayMessage !== "") {
-      obj.displayMessage = message.displayMessage;
+    if (message.displayMessage !== undefined && message.displayMessage !== '') {
+      obj.displayMessage = message.displayMessage
     }
     if (message.textMessageDetails !== undefined) {
-      obj.textMessageDetails = LiveChatTextMessageDetails.toJSON(message.textMessageDetails);
+      obj.textMessageDetails = LiveChatTextMessageDetails.toJSON(message.textMessageDetails)
     }
     if (message.messageDeletedDetails !== undefined) {
-      obj.messageDeletedDetails = LiveChatMessageDeletedDetails.toJSON(message.messageDeletedDetails);
+      obj.messageDeletedDetails = LiveChatMessageDeletedDetails.toJSON(
+        message.messageDeletedDetails,
+      )
     }
     if (message.messageRetractedDetails !== undefined) {
-      obj.messageRetractedDetails = LiveChatMessageRetractedDetails.toJSON(message.messageRetractedDetails);
+      obj.messageRetractedDetails = LiveChatMessageRetractedDetails.toJSON(
+        message.messageRetractedDetails,
+      )
     }
     if (message.userBannedDetails !== undefined) {
-      obj.userBannedDetails = LiveChatUserBannedMessageDetails.toJSON(message.userBannedDetails);
+      obj.userBannedDetails = LiveChatUserBannedMessageDetails.toJSON(message.userBannedDetails)
     }
     if (message.superChatDetails !== undefined) {
-      obj.superChatDetails = LiveChatSuperChatDetails.toJSON(message.superChatDetails);
+      obj.superChatDetails = LiveChatSuperChatDetails.toJSON(message.superChatDetails)
     }
     if (message.superStickerDetails !== undefined) {
-      obj.superStickerDetails = LiveChatSuperStickerDetails.toJSON(message.superStickerDetails);
+      obj.superStickerDetails = LiveChatSuperStickerDetails.toJSON(message.superStickerDetails)
     }
     if (message.newSponsorDetails !== undefined) {
-      obj.newSponsorDetails = LiveChatNewSponsorDetails.toJSON(message.newSponsorDetails);
+      obj.newSponsorDetails = LiveChatNewSponsorDetails.toJSON(message.newSponsorDetails)
     }
     if (message.memberMilestoneChatDetails !== undefined) {
-      obj.memberMilestoneChatDetails = LiveChatMemberMilestoneChatDetails.toJSON(message.memberMilestoneChatDetails);
+      obj.memberMilestoneChatDetails = LiveChatMemberMilestoneChatDetails.toJSON(
+        message.memberMilestoneChatDetails,
+      )
     }
     if (message.membershipGiftingDetails !== undefined) {
-      obj.membershipGiftingDetails = LiveChatMembershipGiftingDetails.toJSON(message.membershipGiftingDetails);
+      obj.membershipGiftingDetails = LiveChatMembershipGiftingDetails.toJSON(
+        message.membershipGiftingDetails,
+      )
     }
     if (message.giftMembershipReceivedDetails !== undefined) {
       obj.giftMembershipReceivedDetails = LiveChatGiftMembershipReceivedDetails.toJSON(
         message.giftMembershipReceivedDetails,
-      );
+      )
     }
     if (message.pollDetails !== undefined) {
-      obj.pollDetails = LiveChatPollDetails.toJSON(message.pollDetails);
+      obj.pollDetails = LiveChatPollDetails.toJSON(message.pollDetails)
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatMessageSnippet>, I>>(base?: I): LiveChatMessageSnippet {
-    return LiveChatMessageSnippet.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatMessageSnippet>, I>>(
+    base?: I,
+  ): LiveChatMessageSnippet {
+    return LiveChatMessageSnippet.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<LiveChatMessageSnippet>, I>>(object: I): LiveChatMessageSnippet {
-    const message = createBaseLiveChatMessageSnippet();
-    message.type = object.type ?? 0;
-    message.liveChatId = object.liveChatId ?? "";
-    message.authorChannelId = object.authorChannelId ?? "";
-    message.publishedAt = object.publishedAt ?? "";
-    message.hasDisplayContent = object.hasDisplayContent ?? false;
-    message.displayMessage = object.displayMessage ?? "";
-    message.textMessageDetails = (object.textMessageDetails !== undefined && object.textMessageDetails !== null)
-      ? LiveChatTextMessageDetails.fromPartial(object.textMessageDetails)
-      : undefined;
+  fromPartial<I extends Exact<DeepPartial<LiveChatMessageSnippet>, I>>(
+    object: I,
+  ): LiveChatMessageSnippet {
+    const message = createBaseLiveChatMessageSnippet()
+    message.type = object.type ?? 0
+    message.liveChatId = object.liveChatId ?? ''
+    message.authorChannelId = object.authorChannelId ?? ''
+    message.publishedAt = object.publishedAt ?? ''
+    message.hasDisplayContent = object.hasDisplayContent ?? false
+    message.displayMessage = object.displayMessage ?? ''
+    message.textMessageDetails =
+      object.textMessageDetails !== undefined && object.textMessageDetails !== null
+        ? LiveChatTextMessageDetails.fromPartial(object.textMessageDetails)
+        : undefined
     message.messageDeletedDetails =
-      (object.messageDeletedDetails !== undefined && object.messageDeletedDetails !== null)
+      object.messageDeletedDetails !== undefined && object.messageDeletedDetails !== null
         ? LiveChatMessageDeletedDetails.fromPartial(object.messageDeletedDetails)
-        : undefined;
+        : undefined
     message.messageRetractedDetails =
-      (object.messageRetractedDetails !== undefined && object.messageRetractedDetails !== null)
+      object.messageRetractedDetails !== undefined && object.messageRetractedDetails !== null
         ? LiveChatMessageRetractedDetails.fromPartial(object.messageRetractedDetails)
-        : undefined;
-    message.userBannedDetails = (object.userBannedDetails !== undefined && object.userBannedDetails !== null)
-      ? LiveChatUserBannedMessageDetails.fromPartial(object.userBannedDetails)
-      : undefined;
-    message.superChatDetails = (object.superChatDetails !== undefined && object.superChatDetails !== null)
-      ? LiveChatSuperChatDetails.fromPartial(object.superChatDetails)
-      : undefined;
-    message.superStickerDetails = (object.superStickerDetails !== undefined && object.superStickerDetails !== null)
-      ? LiveChatSuperStickerDetails.fromPartial(object.superStickerDetails)
-      : undefined;
-    message.newSponsorDetails = (object.newSponsorDetails !== undefined && object.newSponsorDetails !== null)
-      ? LiveChatNewSponsorDetails.fromPartial(object.newSponsorDetails)
-      : undefined;
+        : undefined
+    message.userBannedDetails =
+      object.userBannedDetails !== undefined && object.userBannedDetails !== null
+        ? LiveChatUserBannedMessageDetails.fromPartial(object.userBannedDetails)
+        : undefined
+    message.superChatDetails =
+      object.superChatDetails !== undefined && object.superChatDetails !== null
+        ? LiveChatSuperChatDetails.fromPartial(object.superChatDetails)
+        : undefined
+    message.superStickerDetails =
+      object.superStickerDetails !== undefined && object.superStickerDetails !== null
+        ? LiveChatSuperStickerDetails.fromPartial(object.superStickerDetails)
+        : undefined
+    message.newSponsorDetails =
+      object.newSponsorDetails !== undefined && object.newSponsorDetails !== null
+        ? LiveChatNewSponsorDetails.fromPartial(object.newSponsorDetails)
+        : undefined
     message.memberMilestoneChatDetails =
-      (object.memberMilestoneChatDetails !== undefined && object.memberMilestoneChatDetails !== null)
+      object.memberMilestoneChatDetails !== undefined && object.memberMilestoneChatDetails !== null
         ? LiveChatMemberMilestoneChatDetails.fromPartial(object.memberMilestoneChatDetails)
-        : undefined;
+        : undefined
     message.membershipGiftingDetails =
-      (object.membershipGiftingDetails !== undefined && object.membershipGiftingDetails !== null)
+      object.membershipGiftingDetails !== undefined && object.membershipGiftingDetails !== null
         ? LiveChatMembershipGiftingDetails.fromPartial(object.membershipGiftingDetails)
-        : undefined;
+        : undefined
     message.giftMembershipReceivedDetails =
-      (object.giftMembershipReceivedDetails !== undefined && object.giftMembershipReceivedDetails !== null)
+      object.giftMembershipReceivedDetails !== undefined &&
+      object.giftMembershipReceivedDetails !== null
         ? LiveChatGiftMembershipReceivedDetails.fromPartial(object.giftMembershipReceivedDetails)
-        : undefined;
-    message.pollDetails = (object.pollDetails !== undefined && object.pollDetails !== null)
-      ? LiveChatPollDetails.fromPartial(object.pollDetails)
-      : undefined;
-    return message;
+        : undefined
+    message.pollDetails =
+      object.pollDetails !== undefined && object.pollDetails !== null
+        ? LiveChatPollDetails.fromPartial(object.pollDetails)
+        : undefined
+    return message
   },
-};
+}
 
 function createBaseLiveChatMessageSnippet_TypeWrapper(): LiveChatMessageSnippet_TypeWrapper {
-  return {};
+  return {}
 }
 
 export const LiveChatMessageSnippet_TypeWrapper: MessageFns<LiveChatMessageSnippet_TypeWrapper> = {
-  encode(_: LiveChatMessageSnippet_TypeWrapper, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    return writer;
+  encode(
+    _: LiveChatMessageSnippet_TypeWrapper,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMessageSnippet_TypeWrapper {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMessageSnippet_TypeWrapper();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMessageSnippet_TypeWrapper()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(_: any): LiveChatMessageSnippet_TypeWrapper {
-    return {};
+    return {}
   },
 
   toJSON(_: LiveChatMessageSnippet_TypeWrapper): unknown {
-    const obj: any = {};
-    return obj;
+    const obj: any = {}
+    return obj
   },
 
   create<I extends Exact<DeepPartial<LiveChatMessageSnippet_TypeWrapper>, I>>(
     base?: I,
   ): LiveChatMessageSnippet_TypeWrapper {
-    return LiveChatMessageSnippet_TypeWrapper.fromPartial(base ?? ({} as any));
+    return LiveChatMessageSnippet_TypeWrapper.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<LiveChatMessageSnippet_TypeWrapper>, I>>(
     _: I,
   ): LiveChatMessageSnippet_TypeWrapper {
-    const message = createBaseLiveChatMessageSnippet_TypeWrapper();
-    return message;
+    const message = createBaseLiveChatMessageSnippet_TypeWrapper()
+    return message
   },
-};
+}
 
 function createBaseLiveChatTextMessageDetails(): LiveChatTextMessageDetails {
-  return { messageText: "" };
+  return { messageText: '' }
 }
 
 export const LiveChatTextMessageDetails: MessageFns<LiveChatTextMessageDetails> = {
-  encode(message: LiveChatTextMessageDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.messageText !== undefined && message.messageText !== "") {
-      writer.uint32(10).string(message.messageText);
+  encode(
+    message: LiveChatTextMessageDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.messageText !== undefined && message.messageText !== '') {
+      writer.uint32(10).string(message.messageText)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatTextMessageDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatTextMessageDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatTextMessageDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.messageText = reader.string();
-          continue;
+          message.messageText = reader.string()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatTextMessageDetails {
@@ -1980,63 +1940,70 @@ export const LiveChatTextMessageDetails: MessageFns<LiveChatTextMessageDetails> 
       messageText: isSet(object.messageText)
         ? globalThis.String(object.messageText)
         : isSet(object.message_text)
-        ? globalThis.String(object.message_text)
-        : "",
-    };
+          ? globalThis.String(object.message_text)
+          : '',
+    }
   },
 
   toJSON(message: LiveChatTextMessageDetails): unknown {
-    const obj: any = {};
-    if (message.messageText !== undefined && message.messageText !== "") {
-      obj.messageText = message.messageText;
+    const obj: any = {}
+    if (message.messageText !== undefined && message.messageText !== '') {
+      obj.messageText = message.messageText
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatTextMessageDetails>, I>>(base?: I): LiveChatTextMessageDetails {
-    return LiveChatTextMessageDetails.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatTextMessageDetails>, I>>(
+    base?: I,
+  ): LiveChatTextMessageDetails {
+    return LiveChatTextMessageDetails.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<LiveChatTextMessageDetails>, I>>(object: I): LiveChatTextMessageDetails {
-    const message = createBaseLiveChatTextMessageDetails();
-    message.messageText = object.messageText ?? "";
-    return message;
+  fromPartial<I extends Exact<DeepPartial<LiveChatTextMessageDetails>, I>>(
+    object: I,
+  ): LiveChatTextMessageDetails {
+    const message = createBaseLiveChatTextMessageDetails()
+    message.messageText = object.messageText ?? ''
+    return message
   },
-};
+}
 
 function createBaseLiveChatMessageDeletedDetails(): LiveChatMessageDeletedDetails {
-  return { deletedMessageId: "" };
+  return { deletedMessageId: '' }
 }
 
 export const LiveChatMessageDeletedDetails: MessageFns<LiveChatMessageDeletedDetails> = {
-  encode(message: LiveChatMessageDeletedDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.deletedMessageId !== undefined && message.deletedMessageId !== "") {
-      writer.uint32(810).string(message.deletedMessageId);
+  encode(
+    message: LiveChatMessageDeletedDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.deletedMessageId !== undefined && message.deletedMessageId !== '') {
+      writer.uint32(810).string(message.deletedMessageId)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMessageDeletedDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMessageDeletedDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMessageDeletedDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 101: {
           if (tag !== 810) {
-            break;
+            break
           }
 
-          message.deletedMessageId = reader.string();
-          continue;
+          message.deletedMessageId = reader.string()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatMessageDeletedDetails {
@@ -2044,65 +2011,70 @@ export const LiveChatMessageDeletedDetails: MessageFns<LiveChatMessageDeletedDet
       deletedMessageId: isSet(object.deletedMessageId)
         ? globalThis.String(object.deletedMessageId)
         : isSet(object.deleted_message_id)
-        ? globalThis.String(object.deleted_message_id)
-        : "",
-    };
+          ? globalThis.String(object.deleted_message_id)
+          : '',
+    }
   },
 
   toJSON(message: LiveChatMessageDeletedDetails): unknown {
-    const obj: any = {};
-    if (message.deletedMessageId !== undefined && message.deletedMessageId !== "") {
-      obj.deletedMessageId = message.deletedMessageId;
+    const obj: any = {}
+    if (message.deletedMessageId !== undefined && message.deletedMessageId !== '') {
+      obj.deletedMessageId = message.deletedMessageId
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatMessageDeletedDetails>, I>>(base?: I): LiveChatMessageDeletedDetails {
-    return LiveChatMessageDeletedDetails.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatMessageDeletedDetails>, I>>(
+    base?: I,
+  ): LiveChatMessageDeletedDetails {
+    return LiveChatMessageDeletedDetails.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<LiveChatMessageDeletedDetails>, I>>(
     object: I,
   ): LiveChatMessageDeletedDetails {
-    const message = createBaseLiveChatMessageDeletedDetails();
-    message.deletedMessageId = object.deletedMessageId ?? "";
-    return message;
+    const message = createBaseLiveChatMessageDeletedDetails()
+    message.deletedMessageId = object.deletedMessageId ?? ''
+    return message
   },
-};
+}
 
 function createBaseLiveChatMessageRetractedDetails(): LiveChatMessageRetractedDetails {
-  return { retractedMessageId: "" };
+  return { retractedMessageId: '' }
 }
 
 export const LiveChatMessageRetractedDetails: MessageFns<LiveChatMessageRetractedDetails> = {
-  encode(message: LiveChatMessageRetractedDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.retractedMessageId !== undefined && message.retractedMessageId !== "") {
-      writer.uint32(1610).string(message.retractedMessageId);
+  encode(
+    message: LiveChatMessageRetractedDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.retractedMessageId !== undefined && message.retractedMessageId !== '') {
+      writer.uint32(1610).string(message.retractedMessageId)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMessageRetractedDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMessageRetractedDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMessageRetractedDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 201: {
           if (tag !== 1610) {
-            break;
+            break
           }
 
-          message.retractedMessageId = reader.string();
-          continue;
+          message.retractedMessageId = reader.string()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatMessageRetractedDetails {
@@ -2110,87 +2082,92 @@ export const LiveChatMessageRetractedDetails: MessageFns<LiveChatMessageRetracte
       retractedMessageId: isSet(object.retractedMessageId)
         ? globalThis.String(object.retractedMessageId)
         : isSet(object.retracted_message_id)
-        ? globalThis.String(object.retracted_message_id)
-        : "",
-    };
+          ? globalThis.String(object.retracted_message_id)
+          : '',
+    }
   },
 
   toJSON(message: LiveChatMessageRetractedDetails): unknown {
-    const obj: any = {};
-    if (message.retractedMessageId !== undefined && message.retractedMessageId !== "") {
-      obj.retractedMessageId = message.retractedMessageId;
+    const obj: any = {}
+    if (message.retractedMessageId !== undefined && message.retractedMessageId !== '') {
+      obj.retractedMessageId = message.retractedMessageId
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatMessageRetractedDetails>, I>>(base?: I): LiveChatMessageRetractedDetails {
-    return LiveChatMessageRetractedDetails.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatMessageRetractedDetails>, I>>(
+    base?: I,
+  ): LiveChatMessageRetractedDetails {
+    return LiveChatMessageRetractedDetails.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<LiveChatMessageRetractedDetails>, I>>(
     object: I,
   ): LiveChatMessageRetractedDetails {
-    const message = createBaseLiveChatMessageRetractedDetails();
-    message.retractedMessageId = object.retractedMessageId ?? "";
-    return message;
+    const message = createBaseLiveChatMessageRetractedDetails()
+    message.retractedMessageId = object.retractedMessageId ?? ''
+    return message
   },
-};
+}
 
 function createBaseLiveChatUserBannedMessageDetails(): LiveChatUserBannedMessageDetails {
-  return { bannedUserDetails: undefined, banType: 1, banDurationSeconds: 0 };
+  return { bannedUserDetails: undefined, banType: 1, banDurationSeconds: 0 }
 }
 
 export const LiveChatUserBannedMessageDetails: MessageFns<LiveChatUserBannedMessageDetails> = {
-  encode(message: LiveChatUserBannedMessageDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+  encode(
+    message: LiveChatUserBannedMessageDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
     if (message.bannedUserDetails !== undefined) {
-      ChannelProfileDetails.encode(message.bannedUserDetails, writer.uint32(10).fork()).join();
+      ChannelProfileDetails.encode(message.bannedUserDetails, writer.uint32(10).fork()).join()
     }
     if (message.banType !== undefined && message.banType !== 1) {
-      writer.uint32(16).int32(message.banType);
+      writer.uint32(16).int32(message.banType)
     }
     if (message.banDurationSeconds !== undefined && message.banDurationSeconds !== 0) {
-      writer.uint32(32).uint64(message.banDurationSeconds);
+      writer.uint32(32).uint64(message.banDurationSeconds)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatUserBannedMessageDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatUserBannedMessageDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatUserBannedMessageDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.bannedUserDetails = ChannelProfileDetails.decode(reader, reader.uint32());
-          continue;
+          message.bannedUserDetails = ChannelProfileDetails.decode(reader, reader.uint32())
+          continue
         }
         case 2: {
           if (tag !== 16) {
-            break;
+            break
           }
 
-          message.banType = reader.int32() as any;
-          continue;
+          message.banType = reader.int32() as any
+          continue
         }
         case 4: {
           if (tag !== 32) {
-            break;
+            break
           }
 
-          message.banDurationSeconds = longToNumber(reader.uint64());
-          continue;
+          message.banDurationSeconds = longToNumber(reader.uint64())
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatUserBannedMessageDetails {
@@ -2198,180 +2175,189 @@ export const LiveChatUserBannedMessageDetails: MessageFns<LiveChatUserBannedMess
       bannedUserDetails: isSet(object.bannedUserDetails)
         ? ChannelProfileDetails.fromJSON(object.bannedUserDetails)
         : isSet(object.banned_user_details)
-        ? ChannelProfileDetails.fromJSON(object.banned_user_details)
-        : undefined,
+          ? ChannelProfileDetails.fromJSON(object.banned_user_details)
+          : undefined,
       banType: isSet(object.banType)
         ? liveChatUserBannedMessageDetails_BanTypeWrapper_BanTypeFromJSON(object.banType)
         : isSet(object.ban_type)
-        ? liveChatUserBannedMessageDetails_BanTypeWrapper_BanTypeFromJSON(object.ban_type)
-        : 1,
+          ? liveChatUserBannedMessageDetails_BanTypeWrapper_BanTypeFromJSON(object.ban_type)
+          : 1,
       banDurationSeconds: isSet(object.banDurationSeconds)
         ? globalThis.Number(object.banDurationSeconds)
         : isSet(object.ban_duration_seconds)
-        ? globalThis.Number(object.ban_duration_seconds)
-        : 0,
-    };
+          ? globalThis.Number(object.ban_duration_seconds)
+          : 0,
+    }
   },
 
   toJSON(message: LiveChatUserBannedMessageDetails): unknown {
-    const obj: any = {};
+    const obj: any = {}
     if (message.bannedUserDetails !== undefined) {
-      obj.bannedUserDetails = ChannelProfileDetails.toJSON(message.bannedUserDetails);
+      obj.bannedUserDetails = ChannelProfileDetails.toJSON(message.bannedUserDetails)
     }
     if (message.banType !== undefined && message.banType !== 1) {
-      obj.banType = liveChatUserBannedMessageDetails_BanTypeWrapper_BanTypeToJSON(message.banType);
+      obj.banType = liveChatUserBannedMessageDetails_BanTypeWrapper_BanTypeToJSON(message.banType)
     }
     if (message.banDurationSeconds !== undefined && message.banDurationSeconds !== 0) {
-      obj.banDurationSeconds = Math.round(message.banDurationSeconds);
+      obj.banDurationSeconds = Math.round(message.banDurationSeconds)
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<LiveChatUserBannedMessageDetails>, I>>(
     base?: I,
   ): LiveChatUserBannedMessageDetails {
-    return LiveChatUserBannedMessageDetails.fromPartial(base ?? ({} as any));
+    return LiveChatUserBannedMessageDetails.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<LiveChatUserBannedMessageDetails>, I>>(
     object: I,
   ): LiveChatUserBannedMessageDetails {
-    const message = createBaseLiveChatUserBannedMessageDetails();
-    message.bannedUserDetails = (object.bannedUserDetails !== undefined && object.bannedUserDetails !== null)
-      ? ChannelProfileDetails.fromPartial(object.bannedUserDetails)
-      : undefined;
-    message.banType = object.banType ?? 1;
-    message.banDurationSeconds = object.banDurationSeconds ?? 0;
-    return message;
+    const message = createBaseLiveChatUserBannedMessageDetails()
+    message.bannedUserDetails =
+      object.bannedUserDetails !== undefined && object.bannedUserDetails !== null
+        ? ChannelProfileDetails.fromPartial(object.bannedUserDetails)
+        : undefined
+    message.banType = object.banType ?? 1
+    message.banDurationSeconds = object.banDurationSeconds ?? 0
+    return message
   },
-};
-
-function createBaseLiveChatUserBannedMessageDetails_BanTypeWrapper(): LiveChatUserBannedMessageDetails_BanTypeWrapper {
-  return {};
 }
 
-export const LiveChatUserBannedMessageDetails_BanTypeWrapper: MessageFns<
-  LiveChatUserBannedMessageDetails_BanTypeWrapper
-> = {
-  encode(_: LiveChatUserBannedMessageDetails_BanTypeWrapper, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    return writer;
-  },
+function createBaseLiveChatUserBannedMessageDetails_BanTypeWrapper(): LiveChatUserBannedMessageDetails_BanTypeWrapper {
+  return {}
+}
 
-  decode(input: BinaryReader | Uint8Array, length?: number): LiveChatUserBannedMessageDetails_BanTypeWrapper {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatUserBannedMessageDetails_BanTypeWrapper();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
+export const LiveChatUserBannedMessageDetails_BanTypeWrapper: MessageFns<LiveChatUserBannedMessageDetails_BanTypeWrapper> =
+  {
+    encode(
+      _: LiveChatUserBannedMessageDetails_BanTypeWrapper,
+      writer: BinaryWriter = new BinaryWriter(),
+    ): BinaryWriter {
+      return writer
+    },
+
+    decode(
+      input: BinaryReader | Uint8Array,
+      length?: number,
+    ): LiveChatUserBannedMessageDetails_BanTypeWrapper {
+      const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+      const end = length === undefined ? reader.len : reader.pos + length
+      const message = createBaseLiveChatUserBannedMessageDetails_BanTypeWrapper()
+      while (reader.pos < end) {
+        const tag = reader.uint32()
+        switch (tag >>> 3) {
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break
+        }
+        reader.skip(tag & 7)
       }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
+      return message
+    },
 
-  fromJSON(_: any): LiveChatUserBannedMessageDetails_BanTypeWrapper {
-    return {};
-  },
+    fromJSON(_: any): LiveChatUserBannedMessageDetails_BanTypeWrapper {
+      return {}
+    },
 
-  toJSON(_: LiveChatUserBannedMessageDetails_BanTypeWrapper): unknown {
-    const obj: any = {};
-    return obj;
-  },
+    toJSON(_: LiveChatUserBannedMessageDetails_BanTypeWrapper): unknown {
+      const obj: any = {}
+      return obj
+    },
 
-  create<I extends Exact<DeepPartial<LiveChatUserBannedMessageDetails_BanTypeWrapper>, I>>(
-    base?: I,
-  ): LiveChatUserBannedMessageDetails_BanTypeWrapper {
-    return LiveChatUserBannedMessageDetails_BanTypeWrapper.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<LiveChatUserBannedMessageDetails_BanTypeWrapper>, I>>(
-    _: I,
-  ): LiveChatUserBannedMessageDetails_BanTypeWrapper {
-    const message = createBaseLiveChatUserBannedMessageDetails_BanTypeWrapper();
-    return message;
-  },
-};
+    create<I extends Exact<DeepPartial<LiveChatUserBannedMessageDetails_BanTypeWrapper>, I>>(
+      base?: I,
+    ): LiveChatUserBannedMessageDetails_BanTypeWrapper {
+      return LiveChatUserBannedMessageDetails_BanTypeWrapper.fromPartial(base ?? ({} as any))
+    },
+    fromPartial<I extends Exact<DeepPartial<LiveChatUserBannedMessageDetails_BanTypeWrapper>, I>>(
+      _: I,
+    ): LiveChatUserBannedMessageDetails_BanTypeWrapper {
+      const message = createBaseLiveChatUserBannedMessageDetails_BanTypeWrapper()
+      return message
+    },
+  }
 
 function createBaseLiveChatSuperChatDetails(): LiveChatSuperChatDetails {
-  return { amountMicros: 0, currency: "", amountDisplayString: "", userComment: "", tier: 0 };
+  return { amountMicros: 0, currency: '', amountDisplayString: '', userComment: '', tier: 0 }
 }
 
 export const LiveChatSuperChatDetails: MessageFns<LiveChatSuperChatDetails> = {
-  encode(message: LiveChatSuperChatDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+  encode(
+    message: LiveChatSuperChatDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
     if (message.amountMicros !== undefined && message.amountMicros !== 0) {
-      writer.uint32(8).uint64(message.amountMicros);
+      writer.uint32(8).uint64(message.amountMicros)
     }
-    if (message.currency !== undefined && message.currency !== "") {
-      writer.uint32(18).string(message.currency);
+    if (message.currency !== undefined && message.currency !== '') {
+      writer.uint32(18).string(message.currency)
     }
-    if (message.amountDisplayString !== undefined && message.amountDisplayString !== "") {
-      writer.uint32(26).string(message.amountDisplayString);
+    if (message.amountDisplayString !== undefined && message.amountDisplayString !== '') {
+      writer.uint32(26).string(message.amountDisplayString)
     }
-    if (message.userComment !== undefined && message.userComment !== "") {
-      writer.uint32(34).string(message.userComment);
+    if (message.userComment !== undefined && message.userComment !== '') {
+      writer.uint32(34).string(message.userComment)
     }
     if (message.tier !== undefined && message.tier !== 0) {
-      writer.uint32(40).uint32(message.tier);
+      writer.uint32(40).uint32(message.tier)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatSuperChatDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatSuperChatDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatSuperChatDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 8) {
-            break;
+            break
           }
 
-          message.amountMicros = longToNumber(reader.uint64());
-          continue;
+          message.amountMicros = longToNumber(reader.uint64())
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.currency = reader.string();
-          continue;
+          message.currency = reader.string()
+          continue
         }
         case 3: {
           if (tag !== 26) {
-            break;
+            break
           }
 
-          message.amountDisplayString = reader.string();
-          continue;
+          message.amountDisplayString = reader.string()
+          continue
         }
         case 4: {
           if (tag !== 34) {
-            break;
+            break
           }
 
-          message.userComment = reader.string();
-          continue;
+          message.userComment = reader.string()
+          continue
         }
         case 5: {
           if (tag !== 40) {
-            break;
+            break
           }
 
-          message.tier = reader.uint32();
-          continue;
+          message.tier = reader.uint32()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatSuperChatDetails {
@@ -2379,135 +2365,148 @@ export const LiveChatSuperChatDetails: MessageFns<LiveChatSuperChatDetails> = {
       amountMicros: isSet(object.amountMicros)
         ? globalThis.Number(object.amountMicros)
         : isSet(object.amount_micros)
-        ? globalThis.Number(object.amount_micros)
-        : 0,
-      currency: isSet(object.currency) ? globalThis.String(object.currency) : "",
+          ? globalThis.Number(object.amount_micros)
+          : 0,
+      currency: isSet(object.currency) ? globalThis.String(object.currency) : '',
       amountDisplayString: isSet(object.amountDisplayString)
         ? globalThis.String(object.amountDisplayString)
         : isSet(object.amount_display_string)
-        ? globalThis.String(object.amount_display_string)
-        : "",
+          ? globalThis.String(object.amount_display_string)
+          : '',
       userComment: isSet(object.userComment)
         ? globalThis.String(object.userComment)
         : isSet(object.user_comment)
-        ? globalThis.String(object.user_comment)
-        : "",
+          ? globalThis.String(object.user_comment)
+          : '',
       tier: isSet(object.tier) ? globalThis.Number(object.tier) : 0,
-    };
+    }
   },
 
   toJSON(message: LiveChatSuperChatDetails): unknown {
-    const obj: any = {};
+    const obj: any = {}
     if (message.amountMicros !== undefined && message.amountMicros !== 0) {
-      obj.amountMicros = Math.round(message.amountMicros);
+      obj.amountMicros = Math.round(message.amountMicros)
     }
-    if (message.currency !== undefined && message.currency !== "") {
-      obj.currency = message.currency;
+    if (message.currency !== undefined && message.currency !== '') {
+      obj.currency = message.currency
     }
-    if (message.amountDisplayString !== undefined && message.amountDisplayString !== "") {
-      obj.amountDisplayString = message.amountDisplayString;
+    if (message.amountDisplayString !== undefined && message.amountDisplayString !== '') {
+      obj.amountDisplayString = message.amountDisplayString
     }
-    if (message.userComment !== undefined && message.userComment !== "") {
-      obj.userComment = message.userComment;
+    if (message.userComment !== undefined && message.userComment !== '') {
+      obj.userComment = message.userComment
     }
     if (message.tier !== undefined && message.tier !== 0) {
-      obj.tier = Math.round(message.tier);
+      obj.tier = Math.round(message.tier)
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatSuperChatDetails>, I>>(base?: I): LiveChatSuperChatDetails {
-    return LiveChatSuperChatDetails.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatSuperChatDetails>, I>>(
+    base?: I,
+  ): LiveChatSuperChatDetails {
+    return LiveChatSuperChatDetails.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<LiveChatSuperChatDetails>, I>>(object: I): LiveChatSuperChatDetails {
-    const message = createBaseLiveChatSuperChatDetails();
-    message.amountMicros = object.amountMicros ?? 0;
-    message.currency = object.currency ?? "";
-    message.amountDisplayString = object.amountDisplayString ?? "";
-    message.userComment = object.userComment ?? "";
-    message.tier = object.tier ?? 0;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<LiveChatSuperChatDetails>, I>>(
+    object: I,
+  ): LiveChatSuperChatDetails {
+    const message = createBaseLiveChatSuperChatDetails()
+    message.amountMicros = object.amountMicros ?? 0
+    message.currency = object.currency ?? ''
+    message.amountDisplayString = object.amountDisplayString ?? ''
+    message.userComment = object.userComment ?? ''
+    message.tier = object.tier ?? 0
+    return message
   },
-};
+}
 
 function createBaseLiveChatSuperStickerDetails(): LiveChatSuperStickerDetails {
-  return { amountMicros: 0, currency: "", amountDisplayString: "", tier: 0, superStickerMetadata: undefined };
+  return {
+    amountMicros: 0,
+    currency: '',
+    amountDisplayString: '',
+    tier: 0,
+    superStickerMetadata: undefined,
+  }
 }
 
 export const LiveChatSuperStickerDetails: MessageFns<LiveChatSuperStickerDetails> = {
-  encode(message: LiveChatSuperStickerDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+  encode(
+    message: LiveChatSuperStickerDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
     if (message.amountMicros !== undefined && message.amountMicros !== 0) {
-      writer.uint32(8).uint64(message.amountMicros);
+      writer.uint32(8).uint64(message.amountMicros)
     }
-    if (message.currency !== undefined && message.currency !== "") {
-      writer.uint32(18).string(message.currency);
+    if (message.currency !== undefined && message.currency !== '') {
+      writer.uint32(18).string(message.currency)
     }
-    if (message.amountDisplayString !== undefined && message.amountDisplayString !== "") {
-      writer.uint32(26).string(message.amountDisplayString);
+    if (message.amountDisplayString !== undefined && message.amountDisplayString !== '') {
+      writer.uint32(26).string(message.amountDisplayString)
     }
     if (message.tier !== undefined && message.tier !== 0) {
-      writer.uint32(32).uint32(message.tier);
+      writer.uint32(32).uint32(message.tier)
     }
     if (message.superStickerMetadata !== undefined) {
-      SuperStickerMetadata.encode(message.superStickerMetadata, writer.uint32(42).fork()).join();
+      SuperStickerMetadata.encode(message.superStickerMetadata, writer.uint32(42).fork()).join()
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatSuperStickerDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatSuperStickerDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatSuperStickerDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 8) {
-            break;
+            break
           }
 
-          message.amountMicros = longToNumber(reader.uint64());
-          continue;
+          message.amountMicros = longToNumber(reader.uint64())
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.currency = reader.string();
-          continue;
+          message.currency = reader.string()
+          continue
         }
         case 3: {
           if (tag !== 26) {
-            break;
+            break
           }
 
-          message.amountDisplayString = reader.string();
-          continue;
+          message.amountDisplayString = reader.string()
+          continue
         }
         case 4: {
           if (tag !== 32) {
-            break;
+            break
           }
 
-          message.tier = reader.uint32();
-          continue;
+          message.tier = reader.uint32()
+          continue
         }
         case 5: {
           if (tag !== 42) {
-            break;
+            break
           }
 
-          message.superStickerMetadata = SuperStickerMetadata.decode(reader, reader.uint32());
-          continue;
+          message.superStickerMetadata = SuperStickerMetadata.decode(reader, reader.uint32())
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatSuperStickerDetails {
@@ -2515,126 +2514,134 @@ export const LiveChatSuperStickerDetails: MessageFns<LiveChatSuperStickerDetails
       amountMicros: isSet(object.amountMicros)
         ? globalThis.Number(object.amountMicros)
         : isSet(object.amount_micros)
-        ? globalThis.Number(object.amount_micros)
-        : 0,
-      currency: isSet(object.currency) ? globalThis.String(object.currency) : "",
+          ? globalThis.Number(object.amount_micros)
+          : 0,
+      currency: isSet(object.currency) ? globalThis.String(object.currency) : '',
       amountDisplayString: isSet(object.amountDisplayString)
         ? globalThis.String(object.amountDisplayString)
         : isSet(object.amount_display_string)
-        ? globalThis.String(object.amount_display_string)
-        : "",
+          ? globalThis.String(object.amount_display_string)
+          : '',
       tier: isSet(object.tier) ? globalThis.Number(object.tier) : 0,
       superStickerMetadata: isSet(object.superStickerMetadata)
         ? SuperStickerMetadata.fromJSON(object.superStickerMetadata)
         : isSet(object.super_sticker_metadata)
-        ? SuperStickerMetadata.fromJSON(object.super_sticker_metadata)
-        : undefined,
-    };
+          ? SuperStickerMetadata.fromJSON(object.super_sticker_metadata)
+          : undefined,
+    }
   },
 
   toJSON(message: LiveChatSuperStickerDetails): unknown {
-    const obj: any = {};
+    const obj: any = {}
     if (message.amountMicros !== undefined && message.amountMicros !== 0) {
-      obj.amountMicros = Math.round(message.amountMicros);
+      obj.amountMicros = Math.round(message.amountMicros)
     }
-    if (message.currency !== undefined && message.currency !== "") {
-      obj.currency = message.currency;
+    if (message.currency !== undefined && message.currency !== '') {
+      obj.currency = message.currency
     }
-    if (message.amountDisplayString !== undefined && message.amountDisplayString !== "") {
-      obj.amountDisplayString = message.amountDisplayString;
+    if (message.amountDisplayString !== undefined && message.amountDisplayString !== '') {
+      obj.amountDisplayString = message.amountDisplayString
     }
     if (message.tier !== undefined && message.tier !== 0) {
-      obj.tier = Math.round(message.tier);
+      obj.tier = Math.round(message.tier)
     }
     if (message.superStickerMetadata !== undefined) {
-      obj.superStickerMetadata = SuperStickerMetadata.toJSON(message.superStickerMetadata);
+      obj.superStickerMetadata = SuperStickerMetadata.toJSON(message.superStickerMetadata)
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatSuperStickerDetails>, I>>(base?: I): LiveChatSuperStickerDetails {
-    return LiveChatSuperStickerDetails.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatSuperStickerDetails>, I>>(
+    base?: I,
+  ): LiveChatSuperStickerDetails {
+    return LiveChatSuperStickerDetails.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<LiveChatSuperStickerDetails>, I>>(object: I): LiveChatSuperStickerDetails {
-    const message = createBaseLiveChatSuperStickerDetails();
-    message.amountMicros = object.amountMicros ?? 0;
-    message.currency = object.currency ?? "";
-    message.amountDisplayString = object.amountDisplayString ?? "";
-    message.tier = object.tier ?? 0;
-    message.superStickerMetadata = (object.superStickerMetadata !== undefined && object.superStickerMetadata !== null)
-      ? SuperStickerMetadata.fromPartial(object.superStickerMetadata)
-      : undefined;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<LiveChatSuperStickerDetails>, I>>(
+    object: I,
+  ): LiveChatSuperStickerDetails {
+    const message = createBaseLiveChatSuperStickerDetails()
+    message.amountMicros = object.amountMicros ?? 0
+    message.currency = object.currency ?? ''
+    message.amountDisplayString = object.amountDisplayString ?? ''
+    message.tier = object.tier ?? 0
+    message.superStickerMetadata =
+      object.superStickerMetadata !== undefined && object.superStickerMetadata !== null
+        ? SuperStickerMetadata.fromPartial(object.superStickerMetadata)
+        : undefined
+    return message
   },
-};
+}
 
 function createBaseLiveChatFanFundingEventDetails(): LiveChatFanFundingEventDetails {
-  return { amountMicros: 0, currency: "", amountDisplayString: "", userComment: "" };
+  return { amountMicros: 0, currency: '', amountDisplayString: '', userComment: '' }
 }
 
 export const LiveChatFanFundingEventDetails: MessageFns<LiveChatFanFundingEventDetails> = {
-  encode(message: LiveChatFanFundingEventDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+  encode(
+    message: LiveChatFanFundingEventDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
     if (message.amountMicros !== undefined && message.amountMicros !== 0) {
-      writer.uint32(8).uint64(message.amountMicros);
+      writer.uint32(8).uint64(message.amountMicros)
     }
-    if (message.currency !== undefined && message.currency !== "") {
-      writer.uint32(18).string(message.currency);
+    if (message.currency !== undefined && message.currency !== '') {
+      writer.uint32(18).string(message.currency)
     }
-    if (message.amountDisplayString !== undefined && message.amountDisplayString !== "") {
-      writer.uint32(26).string(message.amountDisplayString);
+    if (message.amountDisplayString !== undefined && message.amountDisplayString !== '') {
+      writer.uint32(26).string(message.amountDisplayString)
     }
-    if (message.userComment !== undefined && message.userComment !== "") {
-      writer.uint32(34).string(message.userComment);
+    if (message.userComment !== undefined && message.userComment !== '') {
+      writer.uint32(34).string(message.userComment)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatFanFundingEventDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatFanFundingEventDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatFanFundingEventDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 8) {
-            break;
+            break
           }
 
-          message.amountMicros = longToNumber(reader.uint64());
-          continue;
+          message.amountMicros = longToNumber(reader.uint64())
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.currency = reader.string();
-          continue;
+          message.currency = reader.string()
+          continue
         }
         case 3: {
           if (tag !== 26) {
-            break;
+            break
           }
 
-          message.amountDisplayString = reader.string();
-          continue;
+          message.amountDisplayString = reader.string()
+          continue
         }
         case 4: {
           if (tag !== 34) {
-            break;
+            break
           }
 
-          message.userComment = reader.string();
-          continue;
+          message.userComment = reader.string()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatFanFundingEventDetails {
@@ -2642,99 +2649,104 @@ export const LiveChatFanFundingEventDetails: MessageFns<LiveChatFanFundingEventD
       amountMicros: isSet(object.amountMicros)
         ? globalThis.Number(object.amountMicros)
         : isSet(object.amount_micros)
-        ? globalThis.Number(object.amount_micros)
-        : 0,
-      currency: isSet(object.currency) ? globalThis.String(object.currency) : "",
+          ? globalThis.Number(object.amount_micros)
+          : 0,
+      currency: isSet(object.currency) ? globalThis.String(object.currency) : '',
       amountDisplayString: isSet(object.amountDisplayString)
         ? globalThis.String(object.amountDisplayString)
         : isSet(object.amount_display_string)
-        ? globalThis.String(object.amount_display_string)
-        : "",
+          ? globalThis.String(object.amount_display_string)
+          : '',
       userComment: isSet(object.userComment)
         ? globalThis.String(object.userComment)
         : isSet(object.user_comment)
-        ? globalThis.String(object.user_comment)
-        : "",
-    };
+          ? globalThis.String(object.user_comment)
+          : '',
+    }
   },
 
   toJSON(message: LiveChatFanFundingEventDetails): unknown {
-    const obj: any = {};
+    const obj: any = {}
     if (message.amountMicros !== undefined && message.amountMicros !== 0) {
-      obj.amountMicros = Math.round(message.amountMicros);
+      obj.amountMicros = Math.round(message.amountMicros)
     }
-    if (message.currency !== undefined && message.currency !== "") {
-      obj.currency = message.currency;
+    if (message.currency !== undefined && message.currency !== '') {
+      obj.currency = message.currency
     }
-    if (message.amountDisplayString !== undefined && message.amountDisplayString !== "") {
-      obj.amountDisplayString = message.amountDisplayString;
+    if (message.amountDisplayString !== undefined && message.amountDisplayString !== '') {
+      obj.amountDisplayString = message.amountDisplayString
     }
-    if (message.userComment !== undefined && message.userComment !== "") {
-      obj.userComment = message.userComment;
+    if (message.userComment !== undefined && message.userComment !== '') {
+      obj.userComment = message.userComment
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatFanFundingEventDetails>, I>>(base?: I): LiveChatFanFundingEventDetails {
-    return LiveChatFanFundingEventDetails.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatFanFundingEventDetails>, I>>(
+    base?: I,
+  ): LiveChatFanFundingEventDetails {
+    return LiveChatFanFundingEventDetails.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<LiveChatFanFundingEventDetails>, I>>(
     object: I,
   ): LiveChatFanFundingEventDetails {
-    const message = createBaseLiveChatFanFundingEventDetails();
-    message.amountMicros = object.amountMicros ?? 0;
-    message.currency = object.currency ?? "";
-    message.amountDisplayString = object.amountDisplayString ?? "";
-    message.userComment = object.userComment ?? "";
-    return message;
+    const message = createBaseLiveChatFanFundingEventDetails()
+    message.amountMicros = object.amountMicros ?? 0
+    message.currency = object.currency ?? ''
+    message.amountDisplayString = object.amountDisplayString ?? ''
+    message.userComment = object.userComment ?? ''
+    return message
   },
-};
+}
 
 function createBaseLiveChatNewSponsorDetails(): LiveChatNewSponsorDetails {
-  return { memberLevelName: "", isUpgrade: false };
+  return { memberLevelName: '', isUpgrade: false }
 }
 
 export const LiveChatNewSponsorDetails: MessageFns<LiveChatNewSponsorDetails> = {
-  encode(message: LiveChatNewSponsorDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.memberLevelName !== undefined && message.memberLevelName !== "") {
-      writer.uint32(10).string(message.memberLevelName);
+  encode(
+    message: LiveChatNewSponsorDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.memberLevelName !== undefined && message.memberLevelName !== '') {
+      writer.uint32(10).string(message.memberLevelName)
     }
     if (message.isUpgrade !== undefined && message.isUpgrade !== false) {
-      writer.uint32(16).bool(message.isUpgrade);
+      writer.uint32(16).bool(message.isUpgrade)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatNewSponsorDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatNewSponsorDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatNewSponsorDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.memberLevelName = reader.string();
-          continue;
+          message.memberLevelName = reader.string()
+          continue
         }
         case 2: {
           if (tag !== 16) {
-            break;
+            break
           }
 
-          message.isUpgrade = reader.bool();
-          continue;
+          message.isUpgrade = reader.bool()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatNewSponsorDetails {
@@ -2742,94 +2754,101 @@ export const LiveChatNewSponsorDetails: MessageFns<LiveChatNewSponsorDetails> = 
       memberLevelName: isSet(object.memberLevelName)
         ? globalThis.String(object.memberLevelName)
         : isSet(object.member_level_name)
-        ? globalThis.String(object.member_level_name)
-        : "",
+          ? globalThis.String(object.member_level_name)
+          : '',
       isUpgrade: isSet(object.isUpgrade)
         ? globalThis.Boolean(object.isUpgrade)
         : isSet(object.is_upgrade)
-        ? globalThis.Boolean(object.is_upgrade)
-        : false,
-    };
+          ? globalThis.Boolean(object.is_upgrade)
+          : false,
+    }
   },
 
   toJSON(message: LiveChatNewSponsorDetails): unknown {
-    const obj: any = {};
-    if (message.memberLevelName !== undefined && message.memberLevelName !== "") {
-      obj.memberLevelName = message.memberLevelName;
+    const obj: any = {}
+    if (message.memberLevelName !== undefined && message.memberLevelName !== '') {
+      obj.memberLevelName = message.memberLevelName
     }
     if (message.isUpgrade !== undefined && message.isUpgrade !== false) {
-      obj.isUpgrade = message.isUpgrade;
+      obj.isUpgrade = message.isUpgrade
     }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<LiveChatNewSponsorDetails>, I>>(base?: I): LiveChatNewSponsorDetails {
-    return LiveChatNewSponsorDetails.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<LiveChatNewSponsorDetails>, I>>(
+    base?: I,
+  ): LiveChatNewSponsorDetails {
+    return LiveChatNewSponsorDetails.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<LiveChatNewSponsorDetails>, I>>(object: I): LiveChatNewSponsorDetails {
-    const message = createBaseLiveChatNewSponsorDetails();
-    message.memberLevelName = object.memberLevelName ?? "";
-    message.isUpgrade = object.isUpgrade ?? false;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<LiveChatNewSponsorDetails>, I>>(
+    object: I,
+  ): LiveChatNewSponsorDetails {
+    const message = createBaseLiveChatNewSponsorDetails()
+    message.memberLevelName = object.memberLevelName ?? ''
+    message.isUpgrade = object.isUpgrade ?? false
+    return message
   },
-};
+}
 
 function createBaseLiveChatMemberMilestoneChatDetails(): LiveChatMemberMilestoneChatDetails {
-  return { memberLevelName: "", memberMonth: 0, userComment: "" };
+  return { memberLevelName: '', memberMonth: 0, userComment: '' }
 }
 
 export const LiveChatMemberMilestoneChatDetails: MessageFns<LiveChatMemberMilestoneChatDetails> = {
-  encode(message: LiveChatMemberMilestoneChatDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.memberLevelName !== undefined && message.memberLevelName !== "") {
-      writer.uint32(10).string(message.memberLevelName);
+  encode(
+    message: LiveChatMemberMilestoneChatDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.memberLevelName !== undefined && message.memberLevelName !== '') {
+      writer.uint32(10).string(message.memberLevelName)
     }
     if (message.memberMonth !== undefined && message.memberMonth !== 0) {
-      writer.uint32(16).uint32(message.memberMonth);
+      writer.uint32(16).uint32(message.memberMonth)
     }
-    if (message.userComment !== undefined && message.userComment !== "") {
-      writer.uint32(26).string(message.userComment);
+    if (message.userComment !== undefined && message.userComment !== '') {
+      writer.uint32(26).string(message.userComment)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMemberMilestoneChatDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMemberMilestoneChatDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMemberMilestoneChatDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.memberLevelName = reader.string();
-          continue;
+          message.memberLevelName = reader.string()
+          continue
         }
         case 2: {
           if (tag !== 16) {
-            break;
+            break
           }
 
-          message.memberMonth = reader.uint32();
-          continue;
+          message.memberMonth = reader.uint32()
+          continue
         }
         case 3: {
           if (tag !== 26) {
-            break;
+            break
           }
 
-          message.userComment = reader.string();
-          continue;
+          message.userComment = reader.string()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatMemberMilestoneChatDetails {
@@ -2837,96 +2856,99 @@ export const LiveChatMemberMilestoneChatDetails: MessageFns<LiveChatMemberMilest
       memberLevelName: isSet(object.memberLevelName)
         ? globalThis.String(object.memberLevelName)
         : isSet(object.member_level_name)
-        ? globalThis.String(object.member_level_name)
-        : "",
+          ? globalThis.String(object.member_level_name)
+          : '',
       memberMonth: isSet(object.memberMonth)
         ? globalThis.Number(object.memberMonth)
         : isSet(object.member_month)
-        ? globalThis.Number(object.member_month)
-        : 0,
+          ? globalThis.Number(object.member_month)
+          : 0,
       userComment: isSet(object.userComment)
         ? globalThis.String(object.userComment)
         : isSet(object.user_comment)
-        ? globalThis.String(object.user_comment)
-        : "",
-    };
+          ? globalThis.String(object.user_comment)
+          : '',
+    }
   },
 
   toJSON(message: LiveChatMemberMilestoneChatDetails): unknown {
-    const obj: any = {};
-    if (message.memberLevelName !== undefined && message.memberLevelName !== "") {
-      obj.memberLevelName = message.memberLevelName;
+    const obj: any = {}
+    if (message.memberLevelName !== undefined && message.memberLevelName !== '') {
+      obj.memberLevelName = message.memberLevelName
     }
     if (message.memberMonth !== undefined && message.memberMonth !== 0) {
-      obj.memberMonth = Math.round(message.memberMonth);
+      obj.memberMonth = Math.round(message.memberMonth)
     }
-    if (message.userComment !== undefined && message.userComment !== "") {
-      obj.userComment = message.userComment;
+    if (message.userComment !== undefined && message.userComment !== '') {
+      obj.userComment = message.userComment
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<LiveChatMemberMilestoneChatDetails>, I>>(
     base?: I,
   ): LiveChatMemberMilestoneChatDetails {
-    return LiveChatMemberMilestoneChatDetails.fromPartial(base ?? ({} as any));
+    return LiveChatMemberMilestoneChatDetails.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<LiveChatMemberMilestoneChatDetails>, I>>(
     object: I,
   ): LiveChatMemberMilestoneChatDetails {
-    const message = createBaseLiveChatMemberMilestoneChatDetails();
-    message.memberLevelName = object.memberLevelName ?? "";
-    message.memberMonth = object.memberMonth ?? 0;
-    message.userComment = object.userComment ?? "";
-    return message;
+    const message = createBaseLiveChatMemberMilestoneChatDetails()
+    message.memberLevelName = object.memberLevelName ?? ''
+    message.memberMonth = object.memberMonth ?? 0
+    message.userComment = object.userComment ?? ''
+    return message
   },
-};
+}
 
 function createBaseLiveChatMembershipGiftingDetails(): LiveChatMembershipGiftingDetails {
-  return { giftMembershipsCount: 0, giftMembershipsLevelName: "" };
+  return { giftMembershipsCount: 0, giftMembershipsLevelName: '' }
 }
 
 export const LiveChatMembershipGiftingDetails: MessageFns<LiveChatMembershipGiftingDetails> = {
-  encode(message: LiveChatMembershipGiftingDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+  encode(
+    message: LiveChatMembershipGiftingDetails,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
     if (message.giftMembershipsCount !== undefined && message.giftMembershipsCount !== 0) {
-      writer.uint32(8).int32(message.giftMembershipsCount);
+      writer.uint32(8).int32(message.giftMembershipsCount)
     }
-    if (message.giftMembershipsLevelName !== undefined && message.giftMembershipsLevelName !== "") {
-      writer.uint32(18).string(message.giftMembershipsLevelName);
+    if (message.giftMembershipsLevelName !== undefined && message.giftMembershipsLevelName !== '') {
+      writer.uint32(18).string(message.giftMembershipsLevelName)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatMembershipGiftingDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatMembershipGiftingDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatMembershipGiftingDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 8) {
-            break;
+            break
           }
 
-          message.giftMembershipsCount = reader.int32();
-          continue;
+          message.giftMembershipsCount = reader.int32()
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.giftMembershipsLevelName = reader.string();
-          continue;
+          message.giftMembershipsLevelName = reader.string()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatMembershipGiftingDetails {
@@ -2934,277 +2956,299 @@ export const LiveChatMembershipGiftingDetails: MessageFns<LiveChatMembershipGift
       giftMembershipsCount: isSet(object.giftMembershipsCount)
         ? globalThis.Number(object.giftMembershipsCount)
         : isSet(object.gift_memberships_count)
-        ? globalThis.Number(object.gift_memberships_count)
-        : 0,
+          ? globalThis.Number(object.gift_memberships_count)
+          : 0,
       giftMembershipsLevelName: isSet(object.giftMembershipsLevelName)
         ? globalThis.String(object.giftMembershipsLevelName)
         : isSet(object.gift_memberships_level_name)
-        ? globalThis.String(object.gift_memberships_level_name)
-        : "",
-    };
+          ? globalThis.String(object.gift_memberships_level_name)
+          : '',
+    }
   },
 
   toJSON(message: LiveChatMembershipGiftingDetails): unknown {
-    const obj: any = {};
+    const obj: any = {}
     if (message.giftMembershipsCount !== undefined && message.giftMembershipsCount !== 0) {
-      obj.giftMembershipsCount = Math.round(message.giftMembershipsCount);
+      obj.giftMembershipsCount = Math.round(message.giftMembershipsCount)
     }
-    if (message.giftMembershipsLevelName !== undefined && message.giftMembershipsLevelName !== "") {
-      obj.giftMembershipsLevelName = message.giftMembershipsLevelName;
+    if (message.giftMembershipsLevelName !== undefined && message.giftMembershipsLevelName !== '') {
+      obj.giftMembershipsLevelName = message.giftMembershipsLevelName
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<LiveChatMembershipGiftingDetails>, I>>(
     base?: I,
   ): LiveChatMembershipGiftingDetails {
-    return LiveChatMembershipGiftingDetails.fromPartial(base ?? ({} as any));
+    return LiveChatMembershipGiftingDetails.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<LiveChatMembershipGiftingDetails>, I>>(
     object: I,
   ): LiveChatMembershipGiftingDetails {
-    const message = createBaseLiveChatMembershipGiftingDetails();
-    message.giftMembershipsCount = object.giftMembershipsCount ?? 0;
-    message.giftMembershipsLevelName = object.giftMembershipsLevelName ?? "";
-    return message;
+    const message = createBaseLiveChatMembershipGiftingDetails()
+    message.giftMembershipsCount = object.giftMembershipsCount ?? 0
+    message.giftMembershipsLevelName = object.giftMembershipsLevelName ?? ''
+    return message
   },
-};
-
-function createBaseLiveChatGiftMembershipReceivedDetails(): LiveChatGiftMembershipReceivedDetails {
-  return { memberLevelName: "", gifterChannelId: "", associatedMembershipGiftingMessageId: "" };
 }
 
-export const LiveChatGiftMembershipReceivedDetails: MessageFns<LiveChatGiftMembershipReceivedDetails> = {
-  encode(message: LiveChatGiftMembershipReceivedDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.memberLevelName !== undefined && message.memberLevelName !== "") {
-      writer.uint32(10).string(message.memberLevelName);
-    }
-    if (message.gifterChannelId !== undefined && message.gifterChannelId !== "") {
-      writer.uint32(18).string(message.gifterChannelId);
-    }
-    if (
-      message.associatedMembershipGiftingMessageId !== undefined && message.associatedMembershipGiftingMessageId !== ""
-    ) {
-      writer.uint32(26).string(message.associatedMembershipGiftingMessageId);
-    }
-    return writer;
-  },
+function createBaseLiveChatGiftMembershipReceivedDetails(): LiveChatGiftMembershipReceivedDetails {
+  return { memberLevelName: '', gifterChannelId: '', associatedMembershipGiftingMessageId: '' }
+}
 
-  decode(input: BinaryReader | Uint8Array, length?: number): LiveChatGiftMembershipReceivedDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatGiftMembershipReceivedDetails();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.memberLevelName = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.gifterChannelId = reader.string();
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.associatedMembershipGiftingMessageId = reader.string();
-          continue;
-        }
+export const LiveChatGiftMembershipReceivedDetails: MessageFns<LiveChatGiftMembershipReceivedDetails> =
+  {
+    encode(
+      message: LiveChatGiftMembershipReceivedDetails,
+      writer: BinaryWriter = new BinaryWriter(),
+    ): BinaryWriter {
+      if (message.memberLevelName !== undefined && message.memberLevelName !== '') {
+        writer.uint32(10).string(message.memberLevelName)
       }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
+      if (message.gifterChannelId !== undefined && message.gifterChannelId !== '') {
+        writer.uint32(18).string(message.gifterChannelId)
       }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
+      if (
+        message.associatedMembershipGiftingMessageId !== undefined &&
+        message.associatedMembershipGiftingMessageId !== ''
+      ) {
+        writer.uint32(26).string(message.associatedMembershipGiftingMessageId)
+      }
+      return writer
+    },
 
-  fromJSON(object: any): LiveChatGiftMembershipReceivedDetails {
-    return {
-      memberLevelName: isSet(object.memberLevelName)
-        ? globalThis.String(object.memberLevelName)
-        : isSet(object.member_level_name)
-        ? globalThis.String(object.member_level_name)
-        : "",
-      gifterChannelId: isSet(object.gifterChannelId)
-        ? globalThis.String(object.gifterChannelId)
-        : isSet(object.gifter_channel_id)
-        ? globalThis.String(object.gifter_channel_id)
-        : "",
-      associatedMembershipGiftingMessageId: isSet(object.associatedMembershipGiftingMessageId)
-        ? globalThis.String(object.associatedMembershipGiftingMessageId)
-        : isSet(object.associated_membership_gifting_message_id)
-        ? globalThis.String(object.associated_membership_gifting_message_id)
-        : "",
-    };
-  },
+    decode(
+      input: BinaryReader | Uint8Array,
+      length?: number,
+    ): LiveChatGiftMembershipReceivedDetails {
+      const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+      const end = length === undefined ? reader.len : reader.pos + length
+      const message = createBaseLiveChatGiftMembershipReceivedDetails()
+      while (reader.pos < end) {
+        const tag = reader.uint32()
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break
+            }
 
-  toJSON(message: LiveChatGiftMembershipReceivedDetails): unknown {
-    const obj: any = {};
-    if (message.memberLevelName !== undefined && message.memberLevelName !== "") {
-      obj.memberLevelName = message.memberLevelName;
-    }
-    if (message.gifterChannelId !== undefined && message.gifterChannelId !== "") {
-      obj.gifterChannelId = message.gifterChannelId;
-    }
-    if (
-      message.associatedMembershipGiftingMessageId !== undefined && message.associatedMembershipGiftingMessageId !== ""
-    ) {
-      obj.associatedMembershipGiftingMessageId = message.associatedMembershipGiftingMessageId;
-    }
-    return obj;
-  },
+            message.memberLevelName = reader.string()
+            continue
+          }
+          case 2: {
+            if (tag !== 18) {
+              break
+            }
 
-  create<I extends Exact<DeepPartial<LiveChatGiftMembershipReceivedDetails>, I>>(
-    base?: I,
-  ): LiveChatGiftMembershipReceivedDetails {
-    return LiveChatGiftMembershipReceivedDetails.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<LiveChatGiftMembershipReceivedDetails>, I>>(
-    object: I,
-  ): LiveChatGiftMembershipReceivedDetails {
-    const message = createBaseLiveChatGiftMembershipReceivedDetails();
-    message.memberLevelName = object.memberLevelName ?? "";
-    message.gifterChannelId = object.gifterChannelId ?? "";
-    message.associatedMembershipGiftingMessageId = object.associatedMembershipGiftingMessageId ?? "";
-    return message;
-  },
-};
+            message.gifterChannelId = reader.string()
+            continue
+          }
+          case 3: {
+            if (tag !== 26) {
+              break
+            }
+
+            message.associatedMembershipGiftingMessageId = reader.string()
+            continue
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break
+        }
+        reader.skip(tag & 7)
+      }
+      return message
+    },
+
+    fromJSON(object: any): LiveChatGiftMembershipReceivedDetails {
+      return {
+        memberLevelName: isSet(object.memberLevelName)
+          ? globalThis.String(object.memberLevelName)
+          : isSet(object.member_level_name)
+            ? globalThis.String(object.member_level_name)
+            : '',
+        gifterChannelId: isSet(object.gifterChannelId)
+          ? globalThis.String(object.gifterChannelId)
+          : isSet(object.gifter_channel_id)
+            ? globalThis.String(object.gifter_channel_id)
+            : '',
+        associatedMembershipGiftingMessageId: isSet(object.associatedMembershipGiftingMessageId)
+          ? globalThis.String(object.associatedMembershipGiftingMessageId)
+          : isSet(object.associated_membership_gifting_message_id)
+            ? globalThis.String(object.associated_membership_gifting_message_id)
+            : '',
+      }
+    },
+
+    toJSON(message: LiveChatGiftMembershipReceivedDetails): unknown {
+      const obj: any = {}
+      if (message.memberLevelName !== undefined && message.memberLevelName !== '') {
+        obj.memberLevelName = message.memberLevelName
+      }
+      if (message.gifterChannelId !== undefined && message.gifterChannelId !== '') {
+        obj.gifterChannelId = message.gifterChannelId
+      }
+      if (
+        message.associatedMembershipGiftingMessageId !== undefined &&
+        message.associatedMembershipGiftingMessageId !== ''
+      ) {
+        obj.associatedMembershipGiftingMessageId = message.associatedMembershipGiftingMessageId
+      }
+      return obj
+    },
+
+    create<I extends Exact<DeepPartial<LiveChatGiftMembershipReceivedDetails>, I>>(
+      base?: I,
+    ): LiveChatGiftMembershipReceivedDetails {
+      return LiveChatGiftMembershipReceivedDetails.fromPartial(base ?? ({} as any))
+    },
+    fromPartial<I extends Exact<DeepPartial<LiveChatGiftMembershipReceivedDetails>, I>>(
+      object: I,
+    ): LiveChatGiftMembershipReceivedDetails {
+      const message = createBaseLiveChatGiftMembershipReceivedDetails()
+      message.memberLevelName = object.memberLevelName ?? ''
+      message.gifterChannelId = object.gifterChannelId ?? ''
+      message.associatedMembershipGiftingMessageId =
+        object.associatedMembershipGiftingMessageId ?? ''
+      return message
+    },
+  }
 
 function createBaseLiveChatPollDetails(): LiveChatPollDetails {
-  return { metadata: undefined, status: 0 };
+  return { metadata: undefined, status: 0 }
 }
 
 export const LiveChatPollDetails: MessageFns<LiveChatPollDetails> = {
   encode(message: LiveChatPollDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.metadata !== undefined) {
-      LiveChatPollDetails_PollMetadata.encode(message.metadata, writer.uint32(10).fork()).join();
+      LiveChatPollDetails_PollMetadata.encode(message.metadata, writer.uint32(10).fork()).join()
     }
     if (message.status !== undefined && message.status !== 0) {
-      writer.uint32(16).int32(message.status);
+      writer.uint32(16).int32(message.status)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatPollDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatPollDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatPollDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.metadata = LiveChatPollDetails_PollMetadata.decode(reader, reader.uint32());
-          continue;
+          message.metadata = LiveChatPollDetails_PollMetadata.decode(reader, reader.uint32())
+          continue
         }
         case 2: {
           if (tag !== 16) {
-            break;
+            break
           }
 
-          message.status = reader.int32() as any;
-          continue;
+          message.status = reader.int32() as any
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatPollDetails {
     return {
-      metadata: isSet(object.metadata) ? LiveChatPollDetails_PollMetadata.fromJSON(object.metadata) : undefined,
-      status: isSet(object.status) ? liveChatPollDetails_PollStatusWrapper_PollStatusFromJSON(object.status) : 0,
-    };
+      metadata: isSet(object.metadata)
+        ? LiveChatPollDetails_PollMetadata.fromJSON(object.metadata)
+        : undefined,
+      status: isSet(object.status)
+        ? liveChatPollDetails_PollStatusWrapper_PollStatusFromJSON(object.status)
+        : 0,
+    }
   },
 
   toJSON(message: LiveChatPollDetails): unknown {
-    const obj: any = {};
+    const obj: any = {}
     if (message.metadata !== undefined) {
-      obj.metadata = LiveChatPollDetails_PollMetadata.toJSON(message.metadata);
+      obj.metadata = LiveChatPollDetails_PollMetadata.toJSON(message.metadata)
     }
     if (message.status !== undefined && message.status !== 0) {
-      obj.status = liveChatPollDetails_PollStatusWrapper_PollStatusToJSON(message.status);
+      obj.status = liveChatPollDetails_PollStatusWrapper_PollStatusToJSON(message.status)
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<LiveChatPollDetails>, I>>(base?: I): LiveChatPollDetails {
-    return LiveChatPollDetails.fromPartial(base ?? ({} as any));
+    return LiveChatPollDetails.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<LiveChatPollDetails>, I>>(object: I): LiveChatPollDetails {
-    const message = createBaseLiveChatPollDetails();
-    message.metadata = (object.metadata !== undefined && object.metadata !== null)
-      ? LiveChatPollDetails_PollMetadata.fromPartial(object.metadata)
-      : undefined;
-    message.status = object.status ?? 0;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<LiveChatPollDetails>, I>>(
+    object: I,
+  ): LiveChatPollDetails {
+    const message = createBaseLiveChatPollDetails()
+    message.metadata =
+      object.metadata !== undefined && object.metadata !== null
+        ? LiveChatPollDetails_PollMetadata.fromPartial(object.metadata)
+        : undefined
+    message.status = object.status ?? 0
+    return message
   },
-};
+}
 
 function createBaseLiveChatPollDetails_PollMetadata(): LiveChatPollDetails_PollMetadata {
-  return { questionText: "", options: [] };
+  return { questionText: '', options: [] }
 }
 
 export const LiveChatPollDetails_PollMetadata: MessageFns<LiveChatPollDetails_PollMetadata> = {
-  encode(message: LiveChatPollDetails_PollMetadata, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.questionText !== undefined && message.questionText !== "") {
-      writer.uint32(10).string(message.questionText);
+  encode(
+    message: LiveChatPollDetails_PollMetadata,
+    writer: BinaryWriter = new BinaryWriter(),
+  ): BinaryWriter {
+    if (message.questionText !== undefined && message.questionText !== '') {
+      writer.uint32(10).string(message.questionText)
     }
     for (const v of message.options) {
-      LiveChatPollDetails_PollMetadata_PollOption.encode(v!, writer.uint32(18).fork()).join();
+      LiveChatPollDetails_PollMetadata_PollOption.encode(v!, writer.uint32(18).fork()).join()
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): LiveChatPollDetails_PollMetadata {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatPollDetails_PollMetadata();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseLiveChatPollDetails_PollMetadata()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.questionText = reader.string();
-          continue;
+          message.questionText = reader.string()
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.options.push(LiveChatPollDetails_PollMetadata_PollOption.decode(reader, reader.uint32()));
-          continue;
+          message.options.push(
+            LiveChatPollDetails_PollMetadata_PollOption.decode(reader, reader.uint32()),
+          )
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): LiveChatPollDetails_PollMetadata {
@@ -3212,318 +3256,332 @@ export const LiveChatPollDetails_PollMetadata: MessageFns<LiveChatPollDetails_Po
       questionText: isSet(object.questionText)
         ? globalThis.String(object.questionText)
         : isSet(object.question_text)
-        ? globalThis.String(object.question_text)
-        : "",
+          ? globalThis.String(object.question_text)
+          : '',
       options: globalThis.Array.isArray(object?.options)
         ? object.options.map((e: any) => LiveChatPollDetails_PollMetadata_PollOption.fromJSON(e))
         : [],
-    };
+    }
   },
 
   toJSON(message: LiveChatPollDetails_PollMetadata): unknown {
-    const obj: any = {};
-    if (message.questionText !== undefined && message.questionText !== "") {
-      obj.questionText = message.questionText;
+    const obj: any = {}
+    if (message.questionText !== undefined && message.questionText !== '') {
+      obj.questionText = message.questionText
     }
     if (message.options?.length) {
-      obj.options = message.options.map((e) => LiveChatPollDetails_PollMetadata_PollOption.toJSON(e));
+      obj.options = message.options.map((e) =>
+        LiveChatPollDetails_PollMetadata_PollOption.toJSON(e),
+      )
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<LiveChatPollDetails_PollMetadata>, I>>(
     base?: I,
   ): LiveChatPollDetails_PollMetadata {
-    return LiveChatPollDetails_PollMetadata.fromPartial(base ?? ({} as any));
+    return LiveChatPollDetails_PollMetadata.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<LiveChatPollDetails_PollMetadata>, I>>(
     object: I,
   ): LiveChatPollDetails_PollMetadata {
-    const message = createBaseLiveChatPollDetails_PollMetadata();
-    message.questionText = object.questionText ?? "";
-    message.options = object.options?.map((e) => LiveChatPollDetails_PollMetadata_PollOption.fromPartial(e)) || [];
-    return message;
+    const message = createBaseLiveChatPollDetails_PollMetadata()
+    message.questionText = object.questionText ?? ''
+    message.options =
+      object.options?.map((e) => LiveChatPollDetails_PollMetadata_PollOption.fromPartial(e)) || []
+    return message
   },
-};
+}
 
 function createBaseLiveChatPollDetails_PollMetadata_PollOption(): LiveChatPollDetails_PollMetadata_PollOption {
-  return { optionText: "", tally: 0 };
+  return { optionText: '', tally: 0 }
 }
 
-export const LiveChatPollDetails_PollMetadata_PollOption: MessageFns<LiveChatPollDetails_PollMetadata_PollOption> = {
-  encode(
-    message: LiveChatPollDetails_PollMetadata_PollOption,
-    writer: BinaryWriter = new BinaryWriter(),
-  ): BinaryWriter {
-    if (message.optionText !== undefined && message.optionText !== "") {
-      writer.uint32(10).string(message.optionText);
-    }
-    if (message.tally !== undefined && message.tally !== 0) {
-      writer.uint32(16).int64(message.tally);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): LiveChatPollDetails_PollMetadata_PollOption {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatPollDetails_PollMetadata_PollOption();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.optionText = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.tally = longToNumber(reader.int64());
-          continue;
-        }
+export const LiveChatPollDetails_PollMetadata_PollOption: MessageFns<LiveChatPollDetails_PollMetadata_PollOption> =
+  {
+    encode(
+      message: LiveChatPollDetails_PollMetadata_PollOption,
+      writer: BinaryWriter = new BinaryWriter(),
+    ): BinaryWriter {
+      if (message.optionText !== undefined && message.optionText !== '') {
+        writer.uint32(10).string(message.optionText)
       }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
+      if (message.tally !== undefined && message.tally !== 0) {
+        writer.uint32(16).int64(message.tally)
       }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
+      return writer
+    },
 
-  fromJSON(object: any): LiveChatPollDetails_PollMetadata_PollOption {
-    return {
-      optionText: isSet(object.optionText)
-        ? globalThis.String(object.optionText)
-        : isSet(object.option_text)
-        ? globalThis.String(object.option_text)
-        : "",
-      tally: isSet(object.tally) ? globalThis.Number(object.tally) : 0,
-    };
-  },
+    decode(
+      input: BinaryReader | Uint8Array,
+      length?: number,
+    ): LiveChatPollDetails_PollMetadata_PollOption {
+      const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+      const end = length === undefined ? reader.len : reader.pos + length
+      const message = createBaseLiveChatPollDetails_PollMetadata_PollOption()
+      while (reader.pos < end) {
+        const tag = reader.uint32()
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break
+            }
 
-  toJSON(message: LiveChatPollDetails_PollMetadata_PollOption): unknown {
-    const obj: any = {};
-    if (message.optionText !== undefined && message.optionText !== "") {
-      obj.optionText = message.optionText;
-    }
-    if (message.tally !== undefined && message.tally !== 0) {
-      obj.tally = Math.round(message.tally);
-    }
-    return obj;
-  },
+            message.optionText = reader.string()
+            continue
+          }
+          case 2: {
+            if (tag !== 16) {
+              break
+            }
 
-  create<I extends Exact<DeepPartial<LiveChatPollDetails_PollMetadata_PollOption>, I>>(
-    base?: I,
-  ): LiveChatPollDetails_PollMetadata_PollOption {
-    return LiveChatPollDetails_PollMetadata_PollOption.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<LiveChatPollDetails_PollMetadata_PollOption>, I>>(
-    object: I,
-  ): LiveChatPollDetails_PollMetadata_PollOption {
-    const message = createBaseLiveChatPollDetails_PollMetadata_PollOption();
-    message.optionText = object.optionText ?? "";
-    message.tally = object.tally ?? 0;
-    return message;
-  },
-};
+            message.tally = longToNumber(reader.int64())
+            continue
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break
+        }
+        reader.skip(tag & 7)
+      }
+      return message
+    },
+
+    fromJSON(object: any): LiveChatPollDetails_PollMetadata_PollOption {
+      return {
+        optionText: isSet(object.optionText)
+          ? globalThis.String(object.optionText)
+          : isSet(object.option_text)
+            ? globalThis.String(object.option_text)
+            : '',
+        tally: isSet(object.tally) ? globalThis.Number(object.tally) : 0,
+      }
+    },
+
+    toJSON(message: LiveChatPollDetails_PollMetadata_PollOption): unknown {
+      const obj: any = {}
+      if (message.optionText !== undefined && message.optionText !== '') {
+        obj.optionText = message.optionText
+      }
+      if (message.tally !== undefined && message.tally !== 0) {
+        obj.tally = Math.round(message.tally)
+      }
+      return obj
+    },
+
+    create<I extends Exact<DeepPartial<LiveChatPollDetails_PollMetadata_PollOption>, I>>(
+      base?: I,
+    ): LiveChatPollDetails_PollMetadata_PollOption {
+      return LiveChatPollDetails_PollMetadata_PollOption.fromPartial(base ?? ({} as any))
+    },
+    fromPartial<I extends Exact<DeepPartial<LiveChatPollDetails_PollMetadata_PollOption>, I>>(
+      object: I,
+    ): LiveChatPollDetails_PollMetadata_PollOption {
+      const message = createBaseLiveChatPollDetails_PollMetadata_PollOption()
+      message.optionText = object.optionText ?? ''
+      message.tally = object.tally ?? 0
+      return message
+    },
+  }
 
 function createBaseLiveChatPollDetails_PollStatusWrapper(): LiveChatPollDetails_PollStatusWrapper {
-  return {};
+  return {}
 }
 
-export const LiveChatPollDetails_PollStatusWrapper: MessageFns<LiveChatPollDetails_PollStatusWrapper> = {
-  encode(_: LiveChatPollDetails_PollStatusWrapper, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    return writer;
-  },
+export const LiveChatPollDetails_PollStatusWrapper: MessageFns<LiveChatPollDetails_PollStatusWrapper> =
+  {
+    encode(
+      _: LiveChatPollDetails_PollStatusWrapper,
+      writer: BinaryWriter = new BinaryWriter(),
+    ): BinaryWriter {
+      return writer
+    },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): LiveChatPollDetails_PollStatusWrapper {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseLiveChatPollDetails_PollStatusWrapper();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
+    decode(
+      input: BinaryReader | Uint8Array,
+      length?: number,
+    ): LiveChatPollDetails_PollStatusWrapper {
+      const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+      const end = length === undefined ? reader.len : reader.pos + length
+      const message = createBaseLiveChatPollDetails_PollStatusWrapper()
+      while (reader.pos < end) {
+        const tag = reader.uint32()
+        switch (tag >>> 3) {
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break
+        }
+        reader.skip(tag & 7)
       }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
+      return message
+    },
 
-  fromJSON(_: any): LiveChatPollDetails_PollStatusWrapper {
-    return {};
-  },
+    fromJSON(_: any): LiveChatPollDetails_PollStatusWrapper {
+      return {}
+    },
 
-  toJSON(_: LiveChatPollDetails_PollStatusWrapper): unknown {
-    const obj: any = {};
-    return obj;
-  },
+    toJSON(_: LiveChatPollDetails_PollStatusWrapper): unknown {
+      const obj: any = {}
+      return obj
+    },
 
-  create<I extends Exact<DeepPartial<LiveChatPollDetails_PollStatusWrapper>, I>>(
-    base?: I,
-  ): LiveChatPollDetails_PollStatusWrapper {
-    return LiveChatPollDetails_PollStatusWrapper.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<LiveChatPollDetails_PollStatusWrapper>, I>>(
-    _: I,
-  ): LiveChatPollDetails_PollStatusWrapper {
-    const message = createBaseLiveChatPollDetails_PollStatusWrapper();
-    return message;
-  },
-};
+    create<I extends Exact<DeepPartial<LiveChatPollDetails_PollStatusWrapper>, I>>(
+      base?: I,
+    ): LiveChatPollDetails_PollStatusWrapper {
+      return LiveChatPollDetails_PollStatusWrapper.fromPartial(base ?? ({} as any))
+    },
+    fromPartial<I extends Exact<DeepPartial<LiveChatPollDetails_PollStatusWrapper>, I>>(
+      _: I,
+    ): LiveChatPollDetails_PollStatusWrapper {
+      const message = createBaseLiveChatPollDetails_PollStatusWrapper()
+      return message
+    },
+  }
 
 function createBaseSuperChatEventSnippet(): SuperChatEventSnippet {
   return {
-    channelId: "",
+    channelId: '',
     supporterDetails: undefined,
-    commentText: "",
-    createdAt: "",
+    commentText: '',
+    createdAt: '',
     amountMicros: 0,
-    currency: "",
-    displayString: "",
+    currency: '',
+    displayString: '',
     messageType: 0,
     isSuperStickerEvent: false,
     superStickerMetadata: undefined,
-  };
+  }
 }
 
 export const SuperChatEventSnippet: MessageFns<SuperChatEventSnippet> = {
   encode(message: SuperChatEventSnippet, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.channelId !== undefined && message.channelId !== "") {
-      writer.uint32(810).string(message.channelId);
+    if (message.channelId !== undefined && message.channelId !== '') {
+      writer.uint32(810).string(message.channelId)
     }
     if (message.supporterDetails !== undefined) {
-      ChannelProfileDetails.encode(message.supporterDetails, writer.uint32(18).fork()).join();
+      ChannelProfileDetails.encode(message.supporterDetails, writer.uint32(18).fork()).join()
     }
-    if (message.commentText !== undefined && message.commentText !== "") {
-      writer.uint32(26).string(message.commentText);
+    if (message.commentText !== undefined && message.commentText !== '') {
+      writer.uint32(26).string(message.commentText)
     }
-    if (message.createdAt !== undefined && message.createdAt !== "") {
-      writer.uint32(34).string(message.createdAt);
+    if (message.createdAt !== undefined && message.createdAt !== '') {
+      writer.uint32(34).string(message.createdAt)
     }
     if (message.amountMicros !== undefined && message.amountMicros !== 0) {
-      writer.uint32(40).uint64(message.amountMicros);
+      writer.uint32(40).uint64(message.amountMicros)
     }
-    if (message.currency !== undefined && message.currency !== "") {
-      writer.uint32(50).string(message.currency);
+    if (message.currency !== undefined && message.currency !== '') {
+      writer.uint32(50).string(message.currency)
     }
-    if (message.displayString !== undefined && message.displayString !== "") {
-      writer.uint32(58).string(message.displayString);
+    if (message.displayString !== undefined && message.displayString !== '') {
+      writer.uint32(58).string(message.displayString)
     }
     if (message.messageType !== undefined && message.messageType !== 0) {
-      writer.uint32(64).uint32(message.messageType);
+      writer.uint32(64).uint32(message.messageType)
     }
     if (message.isSuperStickerEvent !== undefined && message.isSuperStickerEvent !== false) {
-      writer.uint32(88).bool(message.isSuperStickerEvent);
+      writer.uint32(88).bool(message.isSuperStickerEvent)
     }
     if (message.superStickerMetadata !== undefined) {
-      SuperStickerMetadata.encode(message.superStickerMetadata, writer.uint32(98).fork()).join();
+      SuperStickerMetadata.encode(message.superStickerMetadata, writer.uint32(98).fork()).join()
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): SuperChatEventSnippet {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSuperChatEventSnippet();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseSuperChatEventSnippet()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 101: {
           if (tag !== 810) {
-            break;
+            break
           }
 
-          message.channelId = reader.string();
-          continue;
+          message.channelId = reader.string()
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.supporterDetails = ChannelProfileDetails.decode(reader, reader.uint32());
-          continue;
+          message.supporterDetails = ChannelProfileDetails.decode(reader, reader.uint32())
+          continue
         }
         case 3: {
           if (tag !== 26) {
-            break;
+            break
           }
 
-          message.commentText = reader.string();
-          continue;
+          message.commentText = reader.string()
+          continue
         }
         case 4: {
           if (tag !== 34) {
-            break;
+            break
           }
 
-          message.createdAt = reader.string();
-          continue;
+          message.createdAt = reader.string()
+          continue
         }
         case 5: {
           if (tag !== 40) {
-            break;
+            break
           }
 
-          message.amountMicros = longToNumber(reader.uint64());
-          continue;
+          message.amountMicros = longToNumber(reader.uint64())
+          continue
         }
         case 6: {
           if (tag !== 50) {
-            break;
+            break
           }
 
-          message.currency = reader.string();
-          continue;
+          message.currency = reader.string()
+          continue
         }
         case 7: {
           if (tag !== 58) {
-            break;
+            break
           }
 
-          message.displayString = reader.string();
-          continue;
+          message.displayString = reader.string()
+          continue
         }
         case 8: {
           if (tag !== 64) {
-            break;
+            break
           }
 
-          message.messageType = reader.uint32();
-          continue;
+          message.messageType = reader.uint32()
+          continue
         }
         case 11: {
           if (tag !== 88) {
-            break;
+            break
           }
 
-          message.isSuperStickerEvent = reader.bool();
-          continue;
+          message.isSuperStickerEvent = reader.bool()
+          continue
         }
         case 12: {
           if (tag !== 98) {
-            break;
+            break
           }
 
-          message.superStickerMetadata = SuperStickerMetadata.decode(reader, reader.uint32());
-          continue;
+          message.superStickerMetadata = SuperStickerMetadata.decode(reader, reader.uint32())
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): SuperChatEventSnippet {
@@ -3531,166 +3589,170 @@ export const SuperChatEventSnippet: MessageFns<SuperChatEventSnippet> = {
       channelId: isSet(object.channelId)
         ? globalThis.String(object.channelId)
         : isSet(object.channel_id)
-        ? globalThis.String(object.channel_id)
-        : "",
+          ? globalThis.String(object.channel_id)
+          : '',
       supporterDetails: isSet(object.supporterDetails)
         ? ChannelProfileDetails.fromJSON(object.supporterDetails)
         : isSet(object.supporter_details)
-        ? ChannelProfileDetails.fromJSON(object.supporter_details)
-        : undefined,
+          ? ChannelProfileDetails.fromJSON(object.supporter_details)
+          : undefined,
       commentText: isSet(object.commentText)
         ? globalThis.String(object.commentText)
         : isSet(object.comment_text)
-        ? globalThis.String(object.comment_text)
-        : "",
+          ? globalThis.String(object.comment_text)
+          : '',
       createdAt: isSet(object.createdAt)
         ? globalThis.String(object.createdAt)
         : isSet(object.created_at)
-        ? globalThis.String(object.created_at)
-        : "",
+          ? globalThis.String(object.created_at)
+          : '',
       amountMicros: isSet(object.amountMicros)
         ? globalThis.Number(object.amountMicros)
         : isSet(object.amount_micros)
-        ? globalThis.Number(object.amount_micros)
-        : 0,
-      currency: isSet(object.currency) ? globalThis.String(object.currency) : "",
+          ? globalThis.Number(object.amount_micros)
+          : 0,
+      currency: isSet(object.currency) ? globalThis.String(object.currency) : '',
       displayString: isSet(object.displayString)
         ? globalThis.String(object.displayString)
         : isSet(object.display_string)
-        ? globalThis.String(object.display_string)
-        : "",
+          ? globalThis.String(object.display_string)
+          : '',
       messageType: isSet(object.messageType)
         ? globalThis.Number(object.messageType)
         : isSet(object.message_type)
-        ? globalThis.Number(object.message_type)
-        : 0,
+          ? globalThis.Number(object.message_type)
+          : 0,
       isSuperStickerEvent: isSet(object.isSuperStickerEvent)
         ? globalThis.Boolean(object.isSuperStickerEvent)
         : isSet(object.is_super_sticker_event)
-        ? globalThis.Boolean(object.is_super_sticker_event)
-        : false,
+          ? globalThis.Boolean(object.is_super_sticker_event)
+          : false,
       superStickerMetadata: isSet(object.superStickerMetadata)
         ? SuperStickerMetadata.fromJSON(object.superStickerMetadata)
         : isSet(object.super_sticker_metadata)
-        ? SuperStickerMetadata.fromJSON(object.super_sticker_metadata)
-        : undefined,
-    };
+          ? SuperStickerMetadata.fromJSON(object.super_sticker_metadata)
+          : undefined,
+    }
   },
 
   toJSON(message: SuperChatEventSnippet): unknown {
-    const obj: any = {};
-    if (message.channelId !== undefined && message.channelId !== "") {
-      obj.channelId = message.channelId;
+    const obj: any = {}
+    if (message.channelId !== undefined && message.channelId !== '') {
+      obj.channelId = message.channelId
     }
     if (message.supporterDetails !== undefined) {
-      obj.supporterDetails = ChannelProfileDetails.toJSON(message.supporterDetails);
+      obj.supporterDetails = ChannelProfileDetails.toJSON(message.supporterDetails)
     }
-    if (message.commentText !== undefined && message.commentText !== "") {
-      obj.commentText = message.commentText;
+    if (message.commentText !== undefined && message.commentText !== '') {
+      obj.commentText = message.commentText
     }
-    if (message.createdAt !== undefined && message.createdAt !== "") {
-      obj.createdAt = message.createdAt;
+    if (message.createdAt !== undefined && message.createdAt !== '') {
+      obj.createdAt = message.createdAt
     }
     if (message.amountMicros !== undefined && message.amountMicros !== 0) {
-      obj.amountMicros = Math.round(message.amountMicros);
+      obj.amountMicros = Math.round(message.amountMicros)
     }
-    if (message.currency !== undefined && message.currency !== "") {
-      obj.currency = message.currency;
+    if (message.currency !== undefined && message.currency !== '') {
+      obj.currency = message.currency
     }
-    if (message.displayString !== undefined && message.displayString !== "") {
-      obj.displayString = message.displayString;
+    if (message.displayString !== undefined && message.displayString !== '') {
+      obj.displayString = message.displayString
     }
     if (message.messageType !== undefined && message.messageType !== 0) {
-      obj.messageType = Math.round(message.messageType);
+      obj.messageType = Math.round(message.messageType)
     }
     if (message.isSuperStickerEvent !== undefined && message.isSuperStickerEvent !== false) {
-      obj.isSuperStickerEvent = message.isSuperStickerEvent;
+      obj.isSuperStickerEvent = message.isSuperStickerEvent
     }
     if (message.superStickerMetadata !== undefined) {
-      obj.superStickerMetadata = SuperStickerMetadata.toJSON(message.superStickerMetadata);
+      obj.superStickerMetadata = SuperStickerMetadata.toJSON(message.superStickerMetadata)
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<SuperChatEventSnippet>, I>>(base?: I): SuperChatEventSnippet {
-    return SuperChatEventSnippet.fromPartial(base ?? ({} as any));
+    return SuperChatEventSnippet.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<SuperChatEventSnippet>, I>>(object: I): SuperChatEventSnippet {
-    const message = createBaseSuperChatEventSnippet();
-    message.channelId = object.channelId ?? "";
-    message.supporterDetails = (object.supporterDetails !== undefined && object.supporterDetails !== null)
-      ? ChannelProfileDetails.fromPartial(object.supporterDetails)
-      : undefined;
-    message.commentText = object.commentText ?? "";
-    message.createdAt = object.createdAt ?? "";
-    message.amountMicros = object.amountMicros ?? 0;
-    message.currency = object.currency ?? "";
-    message.displayString = object.displayString ?? "";
-    message.messageType = object.messageType ?? 0;
-    message.isSuperStickerEvent = object.isSuperStickerEvent ?? false;
-    message.superStickerMetadata = (object.superStickerMetadata !== undefined && object.superStickerMetadata !== null)
-      ? SuperStickerMetadata.fromPartial(object.superStickerMetadata)
-      : undefined;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<SuperChatEventSnippet>, I>>(
+    object: I,
+  ): SuperChatEventSnippet {
+    const message = createBaseSuperChatEventSnippet()
+    message.channelId = object.channelId ?? ''
+    message.supporterDetails =
+      object.supporterDetails !== undefined && object.supporterDetails !== null
+        ? ChannelProfileDetails.fromPartial(object.supporterDetails)
+        : undefined
+    message.commentText = object.commentText ?? ''
+    message.createdAt = object.createdAt ?? ''
+    message.amountMicros = object.amountMicros ?? 0
+    message.currency = object.currency ?? ''
+    message.displayString = object.displayString ?? ''
+    message.messageType = object.messageType ?? 0
+    message.isSuperStickerEvent = object.isSuperStickerEvent ?? false
+    message.superStickerMetadata =
+      object.superStickerMetadata !== undefined && object.superStickerMetadata !== null
+        ? SuperStickerMetadata.fromPartial(object.superStickerMetadata)
+        : undefined
+    return message
   },
-};
+}
 
 function createBaseSuperStickerMetadata(): SuperStickerMetadata {
-  return { stickerId: "", altText: "", altTextLanguage: "" };
+  return { stickerId: '', altText: '', altTextLanguage: '' }
 }
 
 export const SuperStickerMetadata: MessageFns<SuperStickerMetadata> = {
   encode(message: SuperStickerMetadata, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.stickerId !== undefined && message.stickerId !== "") {
-      writer.uint32(10).string(message.stickerId);
+    if (message.stickerId !== undefined && message.stickerId !== '') {
+      writer.uint32(10).string(message.stickerId)
     }
-    if (message.altText !== undefined && message.altText !== "") {
-      writer.uint32(18).string(message.altText);
+    if (message.altText !== undefined && message.altText !== '') {
+      writer.uint32(18).string(message.altText)
     }
-    if (message.altTextLanguage !== undefined && message.altTextLanguage !== "") {
-      writer.uint32(26).string(message.altTextLanguage);
+    if (message.altTextLanguage !== undefined && message.altTextLanguage !== '') {
+      writer.uint32(26).string(message.altTextLanguage)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): SuperStickerMetadata {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSuperStickerMetadata();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseSuperStickerMetadata()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.stickerId = reader.string();
-          continue;
+          message.stickerId = reader.string()
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.altText = reader.string();
-          continue;
+          message.altText = reader.string()
+          continue
         }
         case 3: {
           if (tag !== 26) {
-            break;
+            break
           }
 
-          message.altTextLanguage = reader.string();
-          continue;
+          message.altTextLanguage = reader.string()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): SuperStickerMetadata {
@@ -3698,114 +3760,116 @@ export const SuperStickerMetadata: MessageFns<SuperStickerMetadata> = {
       stickerId: isSet(object.stickerId)
         ? globalThis.String(object.stickerId)
         : isSet(object.sticker_id)
-        ? globalThis.String(object.sticker_id)
-        : "",
+          ? globalThis.String(object.sticker_id)
+          : '',
       altText: isSet(object.altText)
         ? globalThis.String(object.altText)
         : isSet(object.alt_text)
-        ? globalThis.String(object.alt_text)
-        : "",
+          ? globalThis.String(object.alt_text)
+          : '',
       altTextLanguage: isSet(object.altTextLanguage)
         ? globalThis.String(object.altTextLanguage)
         : isSet(object.alt_text_language)
-        ? globalThis.String(object.alt_text_language)
-        : "",
-    };
+          ? globalThis.String(object.alt_text_language)
+          : '',
+    }
   },
 
   toJSON(message: SuperStickerMetadata): unknown {
-    const obj: any = {};
-    if (message.stickerId !== undefined && message.stickerId !== "") {
-      obj.stickerId = message.stickerId;
+    const obj: any = {}
+    if (message.stickerId !== undefined && message.stickerId !== '') {
+      obj.stickerId = message.stickerId
     }
-    if (message.altText !== undefined && message.altText !== "") {
-      obj.altText = message.altText;
+    if (message.altText !== undefined && message.altText !== '') {
+      obj.altText = message.altText
     }
-    if (message.altTextLanguage !== undefined && message.altTextLanguage !== "") {
-      obj.altTextLanguage = message.altTextLanguage;
+    if (message.altTextLanguage !== undefined && message.altTextLanguage !== '') {
+      obj.altTextLanguage = message.altTextLanguage
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<SuperStickerMetadata>, I>>(base?: I): SuperStickerMetadata {
-    return SuperStickerMetadata.fromPartial(base ?? ({} as any));
+    return SuperStickerMetadata.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<SuperStickerMetadata>, I>>(object: I): SuperStickerMetadata {
-    const message = createBaseSuperStickerMetadata();
-    message.stickerId = object.stickerId ?? "";
-    message.altText = object.altText ?? "";
-    message.altTextLanguage = object.altTextLanguage ?? "";
-    return message;
+  fromPartial<I extends Exact<DeepPartial<SuperStickerMetadata>, I>>(
+    object: I,
+  ): SuperStickerMetadata {
+    const message = createBaseSuperStickerMetadata()
+    message.stickerId = object.stickerId ?? ''
+    message.altText = object.altText ?? ''
+    message.altTextLanguage = object.altTextLanguage ?? ''
+    return message
   },
-};
+}
 
 function createBaseChannelProfileDetails(): ChannelProfileDetails {
-  return { channelId: "", channelUrl: "", displayName: "", profileImageUrl: "" };
+  return { channelId: '', channelUrl: '', displayName: '', profileImageUrl: '' }
 }
 
 export const ChannelProfileDetails: MessageFns<ChannelProfileDetails> = {
   encode(message: ChannelProfileDetails, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.channelId !== undefined && message.channelId !== "") {
-      writer.uint32(810).string(message.channelId);
+    if (message.channelId !== undefined && message.channelId !== '') {
+      writer.uint32(810).string(message.channelId)
     }
-    if (message.channelUrl !== undefined && message.channelUrl !== "") {
-      writer.uint32(18).string(message.channelUrl);
+    if (message.channelUrl !== undefined && message.channelUrl !== '') {
+      writer.uint32(18).string(message.channelUrl)
     }
-    if (message.displayName !== undefined && message.displayName !== "") {
-      writer.uint32(26).string(message.displayName);
+    if (message.displayName !== undefined && message.displayName !== '') {
+      writer.uint32(26).string(message.displayName)
     }
-    if (message.profileImageUrl !== undefined && message.profileImageUrl !== "") {
-      writer.uint32(34).string(message.profileImageUrl);
+    if (message.profileImageUrl !== undefined && message.profileImageUrl !== '') {
+      writer.uint32(34).string(message.profileImageUrl)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): ChannelProfileDetails {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseChannelProfileDetails();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseChannelProfileDetails()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 101: {
           if (tag !== 810) {
-            break;
+            break
           }
 
-          message.channelId = reader.string();
-          continue;
+          message.channelId = reader.string()
+          continue
         }
         case 2: {
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.channelUrl = reader.string();
-          continue;
+          message.channelUrl = reader.string()
+          continue
         }
         case 3: {
           if (tag !== 26) {
-            break;
+            break
           }
 
-          message.displayName = reader.string();
-          continue;
+          message.displayName = reader.string()
+          continue
         }
         case 4: {
           if (tag !== 34) {
-            break;
+            break
           }
 
-          message.profileImageUrl = reader.string();
-          continue;
+          message.profileImageUrl = reader.string()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): ChannelProfileDetails {
@@ -3813,101 +3877,103 @@ export const ChannelProfileDetails: MessageFns<ChannelProfileDetails> = {
       channelId: isSet(object.channelId)
         ? globalThis.String(object.channelId)
         : isSet(object.channel_id)
-        ? globalThis.String(object.channel_id)
-        : "",
+          ? globalThis.String(object.channel_id)
+          : '',
       channelUrl: isSet(object.channelUrl)
         ? globalThis.String(object.channelUrl)
         : isSet(object.channel_url)
-        ? globalThis.String(object.channel_url)
-        : "",
+          ? globalThis.String(object.channel_url)
+          : '',
       displayName: isSet(object.displayName)
         ? globalThis.String(object.displayName)
         : isSet(object.display_name)
-        ? globalThis.String(object.display_name)
-        : "",
+          ? globalThis.String(object.display_name)
+          : '',
       profileImageUrl: isSet(object.profileImageUrl)
         ? globalThis.String(object.profileImageUrl)
         : isSet(object.profile_image_url)
-        ? globalThis.String(object.profile_image_url)
-        : "",
-    };
+          ? globalThis.String(object.profile_image_url)
+          : '',
+    }
   },
 
   toJSON(message: ChannelProfileDetails): unknown {
-    const obj: any = {};
-    if (message.channelId !== undefined && message.channelId !== "") {
-      obj.channelId = message.channelId;
+    const obj: any = {}
+    if (message.channelId !== undefined && message.channelId !== '') {
+      obj.channelId = message.channelId
     }
-    if (message.channelUrl !== undefined && message.channelUrl !== "") {
-      obj.channelUrl = message.channelUrl;
+    if (message.channelUrl !== undefined && message.channelUrl !== '') {
+      obj.channelUrl = message.channelUrl
     }
-    if (message.displayName !== undefined && message.displayName !== "") {
-      obj.displayName = message.displayName;
+    if (message.displayName !== undefined && message.displayName !== '') {
+      obj.displayName = message.displayName
     }
-    if (message.profileImageUrl !== undefined && message.profileImageUrl !== "") {
-      obj.profileImageUrl = message.profileImageUrl;
+    if (message.profileImageUrl !== undefined && message.profileImageUrl !== '') {
+      obj.profileImageUrl = message.profileImageUrl
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<ChannelProfileDetails>, I>>(base?: I): ChannelProfileDetails {
-    return ChannelProfileDetails.fromPartial(base ?? ({} as any));
+    return ChannelProfileDetails.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<ChannelProfileDetails>, I>>(object: I): ChannelProfileDetails {
-    const message = createBaseChannelProfileDetails();
-    message.channelId = object.channelId ?? "";
-    message.channelUrl = object.channelUrl ?? "";
-    message.displayName = object.displayName ?? "";
-    message.profileImageUrl = object.profileImageUrl ?? "";
-    return message;
+  fromPartial<I extends Exact<DeepPartial<ChannelProfileDetails>, I>>(
+    object: I,
+  ): ChannelProfileDetails {
+    const message = createBaseChannelProfileDetails()
+    message.channelId = object.channelId ?? ''
+    message.channelUrl = object.channelUrl ?? ''
+    message.displayName = object.displayName ?? ''
+    message.profileImageUrl = object.profileImageUrl ?? ''
+    return message
   },
-};
+}
 
 function createBasePageInfo(): PageInfo {
-  return { totalResults: 0, resultsPerPage: 0 };
+  return { totalResults: 0, resultsPerPage: 0 }
 }
 
 export const PageInfo: MessageFns<PageInfo> = {
   encode(message: PageInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.totalResults !== undefined && message.totalResults !== 0) {
-      writer.uint32(8).int32(message.totalResults);
+      writer.uint32(8).int32(message.totalResults)
     }
     if (message.resultsPerPage !== undefined && message.resultsPerPage !== 0) {
-      writer.uint32(16).int32(message.resultsPerPage);
+      writer.uint32(16).int32(message.resultsPerPage)
     }
-    return writer;
+    return writer
   },
 
   decode(input: BinaryReader | Uint8Array, length?: number): PageInfo {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBasePageInfo();
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+    const end = length === undefined ? reader.len : reader.pos + length
+    const message = createBasePageInfo()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1: {
           if (tag !== 8) {
-            break;
+            break
           }
 
-          message.totalResults = reader.int32();
-          continue;
+          message.totalResults = reader.int32()
+          continue
         }
         case 2: {
           if (tag !== 16) {
-            break;
+            break
           }
 
-          message.resultsPerPage = reader.int32();
-          continue;
+          message.resultsPerPage = reader.int32()
+          continue
         }
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skip(tag & 7);
+      reader.skip(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): PageInfo {
@@ -3915,57 +3981,59 @@ export const PageInfo: MessageFns<PageInfo> = {
       totalResults: isSet(object.totalResults)
         ? globalThis.Number(object.totalResults)
         : isSet(object.total_results)
-        ? globalThis.Number(object.total_results)
-        : 0,
+          ? globalThis.Number(object.total_results)
+          : 0,
       resultsPerPage: isSet(object.resultsPerPage)
         ? globalThis.Number(object.resultsPerPage)
         : isSet(object.results_per_page)
-        ? globalThis.Number(object.results_per_page)
-        : 0,
-    };
+          ? globalThis.Number(object.results_per_page)
+          : 0,
+    }
   },
 
   toJSON(message: PageInfo): unknown {
-    const obj: any = {};
+    const obj: any = {}
     if (message.totalResults !== undefined && message.totalResults !== 0) {
-      obj.totalResults = Math.round(message.totalResults);
+      obj.totalResults = Math.round(message.totalResults)
     }
     if (message.resultsPerPage !== undefined && message.resultsPerPage !== 0) {
-      obj.resultsPerPage = Math.round(message.resultsPerPage);
+      obj.resultsPerPage = Math.round(message.resultsPerPage)
     }
-    return obj;
+    return obj
   },
 
   create<I extends Exact<DeepPartial<PageInfo>, I>>(base?: I): PageInfo {
-    return PageInfo.fromPartial(base ?? ({} as any));
+    return PageInfo.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<PageInfo>, I>>(object: I): PageInfo {
-    const message = createBasePageInfo();
-    message.totalResults = object.totalResults ?? 0;
-    message.resultsPerPage = object.resultsPerPage ?? 0;
-    return message;
+    const message = createBasePageInfo()
+    message.totalResults = object.totalResults ?? 0
+    message.resultsPerPage = object.resultsPerPage ?? 0
+    return message
   },
-};
+}
 
-export type V3DataLiveChatMessageServiceService = typeof V3DataLiveChatMessageServiceService;
+export type V3DataLiveChatMessageServiceService = typeof V3DataLiveChatMessageServiceService
 export const V3DataLiveChatMessageServiceService = {
   /** Allows a user to load live chat through a server-streamed RPC. */
   streamList: {
-    path: "/youtube.api.v3.V3DataLiveChatMessageService/StreamList" as const,
+    path: '/youtube.api.v3.V3DataLiveChatMessageService/StreamList' as const,
     requestStream: false as const,
     responseStream: true as const,
     requestSerialize: (value: LiveChatMessageListRequest): Buffer =>
       Buffer.from(LiveChatMessageListRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): LiveChatMessageListRequest => LiveChatMessageListRequest.decode(value),
+    requestDeserialize: (value: Buffer): LiveChatMessageListRequest =>
+      LiveChatMessageListRequest.decode(value),
     responseSerialize: (value: LiveChatMessageListResponse): Buffer =>
       Buffer.from(LiveChatMessageListResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): LiveChatMessageListResponse => LiveChatMessageListResponse.decode(value),
+    responseDeserialize: (value: Buffer): LiveChatMessageListResponse =>
+      LiveChatMessageListResponse.decode(value),
   },
-} as const;
+} as const
 
 export interface V3DataLiveChatMessageServiceServer extends UntypedServiceImplementation {
   /** Allows a user to load live chat through a server-streamed RPC. */
-  streamList: handleServerStreamingCall<LiveChatMessageListRequest, LiveChatMessageListResponse>;
+  streamList: handleServerStreamingCall<LiveChatMessageListRequest, LiveChatMessageListResponse>
 }
 
 export interface V3DataLiveChatMessageServiceClient extends Client {
@@ -3973,59 +4041,64 @@ export interface V3DataLiveChatMessageServiceClient extends Client {
   streamList(
     request: LiveChatMessageListRequest,
     options?: Partial<CallOptions>,
-  ): ClientReadableStream<LiveChatMessageListResponse>;
+  ): ClientReadableStream<LiveChatMessageListResponse>
   streamList(
     request: LiveChatMessageListRequest,
     metadata?: Metadata,
     options?: Partial<CallOptions>,
-  ): ClientReadableStream<LiveChatMessageListResponse>;
+  ): ClientReadableStream<LiveChatMessageListResponse>
 }
 
 export const V3DataLiveChatMessageServiceClient = makeGenericClientConstructor(
   V3DataLiveChatMessageServiceService,
-  "youtube.api.v3.V3DataLiveChatMessageService",
+  'youtube.api.v3.V3DataLiveChatMessageService',
 ) as unknown as {
   new (
     address: string,
     credentials: ChannelCredentials,
     options?: Partial<ClientOptions>,
-  ): V3DataLiveChatMessageServiceClient;
-  service: typeof V3DataLiveChatMessageServiceService;
-  serviceName: string;
-};
+  ): V3DataLiveChatMessageServiceClient
+  service: typeof V3DataLiveChatMessageServiceService
+  serviceName: string
+}
 
-type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
+type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined
 
-type DeepPartial<T> = T extends Builtin ? T
-  : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
-  : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
-  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
-  : Partial<T>;
+type DeepPartial<T> = T extends Builtin
+  ? T
+  : T extends globalThis.Array<infer U>
+    ? globalThis.Array<DeepPartial<U>>
+    : T extends ReadonlyArray<infer U>
+      ? ReadonlyArray<DeepPartial<U>>
+      : T extends {}
+        ? { [K in keyof T]?: DeepPartial<T[K]> }
+        : Partial<T>
 
-type KeysOfUnion<T> = T extends T ? keyof T : never;
-type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+type KeysOfUnion<T> = T extends T ? keyof T : never
+type Exact<P, I extends P> = P extends Builtin
+  ? P
+  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never }
 
 function longToNumber(int64: { toString(): string }): number {
-  const num = globalThis.Number(int64.toString());
+  const num = globalThis.Number(int64.toString())
   if (num > globalThis.Number.MAX_SAFE_INTEGER) {
-    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
+    throw new globalThis.Error('Value is larger than Number.MAX_SAFE_INTEGER')
   }
   if (num < globalThis.Number.MIN_SAFE_INTEGER) {
-    throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
+    throw new globalThis.Error('Value is smaller than Number.MIN_SAFE_INTEGER')
   }
-  return num;
+  return num
 }
 
 function isSet(value: any): boolean {
-  return value !== null && value !== undefined;
+  return value !== null && value !== undefined
 }
 
 interface MessageFns<T> {
-  encode(message: T, writer?: BinaryWriter): BinaryWriter;
-  decode(input: BinaryReader | Uint8Array, length?: number): T;
-  fromJSON(object: any): T;
-  toJSON(message: T): unknown;
-  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
-  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
+  encode(message: T, writer?: BinaryWriter): BinaryWriter
+  decode(input: BinaryReader | Uint8Array, length?: number): T
+  fromJSON(object: any): T
+  toJSON(message: T): unknown
+  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T
+  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T
 }

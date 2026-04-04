@@ -1,5 +1,44 @@
 - use worktree_create(branch, baseBranch?) and worktree_delete(reason) tools when working on features.
 
+## Code Formatting and Linting
+
+This project uses **oxlint** (linter) and **oxfmt** (formatter) from the Oxc toolchain.
+
+### Configuration
+
+- **Linter config**: `.oxlintrc.json`
+- **Formatter config**: `.oxfmtrc.json`
+- **Format rules**: max 100 chars per line, no semicolons, single quotes, sorted imports
+
+### Scripts
+
+```bash
+bun run lint          # Check for lint errors
+bun run lint:fix      # Fix auto-fixable lint issues
+bun run format        # Format all files
+bun run format:check  # Check formatting without modifying
+bun run check         # Run typecheck + lint + format check
+bun run fix           # Fix lint and format issues
+```
+
+### IMPORTANT: Format After Changes
+
+**ALWAYS run `bun run fix` after creating or modifying files.**
+
+Before declaring any task complete:
+
+1. Run `bun run fix` to auto-format and fix lint issues
+2. Verify no lint errors remain: `bun run lint`
+3. Verify no type errors: `bun run typecheck`
+
+### Editor Integration
+
+**VSCode**: Extension `oxc.oxc-vscode` — auto-format and fix on save enabled
+**Zed**: Extension "Oxc" — configured in `.zed/settings.json`
+**JetBrains**: Plugin "Oxc" — external tools configured in `.idea/`
+
+---
+
 Default to using Bun instead of Node.js.
 
 - Use `bun <file>` instead of `node <file>` or `ts-node <file>`

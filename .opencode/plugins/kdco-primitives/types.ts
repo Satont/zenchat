@@ -4,7 +4,7 @@
  * @module kdco-primitives/types
  */
 
-import type { createOpencodeClient } from "@opencode-ai/sdk"
+import type { createOpencodeClient } from '@opencode-ai/sdk'
 
 /**
  * OpenCode client instance type.

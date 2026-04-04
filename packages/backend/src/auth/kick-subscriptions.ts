@@ -7,24 +7,24 @@
  * Docs: https://docs.kick.com/events/subscriptions
  */
 
-import { config } from "../config.ts";
+import { config } from '../config.ts'
 
-const KICK_API_BASE = "https://api.kick.com/public/v1";
+const KICK_API_BASE = 'https://api.kick.com/public/v1'
 
 // The public URL where Kick will POST webhook events.
-const WEBHOOK_URL = config.KICK_WEBHOOK_URL;
+const WEBHOOK_URL = config.KICK_WEBHOOK_URL
 
 const EVENT_TYPES = [
-  "chat.message.sent",
-  "channel.followed",
-  "channel.subscription.new",
-  "channel.subscription.renewal",
-  "channel.subscription.gifts",
-] as const;
+  'chat.message.sent',
+  'channel.followed',
+  'channel.subscription.new',
+  'channel.subscription.renewal',
+  'channel.subscription.gifts',
+] as const
 
 interface SubscriptionResponse {
-  data?: Array<{ id: string; event_type: string; broadcaster_user_id: number }>;
-  error?: string;
+  data?: { id: string; event_type: string; broadcaster_user_id: number }[]
+  error?: string
 }
 
 /**
@@ -34,36 +34,33 @@ interface SubscriptionResponse {
  * @param accessToken  Fresh Kick OAuth access token with `events:subscribe` scope
  * @param clientId     Kick app client_id (needed for Client-ID header)
  */
-export async function subscribeKickEvents(
-  accessToken: string,
-  clientId: string
-): Promise<void> {
+export async function subscribeKickEvents(accessToken: string, clientId: string): Promise<void> {
   const subscriptions = EVENT_TYPES.map((eventType) => ({
-    type: eventType,
-    version: 1,
     condition: {},
     transport: {
-      method: "webhook",
       callback: WEBHOOK_URL,
+      method: 'webhook',
     },
-  }));
+    type: eventType,
+    version: 1,
+  }))
 
   const res = await fetch(`${KICK_API_BASE}/events/subscriptions`, {
-    method: "POST",
+    body: JSON.stringify(subscriptions),
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Client-ID": clientId,
-      "Content-Type": "application/json",
+      'Client-ID': clientId,
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify(subscriptions),
-  });
+    method: 'POST',
+  })
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Kick event subscription failed: ${res.status} ${body}`);
+    const body = await res.text()
+    throw new Error(`Kick event subscription failed: ${res.status} ${body}`)
   }
 
-  const data = (await res.json()) as SubscriptionResponse;
-  const count = data.data?.length ?? 0;
-  console.log(`[Kick] Subscribed to ${count} event type(s) at ${WEBHOOK_URL}`);
+  const data = (await res.json()) as SubscriptionResponse
+  const count = data.data?.length ?? 0
+  console.log(`[Kick] Subscribed to ${count} event type(s) at ${WEBHOOK_URL}`)
 }

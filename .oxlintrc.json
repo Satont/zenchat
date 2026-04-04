@@ -1,0 +1,49 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["import", "typescript", "oxc"],
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "globals": {
+    "Bun": "readonly"
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "no-console": "off",
+    "no-debugger": "warn",
+    "eqeqeq": "error",
+    "prefer-const": "warn",
+    "func-style": "off",
+    "id-length": "off",
+    "no-ternary": "off",
+    "no-magic-numbers": "off",
+    "sort-imports": "off",
+    "sort-keys": "off",
+    "prefer-template": "off",
+    "no-duplicate-imports": "off",
+    "unicorn/filename-case": "off",
+    "unicorn/no-null": "off",
+    "unicorn/numeric-separators-style": "off",
+    "import/no-named-export": "off",
+    "import/no-namespace": "off",
+    "import/no-nodejs-modules": "off",
+    "import/prefer-default-export": "off",
+    "import/group-exports": "off",
+    "no-useless-constructor": "off"
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.out/**",
+    "**/gen/**",
+    "**/*.d.ts",
+    "**/coverage/**",
+    "**/.opencode/**"
+  ]
+}

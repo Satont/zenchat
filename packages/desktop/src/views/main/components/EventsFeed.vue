@@ -1,118 +1,158 @@
 <script setup lang="ts">
-import type { NormalizedEvent } from "@twirchat/shared/types";
+import type { NormalizedEvent } from '@twirchat/shared/types'
 
 const props = defineProps<{
-  events: NormalizedEvent[];
-}>();
+  events: NormalizedEvent[]
+}>()
 
-function eventIcon(type: NormalizedEvent["type"]): string {
+function eventIcon(type: NormalizedEvent['type']): string {
   switch (type) {
-    case "follow":
-      return "follow";
-    case "sub":
-      return "sub";
-    case "resub":
-      return "sub";
-    case "gift_sub":
-      return "gift";
-    case "raid":
-      return "raid";
-    case "host":
-      return "host";
-    case "bits":
-      return "bits";
-    case "superchat":
-      return "superchat";
-    case "membership":
-      return "sub";
-    default:
-      return "bell";
+    case 'follow': {
+      return 'follow'
+    }
+    case 'sub': {
+      return 'sub'
+    }
+    case 'resub': {
+      return 'sub'
+    }
+    case 'gift_sub': {
+      return 'gift'
+    }
+    case 'raid': {
+      return 'raid'
+    }
+    case 'host': {
+      return 'host'
+    }
+    case 'bits': {
+      return 'bits'
+    }
+    case 'superchat': {
+      return 'superchat'
+    }
+    case 'membership': {
+      return 'sub'
+    }
+    default: {
+      return 'bell'
+    }
   }
 }
 
-function eventLabel(type: NormalizedEvent["type"]): string {
+function eventLabel(type: NormalizedEvent['type']): string {
   switch (type) {
-    case "follow":
-      return "Follow";
-    case "sub":
-      return "Subscription";
-    case "resub":
-      return "Re-subscription";
-    case "gift_sub":
-      return "Gift sub";
-    case "raid":
-      return "Raid";
-    case "host":
-      return "Host";
-    case "bits":
-      return "Bits";
-    case "superchat":
-      return "Super Chat";
-    case "membership":
-      return "Membership";
-    default:
-      return type;
+    case 'follow': {
+      return 'Follow'
+    }
+    case 'sub': {
+      return 'Subscription'
+    }
+    case 'resub': {
+      return 'Re-subscription'
+    }
+    case 'gift_sub': {
+      return 'Gift sub'
+    }
+    case 'raid': {
+      return 'Raid'
+    }
+    case 'host': {
+      return 'Host'
+    }
+    case 'bits': {
+      return 'Bits'
+    }
+    case 'superchat': {
+      return 'Super Chat'
+    }
+    case 'membership': {
+      return 'Membership'
+    }
+    default: {
+      return type
+    }
   }
 }
 
-function eventColor(type: NormalizedEvent["type"]): string {
+function eventColor(type: NormalizedEvent['type']): string {
   switch (type) {
-    case "follow":
-      return "#22c55e";
-    case "sub":
-      return "#a78bfa";
-    case "resub":
-      return "#a78bfa";
-    case "gift_sub":
-      return "#f59e0b";
-    case "raid":
-      return "#3b82f6";
-    case "host":
-      return "#06b6d4";
-    case "bits":
-      return "#f59e0b";
-    case "superchat":
-      return "#ef4444";
-    case "membership":
-      return "#a78bfa";
-    default:
-      return "#8b8b99";
+    case 'follow': {
+      return '#22c55e'
+    }
+    case 'sub': {
+      return '#a78bfa'
+    }
+    case 'resub': {
+      return '#a78bfa'
+    }
+    case 'gift_sub': {
+      return '#f59e0b'
+    }
+    case 'raid': {
+      return '#3b82f6'
+    }
+    case 'host': {
+      return '#06b6d4'
+    }
+    case 'bits': {
+      return '#f59e0b'
+    }
+    case 'superchat': {
+      return '#ef4444'
+    }
+    case 'membership': {
+      return '#a78bfa'
+    }
+    default: {
+      return '#8b8b99'
+    }
   }
 }
 
 function platformColor(platform: string): string {
   switch (platform) {
-    case "twitch":
-      return "#9146ff";
-    case "youtube":
-      return "#ff0000";
-    case "kick":
-      return "#53fc18";
-    default:
-      return "#888";
+    case 'twitch': {
+      return '#9146ff'
+    }
+    case 'youtube': {
+      return '#ff0000'
+    }
+    case 'kick': {
+      return '#53fc18'
+    }
+    default: {
+      return '#888'
+    }
   }
 }
 
 function formatTime(ts: Date): string {
-  const d = new Date(ts);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const d = new Date(ts)
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
 function eventDetail(ev: NormalizedEvent): string {
-  const d = ev.data as Record<string, unknown>;
+  const d = ev.data as Record<string, unknown>
   switch (ev.type) {
-    case "resub":
-      return d.months ? `${d.months} months` : "";
-    case "raid":
-      return d.viewers ? `${d.viewers} viewers` : "";
-    case "bits":
-      return d.amount ? `${d.amount} bits` : "";
-    case "gift_sub":
-      return d.count ? `×${d.count}` : "";
-    case "superchat":
-      return d.amount ? String(d.amount) : "";
-    default:
-      return "";
+    case 'resub': {
+      return d.months ? `${d.months} months` : ''
+    }
+    case 'raid': {
+      return d.viewers ? `${d.viewers} viewers` : ''
+    }
+    case 'bits': {
+      return d.amount ? `${d.amount} bits` : ''
+    }
+    case 'gift_sub': {
+      return d.count ? `×${d.count}` : ''
+    }
+    case 'superchat': {
+      return d.amount ? String(d.amount) : ''
+    }
+    default: {
+      return ''
+    }
   }
 }
 </script>
@@ -121,9 +161,7 @@ function eventDetail(ev: NormalizedEvent): string {
   <div class="events-panel">
     <div class="panel-header">
       <h2 class="panel-title">Events</h2>
-      <span class="event-count" v-if="events.length > 0">{{
-        events.length
-      }}</span>
+      <span class="event-count" v-if="events.length > 0">{{ events.length }}</span>
     </div>
 
     <div class="events-list">
@@ -145,9 +183,7 @@ function eventDetail(ev: NormalizedEvent): string {
           </svg>
         </div>
         <p class="empty-title">No events yet</p>
-        <p class="empty-hint">
-          Follows, subs, raids and bits will appear here.
-        </p>
+        <p class="empty-hint">Follows, subs, raids and bits will appear here.</p>
       </div>
 
       <div v-for="ev in events" :key="ev.id" class="event-card">
@@ -241,10 +277,7 @@ function eventDetail(ev: NormalizedEvent): string {
           </svg>
           <!-- Bits / Superchat -->
           <svg
-            v-else-if="
-              eventIcon(ev.type) === 'bits' ||
-              eventIcon(ev.type) === 'superchat'
-            "
+            v-else-if="eventIcon(ev.type) === 'bits' || eventIcon(ev.type) === 'superchat'"
             width="16"
             height="16"
             viewBox="0 0 24 24"
@@ -278,14 +311,10 @@ function eventDetail(ev: NormalizedEvent): string {
         <div class="event-info">
           <div class="event-top">
             <span class="event-user">{{ ev.user.displayName }}</span>
-            <span
-              class="event-type-label"
-              :style="{ color: eventColor(ev.type) }"
-              >{{ eventLabel(ev.type) }}</span
-            >
-            <span v-if="eventDetail(ev)" class="event-detail">{{
-              eventDetail(ev)
+            <span class="event-type-label" :style="{ color: eventColor(ev.type) }">{{
+              eventLabel(ev.type)
             }}</span>
+            <span v-if="eventDetail(ev)" class="event-detail">{{ eventDetail(ev) }}</span>
           </div>
           <div class="event-bottom">
             <span

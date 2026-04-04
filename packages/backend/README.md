@@ -30,17 +30,17 @@ Migrations run automatically on first startup — no manual setup needed.
 
 ## Environment variables
 
-| Variable              | Default                                    | Description                                                                                                     |
-| --------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `PORT`                | `3000`                                     | HTTP + WebSocket listen port                                                                                    |
-| `DATABASE_URL`        | —                                          | PostgreSQL connection string — `postgres://user:pass@host:port/db`. Bun also accepts `POSTGRES_URL` or `PGURL`. |
-| `KICK_CLIENT_ID`      | —                                          | From [kick.com/settings/developer](https://kick.com/settings/developer)                                         |
-| `KICK_CLIENT_SECRET`  | —                                          | From [kick.com/settings/developer](https://kick.com/settings/developer)                                         |
-| `KICK_REDIRECT_URI`   | `http://localhost:3000/auth/kick/callback` | Must match the URI registered in your Kick app                                                                  |
-| `KICK_WEBHOOK_URL`    | —                                          | Public HTTPS URL that Kick POSTs events to (`/webhook/kick`)                                                    |
-| `KICK_WEBHOOK_SECRET` | —                                          | HMAC secret for verifying Kick payloads — generate with `openssl rand -hex 32`                                  |
-| `YOUTUBE_CLIENT_ID`     | —                                          | From [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — see setup guide below        |
-| `YOUTUBE_CLIENT_SECRET` | —                                          | From [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — see setup guide below        |
+| Variable                | Default                                    | Description                                                                                                     |
+| ----------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `PORT`                  | `3000`                                     | HTTP + WebSocket listen port                                                                                    |
+| `DATABASE_URL`          | —                                          | PostgreSQL connection string — `postgres://user:pass@host:port/db`. Bun also accepts `POSTGRES_URL` or `PGURL`. |
+| `KICK_CLIENT_ID`        | —                                          | From [kick.com/settings/developer](https://kick.com/settings/developer)                                         |
+| `KICK_CLIENT_SECRET`    | —                                          | From [kick.com/settings/developer](https://kick.com/settings/developer)                                         |
+| `KICK_REDIRECT_URI`     | `http://localhost:3000/auth/kick/callback` | Must match the URI registered in your Kick app                                                                  |
+| `KICK_WEBHOOK_URL`      | —                                          | Public HTTPS URL that Kick POSTs events to (`/webhook/kick`)                                                    |
+| `KICK_WEBHOOK_SECRET`   | —                                          | HMAC secret for verifying Kick payloads — generate with `openssl rand -hex 32`                                  |
+| `YOUTUBE_CLIENT_ID`     | —                                          | From [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — see setup guide below          |
+| `YOUTUBE_CLIENT_SECRET` | —                                          | From [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — see setup guide below          |
 
 ## Local webhook testing (ngrok)
 
@@ -85,16 +85,19 @@ The desktop app generates a random secret on first launch and persists it locall
 To enable YouTube login, you need to create OAuth credentials in Google Cloud Console:
 
 ### 1. Create a Google Cloud Project
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click "Select a project" → "New Project"
 3. Give it a name (e.g., "TwirChat") and click "Create"
 
 ### 2. Enable YouTube Data API
+
 1. In your project, go to **APIs & Services** → **Library**
 2. Search for "YouTube Data API v3"
 3. Click on it and press **Enable**
 
 ### 3. Create OAuth Credentials
+
 1. Go to **APIs & Services** → **Credentials**
 2. Click **Create Credentials** → **OAuth client ID**
 3. If prompted, configure the consent screen:
@@ -108,14 +111,18 @@ To enable YouTube login, you need to create OAuth credentials in Google Cloud Co
 7. Copy the **Client ID** and **Client Secret**
 
 ### 4. Configure Environment Variables
+
 Add to your `.env` file:
+
 ```env
 YOUTUBE_CLIENT_ID=your_client_id_here
 YOUTUBE_CLIENT_SECRET=your_client_secret_here
 ```
 
 ### 5. Add Test Users (Important!)
+
 While your app is in testing mode, only test users can log in:
+
 1. Go to **APIs & Services** → **OAuth consent screen**
 2. Scroll to **Test users**
 3. Click **Add users**
@@ -123,7 +130,9 @@ While your app is in testing mode, only test users can log in:
 5. Save
 
 ### 6. Publish (Optional)
+
 If you want anyone to use your app (not just test users):
+
 1. Go to **APIs & Services** → **OAuth consent screen**
 2. Click **Publish App**
 3. Google will review your app (takes a few days)

@@ -9,9 +9,9 @@
  * Response: UpdateStreamResponse
  */
 
-import { config } from "../config.ts";
-import type { UpdateStreamRequest, UpdateStreamResponse } from "@twirchat/shared";
-import { getTwitchAppToken } from "./stream-status.ts";
+import { config } from '../config.ts'
+import type { UpdateStreamRequest, UpdateStreamResponse } from '@twirchat/shared'
+import { getTwitchAppToken } from './stream-status.ts'
 
 // ----------------------------------------------------------------
 // Twitch
@@ -23,32 +23,36 @@ async function updateTwitchStream(
   title?: string,
   categoryId?: string,
 ): Promise<void> {
-  const body: Record<string, string> = {};
-  if (title !== undefined) body.title = title;
-
-  if (categoryId !== undefined) {
-    // game_id must be the Twitch numeric ID string
-    body.game_id = categoryId;
+  const body: Record<string, string> = {}
+  if (title !== undefined) {
+    body.title = title
   }
 
-  if (Object.keys(body).length === 0) return;
+  if (categoryId !== undefined) {
+    // Game_id must be the Twitch numeric ID string
+    body.game_id = categoryId
+  }
+
+  if (Object.keys(body).length === 0) {
+    return
+  }
 
   const res = await fetch(
     `https://api.twitch.tv/helix/channels?broadcaster_id=${encodeURIComponent(channelId)}`,
     {
-      method: "PATCH",
+      body: JSON.stringify(body),
       headers: {
         Authorization: `Bearer ${userAccessToken}`,
-        "Client-Id": config.TWITCH_CLIENT_ID,
-        "Content-Type": "application/json",
+        'Client-Id': config.TWITCH_CLIENT_ID,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      method: 'PATCH',
     },
-  );
+  )
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Twitch channel update failed: ${res.status} ${text}`);
+    const text = await res.text()
+    throw new Error(`Twitch channel update failed: ${res.status} ${text}`)
   }
 }
 
@@ -62,25 +66,31 @@ async function updateKickStream(
   title?: string,
   categoryId?: string,
 ): Promise<void> {
-  const body: Record<string, string | number> = {};
-  if (title !== undefined) body.stream_title = title;
-  if (categoryId !== undefined) body.category_id = Number(categoryId);
+  const body: Record<string, string | number> = {}
+  if (title !== undefined) {
+    body.stream_title = title
+  }
+  if (categoryId !== undefined) {
+    body.category_id = Number(categoryId)
+  }
 
-  if (Object.keys(body).length === 0) return;
+  if (Object.keys(body).length === 0) {
+    return
+  }
 
-  const res = await fetch("https://api.kick.com/public/v1/channels", {
-    method: "PATCH",
+  const res = await fetch('https://api.kick.com/public/v1/channels', {
+    body: JSON.stringify(body),
     headers: {
       Authorization: `Bearer ${userAccessToken}`,
-      "Client-ID": config.KICK_CLIENT_ID,
-      "Content-Type": "application/json",
+      'Client-ID': config.KICK_CLIENT_ID,
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify(body),
-  });
+    method: 'PATCH',
+  })
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Kick channel update failed: ${res.status} ${text}`);
+    const text = await res.text()
+    throw new Error(`Kick channel update failed: ${res.status} ${text}`)
   }
 }
 
@@ -88,25 +98,23 @@ async function updateKickStream(
 // Public handler
 // ----------------------------------------------------------------
 
-export async function handleUpdateStream(
-  req: Request,
-): Promise<UpdateStreamResponse> {
-  const body = (await req.json()) as UpdateStreamRequest;
-  const { platform, channelId, userAccessToken, title, categoryId } = body;
+export async function handleUpdateStream(req: Request): Promise<UpdateStreamResponse> {
+  const body = (await req.json()) as UpdateStreamRequest
+  const { platform, channelId, userAccessToken, title, categoryId } = body
 
   if (!platform || !channelId || !userAccessToken) {
-    throw new Error("platform, channelId, and userAccessToken are required");
+    throw new Error('platform, channelId, and userAccessToken are required')
   }
 
-  if (platform === "twitch") {
-    await updateTwitchStream(channelId, userAccessToken, title, categoryId);
-    return { ok: true };
+  if (platform === 'twitch') {
+    await updateTwitchStream(channelId, userAccessToken, title, categoryId)
+    return { ok: true }
   }
 
-  if (platform === "kick") {
-    await updateKickStream(channelId, userAccessToken, title, categoryId);
-    return { ok: true };
+  if (platform === 'kick') {
+    await updateKickStream(channelId, userAccessToken, title, categoryId)
+    return { ok: true }
   }
 
-  throw new Error(`Unsupported platform: ${platform}`);
+  throw new Error(`Unsupported platform: ${platform}`)
 }

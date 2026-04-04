@@ -1,29 +1,24 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import {
-  PopoverRoot,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverArrow,
-} from "reka-ui";
-import type { AppSettings } from "@twirchat/shared/types";
+import { computed } from 'vue'
+import { PopoverArrow, PopoverContent, PopoverRoot, PopoverTrigger } from 'reka-ui'
+import type { AppSettings } from '@twirchat/shared/types'
 
 const props = defineProps<{
-  settings: AppSettings;
-}>();
+  settings: AppSettings
+}>()
 
 const emit = defineEmits<{
-  change: [settings: AppSettings];
-}>();
+  change: [settings: AppSettings]
+}>()
 
 function patch(partial: Partial<AppSettings>) {
-  emit("change", { ...props.settings, ...partial });
+  emit('change', { ...props.settings, ...partial })
 }
 
 const fontSize = computed({
   get: () => props.settings.fontSize,
   set: (v: number) => patch({ fontSize: v }),
-});
+})
 </script>
 
 <template>
@@ -31,19 +26,25 @@ const fontSize = computed({
     <PopoverTrigger as-child>
       <button class="appearance-btn" title="Chat appearance">
         <!-- gear icon -->
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+          />
         </svg>
       </button>
     </PopoverTrigger>
 
-    <PopoverContent
-      side="bottom"
-      :side-offset="8"
-      align="end"
-      class="appearance-popover"
-    >
+    <PopoverContent side="bottom" :side-offset="8" align="end" class="appearance-popover">
       <PopoverArrow class="appearance-popover-arrow" />
 
       <!-- Font size -->
@@ -73,35 +74,57 @@ const fontSize = computed({
           <label class="ap-toggle-row">
             <span class="ap-toggle-name">Color stripe</span>
             <span class="ap-switch">
-              <input type="checkbox" :checked="settings.showPlatformColorStripe" @change="patch({ showPlatformColorStripe: ($event.target as HTMLInputElement).checked })" />
+              <input
+                type="checkbox"
+                :checked="settings.showPlatformColorStripe"
+                @change="
+                  patch({ showPlatformColorStripe: ($event.target as HTMLInputElement).checked })
+                "
+              />
               <span class="ap-switch-thumb" />
             </span>
           </label>
           <label class="ap-toggle-row">
             <span class="ap-toggle-name">Platform icon</span>
             <span class="ap-switch">
-              <input type="checkbox" :checked="settings.showPlatformIcon" @change="patch({ showPlatformIcon: ($event.target as HTMLInputElement).checked })" />
+              <input
+                type="checkbox"
+                :checked="settings.showPlatformIcon"
+                @change="patch({ showPlatformIcon: ($event.target as HTMLInputElement).checked })"
+              />
               <span class="ap-switch-thumb" />
             </span>
           </label>
           <label class="ap-toggle-row">
             <span class="ap-toggle-name">Avatars</span>
             <span class="ap-switch">
-              <input type="checkbox" :checked="settings.showAvatars" @change="patch({ showAvatars: ($event.target as HTMLInputElement).checked })" />
+              <input
+                type="checkbox"
+                :checked="settings.showAvatars"
+                @change="patch({ showAvatars: ($event.target as HTMLInputElement).checked })"
+              />
               <span class="ap-switch-thumb" />
             </span>
           </label>
           <label class="ap-toggle-row">
             <span class="ap-toggle-name">Badges</span>
             <span class="ap-switch">
-              <input type="checkbox" :checked="settings.showBadges" @change="patch({ showBadges: ($event.target as HTMLInputElement).checked })" />
+              <input
+                type="checkbox"
+                :checked="settings.showBadges"
+                @change="patch({ showBadges: ($event.target as HTMLInputElement).checked })"
+              />
               <span class="ap-switch-thumb" />
             </span>
           </label>
           <label class="ap-toggle-row">
             <span class="ap-toggle-name">Timestamp</span>
             <span class="ap-switch">
-              <input type="checkbox" :checked="settings.showTimestamp" @change="patch({ showTimestamp: ($event.target as HTMLInputElement).checked })" />
+              <input
+                type="checkbox"
+                :checked="settings.showTimestamp"
+                @change="patch({ showTimestamp: ($event.target as HTMLInputElement).checked })"
+              />
               <span class="ap-switch-thumb" />
             </span>
           </label>
@@ -182,8 +205,14 @@ const fontSize = computed({
 }
 
 @keyframes ap-fade-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .appearance-popover-arrow {
@@ -223,7 +252,7 @@ const fontSize = computed({
   cursor: pointer;
   height: 4px;
   appearance: none;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 2px;
   outline: none;
 }
@@ -234,7 +263,7 @@ const fontSize = computed({
   border-radius: 50%;
   background: #a78bfa;
   cursor: pointer;
-  box-shadow: 0 0 0 2px rgba(167,139,250,0.25);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.25);
 }
 .ap-slider-ticks {
   display: flex;
@@ -256,7 +285,7 @@ const fontSize = computed({
   align-items: center;
   justify-content: space-between;
   padding: 7px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
 }
 
@@ -291,7 +320,7 @@ const fontSize = computed({
 .ap-switch-thumb {
   width: 34px;
   height: 19px;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   transition: background 0.2s;
   position: relative;
@@ -304,9 +333,11 @@ const fontSize = computed({
   left: 2.5px;
   width: 14px;
   height: 14px;
-  background: rgba(255,255,255,0.5);
+  background: rgba(255, 255, 255, 0.5);
   border-radius: 50%;
-  transition: transform 0.2s, background 0.2s;
+  transition:
+    transform 0.2s,
+    background 0.2s;
 }
 
 .ap-switch input:checked ~ .ap-switch-thumb {
@@ -326,8 +357,8 @@ const fontSize = computed({
 
 .ap-theme-btn {
   flex: 1;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 10px 8px 8px;
   cursor: pointer;
@@ -335,15 +366,17 @@ const fontSize = computed({
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 .ap-theme-btn:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 .ap-theme-btn.active {
   border-color: #a78bfa;
-  background: rgba(167,139,250,0.1);
+  background: rgba(167, 139, 250, 0.1);
 }
 
 .ap-theme-label {
@@ -372,7 +405,7 @@ const fontSize = computed({
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -385,10 +418,15 @@ const fontSize = computed({
 .tp-line {
   height: 3px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
 }
-.tp-name { width: 40%; background: rgba(167,139,250,0.5); }
-.tp-text { width: 85%; }
+.tp-name {
+  width: 40%;
+  background: rgba(167, 139, 250, 0.5);
+}
+.tp-text {
+  width: 85%;
+}
 
 /* Compact preview */
 .cp-row {
@@ -401,25 +439,29 @@ const fontSize = computed({
   width: 28%;
   height: 3px;
   border-radius: 2px;
-  background: rgba(167,139,250,0.5);
+  background: rgba(167, 139, 250, 0.5);
   flex-shrink: 0;
 }
-.cp-name-short { width: 18%; }
+.cp-name-short {
+  width: 18%;
+}
 .cp-sep {
   width: 3px;
   height: 3px;
   border-radius: 1px;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
 }
 .cp-text {
   flex: 1;
   height: 3px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   width: 60%;
 }
-.cp-text-long { width: 90%; }
+.cp-text-long {
+  width: 90%;
+}
 </style>
 
 <style scoped>
@@ -433,11 +475,13 @@ const fontSize = computed({
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
   flex-shrink: 0;
 }
 .appearance-btn:hover {
   color: #e2e2e8;
-  background: rgba(255,255,255,0.07);
+  background: rgba(255, 255, 255, 0.07);
 }
 </style>

@@ -7,7 +7,7 @@
  * @module kdco-primitives/log-warn
  */
 
-import type { OpencodeClient } from "./types"
+import type { OpencodeClient } from './types'
 
 /**
  * Log a warning message via OpenCode client or console fallback.
@@ -30,22 +30,22 @@ import type { OpencodeClient } from "./types"
  * ```
  */
 export function logWarn(
-	client: OpencodeClient | undefined,
-	service: string,
-	message: string,
+  client: OpencodeClient | undefined,
+  service: string,
+  message: string,
 ): void {
-	// Guard: No client available, use console fallback (Law 1: Early Exit)
-	if (!client) {
-		console.warn(`[${service}] ${message}`)
-		return
-	}
+  // Guard: No client available, use console fallback (Law 1: Early Exit)
+  if (!client) {
+    console.warn(`[${service}] ${message}`)
+    return
+  }
 
-	// Happy path: Use OpenCode logging API
-	client.app
-		.log({
-			body: { service, level: "warn", message },
-		})
-		.catch(() => {
-			// Silently ignore logging failures - don't disrupt caller
-		})
+  // Happy path: Use OpenCode logging API
+  client.app
+    .log({
+      body: { level: 'warn', message, service },
+    })
+    .catch(() => {
+      // Silently ignore logging failures - don't disrupt caller
+    })
 }

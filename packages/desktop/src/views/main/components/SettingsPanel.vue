@@ -1,71 +1,86 @@
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
-import type { AppSettings } from "@twirchat/shared/types";
-import { DEFAULT_SETTINGS } from "@twirchat/shared/types";
-import { rpc } from "../main";
+import { computed, ref, watch } from 'vue'
+import type { AppSettings } from '@twirchat/shared/types'
+import { DEFAULT_SETTINGS } from '@twirchat/shared/types'
+import { rpc } from '../main'
 
 const props = defineProps<{
-  settings: AppSettings | null;
-}>();
+  settings: AppSettings | null
+}>()
 
 const emit = defineEmits<{
-  saved: [settings: AppSettings];
-  change: [settings: AppSettings];
-}>();
+  saved: [settings: AppSettings]
+  change: [settings: AppSettings]
+}>()
 
 const local = ref<AppSettings>(
-  props.settings ? { ...props.settings, overlay: { ...props.settings.overlay } } : { ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay } }
-);
+  props.settings
+    ? { ...props.settings, overlay: { ...props.settings.overlay } }
+    : { ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay } },
+)
 
 // Flag to avoid feedback loop: when local changes → App updates settings prop → we'd reset local again
-let ignorePropSync = false;
+let ignorePropSync = false
 
-watch(() => props.settings, (s) => {
-  if (ignorePropSync) return;
-  if (s) local.value = { ...s, overlay: { ...s.overlay } };
-});
+watch(
+  () => props.settings,
+  (s) => {
+    if (ignorePropSync) {
+      return
+    }
+    if (s) {
+      local.value = { ...s, overlay: { ...s.overlay } }
+    }
+  },
+)
 
 // Emit every local change so App can apply settings live (before Save)
-watch(local, (s) => {
-  ignorePropSync = true;
-  emit("change", { ...s, overlay: { ...s.overlay } });
-  // Reset flag on next tick after Vue has propagated the prop update
-  Promise.resolve().then(() => { ignorePropSync = false; });
-}, { deep: true });
+watch(
+  local,
+  (s) => {
+    ignorePropSync = true
+    emit('change', { ...s, overlay: { ...s.overlay } })
+    // Reset flag on next tick after Vue has propagated the prop update
+    Promise.resolve().then(() => {
+      ignorePropSync = false
+    })
+  },
+  { deep: true },
+)
 
-const saving = ref(false);
-const saved = ref(false);
+const saving = ref(false)
+const saved = ref(false)
 
 async function save() {
-  saving.value = true;
+  saving.value = true
   try {
-    await rpc.request.saveSettings(local.value);
-    emit("saved", { ...local.value, overlay: { ...local.value.overlay } });
-    saved.value = true;
-    setTimeout(() => { saved.value = false; }, 2000);
+    await rpc.request.saveSettings(local.value)
+    emit('saved', { ...local.value, overlay: { ...local.value.overlay } })
+    saved.value = true
+    setTimeout(() => {
+      saved.value = false
+    }, 2000)
   } finally {
-    saving.value = false;
+    saving.value = false
   }
 }
 
 const overlayUrl = computed(() => {
-  const p = local.value.overlay;
+  const p = local.value.overlay
   const params = new URLSearchParams({
+    animation: p.animation,
     bg: p.background,
     color: p.textColor,
     fontSize: String(p.fontSize),
     maxMessages: String(p.maxMessages),
-    animation: p.animation,
     position: p.position,
-  });
-  return `http://localhost:${p.port}/?${params}`;
-});
+  })
+  return `http://localhost:${p.port}/?${params}`
+})
 
 function copyOverlayUrl() {
-  navigator.clipboard.writeText(overlayUrl.value);
+  navigator.clipboard.writeText(overlayUrl.value)
 }
-
-
 </script>
 
 <template>
@@ -78,8 +93,18 @@ function copyOverlayUrl() {
           <p class="page-sub">Customize appearance and overlay options</p>
         </div>
         <button class="btn btn-save" :disabled="saving" @click="save">
-          <svg v-if="saved" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
+          <svg
+            v-if="saved"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
           </svg>
           {{ saved ? 'Saved!' : saving ? 'Saving…' : 'Save changes' }}
         </button>
@@ -98,12 +123,16 @@ function copyOverlayUrl() {
               class="toggle-btn"
               :class="{ active: local.theme === 'dark' }"
               @click="local.theme = 'dark'"
-            >Dark</button>
+            >
+              Dark
+            </button>
             <button
               class="toggle-btn"
               :class="{ active: local.theme === 'light' }"
               @click="local.theme = 'light'"
-            >Light</button>
+            >
+              Light
+            </button>
           </div>
         </div>
 
@@ -116,17 +145,23 @@ function copyOverlayUrl() {
               class="toggle-btn"
               :class="{ active: local.fontFamily === 'inter' }"
               @click="local.fontFamily = 'inter'"
-            >Inter</button>
+            >
+              Inter
+            </button>
             <button
               class="toggle-btn"
               :class="{ active: local.fontFamily === 'manrope' }"
               @click="local.fontFamily = 'manrope'"
-            >Manrope</button>
+            >
+              Manrope
+            </button>
             <button
               class="toggle-btn"
               :class="{ active: local.fontFamily === 'system' }"
               @click="local.fontFamily = 'system'"
-            >System</button>
+            >
+              System
+            </button>
           </div>
         </div>
       </section>
@@ -157,9 +192,18 @@ function copyOverlayUrl() {
         <div class="overlay-url-box">
           <code class="overlay-url">{{ overlayUrl }}</code>
           <button class="btn btn-copy" @click="copyOverlayUrl" title="Copy URL">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
             </svg>
             Copy
           </button>
@@ -169,7 +213,13 @@ function copyOverlayUrl() {
           <div class="form-label">
             <span>Port</span>
           </div>
-          <input v-model.number="local.overlay.port" type="number" class="input-sm" min="1024" max="65535" />
+          <input
+            v-model.number="local.overlay.port"
+            type="number"
+            class="input-sm"
+            min="1024"
+            max="65535"
+          />
         </div>
 
         <div class="form-row">
@@ -243,7 +293,9 @@ function copyOverlayUrl() {
               class="toggle-btn"
               :class="{ active: local.overlay.animation === anim }"
               @click="local.overlay.animation = anim as AppSettings['overlay']['animation']"
-            >{{ anim }}</button>
+            >
+              {{ anim }}
+            </button>
           </div>
         </div>
 
@@ -258,7 +310,9 @@ function copyOverlayUrl() {
               class="toggle-btn"
               :class="{ active: local.overlay.position === pos }"
               @click="local.overlay.position = pos as AppSettings['overlay']['position']"
-            >{{ pos }}</button>
+            >
+              {{ pos }}
+            </button>
           </div>
         </div>
 
@@ -401,7 +455,9 @@ function copyOverlayUrl() {
   font-weight: 500;
   padding: 5px 12px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   font-family: inherit;
   text-transform: capitalize;
 }
@@ -411,7 +467,7 @@ function copyOverlayUrl() {
 }
 
 .toggle-btn.active {
-  background: rgba(167,139,250,0.2);
+  background: rgba(167, 139, 250, 0.2);
   color: #a78bfa;
 }
 
@@ -529,7 +585,7 @@ function copyOverlayUrl() {
 
 .overlay-url {
   flex: 1;
-  font-family: "SF Mono", "Fira Mono", monospace;
+  font-family: 'SF Mono', 'Fira Mono', monospace;
   font-size: 11px;
   color: #a78bfa;
   word-break: break-all;
@@ -551,7 +607,10 @@ function copyOverlayUrl() {
   align-items: center;
   gap: 6px;
 }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .btn-save {
   background: #a78bfa;
@@ -559,16 +618,20 @@ function copyOverlayUrl() {
   padding: 8px 18px;
   white-space: nowrap;
 }
-.btn-save:not(:disabled):hover { opacity: 0.88; }
+.btn-save:not(:disabled):hover {
+  opacity: 0.88;
+}
 
 .btn-copy {
-  background: rgba(167,139,250,0.12);
+  background: rgba(167, 139, 250, 0.12);
   color: #a78bfa;
-  border: 1px solid rgba(167,139,250,0.25);
+  border: 1px solid rgba(167, 139, 250, 0.25);
   padding: 5px 10px;
   white-space: nowrap;
   flex-shrink: 0;
   font-size: 12px;
 }
-.btn-copy:hover { background: rgba(167,139,250,0.22); }
+.btn-copy:hover {
+  background: rgba(167, 139, 250, 0.22);
+}
 </style>

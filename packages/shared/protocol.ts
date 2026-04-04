@@ -1,4 +1,4 @@
-import type { Platform } from "./types";
+import type { Platform } from './types'
 
 /**
  * Протокол WebSocket между backend и desktop-приложением.
@@ -15,13 +15,13 @@ import type { Platform } from "./types";
  */
 
 export interface SevenTVEmote {
-  id: string;
-  alias: string;
-  name: string;
-  animated: boolean;
-  zeroWidth: boolean;
-  aspectRatio: number;
-  imageUrl: string;
+  id: string
+  alias: string
+  name: string
+  animated: boolean
+  zeroWidth: boolean
+  aspectRatio: number
+  imageUrl: string
 }
 
 // ============================================================
@@ -29,40 +29,79 @@ export interface SevenTVEmote {
 // ============================================================
 
 export type BackendToDesktopMessage =
-  | { type: "auth_url"; platform: Platform; url: string }
-  | { type: "auth_success"; platform: Platform; username: string; displayName: string }
-  | { type: "auth_error"; platform: Platform; error: string }
-  | { type: "error"; message: string }
-  | { type: "pong" }
-  | { type: "chat_message"; data: unknown }
-  | { type: "chat_event"; data: unknown }
-  | { type: "platform_status"; platform: Platform; status: "connected" | "disconnected" | "error"; error?: string }
+  | { type: 'auth_url'; platform: Platform; url: string }
+  | { type: 'auth_success'; platform: Platform; username: string; displayName: string }
+  | { type: 'auth_error'; platform: Platform; error: string }
+  | { type: 'error'; message: string }
+  | { type: 'pong' }
+  | { type: 'chat_message'; data: unknown }
+  | { type: 'chat_event'; data: unknown }
+  | {
+      type: 'platform_status'
+      platform: Platform
+      status: 'connected' | 'disconnected' | 'error'
+      error?: string
+    }
   // 7TV events
-  | { type: "seventv_emote_set"; platform: Platform; channelId: string; emotes: SevenTVEmote[] }
-  | { type: "seventv_emote_added"; platform: Platform; channelId: string; emote: SevenTVEmote }
-  | { type: "seventv_emote_removed"; platform: Platform; channelId: string; emoteId: string }
-  | { type: "seventv_emote_updated"; platform: Platform; channelId: string; emoteId: string; alias: string }
+  | { type: 'seventv_emote_set'; platform: Platform; channelId: string; emotes: SevenTVEmote[] }
+  | { type: 'seventv_emote_added'; platform: Platform; channelId: string; emote: SevenTVEmote }
+  | { type: 'seventv_emote_removed'; platform: Platform; channelId: string; emoteId: string }
+  | {
+      type: 'seventv_emote_updated'
+      platform: Platform
+      channelId: string
+      emoteId: string
+      alias: string
+    }
   // 7TV system notification
-  | { type: "seventv_system_message"; platform: Platform; channelId: string; action: "added" | "removed" | "updated"; emote: SevenTVEmote; oldAlias?: string }
-  | { type: "seventv_system_message"; platform: Platform; channelId: string; action: "set_changed"; setName: string };
+  | {
+      type: 'seventv_system_message'
+      platform: Platform
+      channelId: string
+      action: 'added' | 'removed' | 'updated'
+      emote: SevenTVEmote
+      oldAlias?: string
+    }
+  | {
+      type: 'seventv_system_message'
+      platform: Platform
+      channelId: string
+      action: 'set_changed'
+      setName: string
+    }
+  | {
+      type: 'seventv_system_message'
+      platform: Platform
+      channelId: string
+      action: 'set_renamed'
+      oldName: string
+      newName: string
+    }
+  | {
+      type: 'seventv_system_message'
+      platform: Platform
+      channelId: string
+      action: 'set_deleted'
+      setName: string
+    }
 
 // ============================================================
 // Desktop → Backend
 // ============================================================
 
 export type DesktopToBackendMessage =
-  | { type: "ping" }
-  | { type: "auth_start"; platform: Exclude<Platform, "twitch"> }
-  | { type: "auth_start_twitch"; codeChallenge: string; state: string }
-  | { type: "auth_logout"; platform: Platform }
-  | { type: "send_message"; platform: Platform; channel: string; message: string }
-  | { type: "channel_join"; platform: Platform; channel: string }
-  | { type: "channel_leave"; platform: Platform; channel: string }
+  | { type: 'ping' }
+  | { type: 'auth_start'; platform: Exclude<Platform, 'twitch'> }
+  | { type: 'auth_start_twitch'; codeChallenge: string; state: string }
+  | { type: 'auth_logout'; platform: Platform }
+  | { type: 'send_message'; platform: Platform; channel: string; message: string }
+  | { type: 'channel_join'; platform: Platform; channel: string }
+  | { type: 'channel_leave'; platform: Platform; channel: string }
   // 7TV commands
-  | { type: "seventv_subscribe"; platform: Platform; channelId: string }
-  | { type: "seventv_unsubscribe"; platform: Platform; channelId: string }
+  | { type: 'seventv_subscribe'; platform: Platform; channelId: string }
+  | { type: 'seventv_unsubscribe'; platform: Platform; channelId: string }
   // Client reconnect - send list of subscribed channels
-  | { type: "seventv_resubscribe"; subscriptions: Array<{ platform: Platform; channelId: string }> };
+  | { type: 'seventv_resubscribe'; subscriptions: { platform: Platform; channelId: string }[] }
 
 // ============================================================
 // HTTP API — запросы от desktop к backend
@@ -70,11 +109,11 @@ export type DesktopToBackendMessage =
 
 /** POST /api/auth/kick/start — получить URL для OAuth */
 export interface AuthStartRequest {
-  clientSecret: string;
+  clientSecret: string
 }
 
 export interface AuthStartResponse {
-  url: string;
+  url: string
 }
 
 /**
@@ -82,13 +121,13 @@ export interface AuthStartResponse {
  * Desktop отправляет PKCE codeChallenge + state + redirectUri, backend формирует authUrl
  */
 export interface TwitchBuildUrlRequest {
-  codeChallenge: string;
-  state: string;
-  redirectUri: string;
+  codeChallenge: string
+  state: string
+  redirectUri: string
 }
 
 export interface TwitchBuildUrlResponse {
-  url: string;
+  url: string
 }
 
 /**
@@ -96,16 +135,16 @@ export interface TwitchBuildUrlResponse {
  * Desktop получил code из callback, просит backend обменять на токены
  */
 export interface TwitchExchangeRequest {
-  code: string;
-  codeVerifier: string;
-  redirectUri: string;
+  code: string
+  codeVerifier: string
+  redirectUri: string
 }
 
 export interface TwitchExchangeResponse {
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
-  scope?: string[];
+  accessToken: string
+  refreshToken?: string
+  expiresIn?: number
+  scope?: string[]
 }
 
 /**
@@ -113,13 +152,13 @@ export interface TwitchExchangeResponse {
  * Desktop отправляет PKCE codeChallenge + state, backend формирует authUrl
  */
 export interface KickBuildUrlRequest {
-  codeChallenge: string;
-  state: string;
-  redirectUri: string;
+  codeChallenge: string
+  state: string
+  redirectUri: string
 }
 
 export interface KickBuildUrlResponse {
-  url: string;
+  url: string
 }
 
 /**
@@ -127,16 +166,16 @@ export interface KickBuildUrlResponse {
  * Desktop получил code из callback, просит backend обменять на токены
  */
 export interface KickExchangeRequest {
-  code: string;
-  codeVerifier: string;
-  redirectUri: string;
+  code: string
+  codeVerifier: string
+  redirectUri: string
 }
 
 export interface KickExchangeResponse {
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
-  scope?: string[];
+  accessToken: string
+  refreshToken?: string
+  expiresIn?: number
+  scope?: string[]
 }
 
 /**
@@ -144,13 +183,13 @@ export interface KickExchangeResponse {
  * Desktop просит backend обновить Kick токен
  */
 export interface KickRefreshRequest {
-  refreshToken: string;
+  refreshToken: string
 }
 
 export interface KickRefreshResponse {
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
+  accessToken: string
+  refreshToken?: string
+  expiresIn?: number
 }
 
 /**
@@ -158,13 +197,13 @@ export interface KickRefreshResponse {
  * Desktop просит backend обновить токен
  */
 export interface TwitchRefreshRequest {
-  refreshToken: string;
+  refreshToken: string
 }
 
 export interface TwitchRefreshResponse {
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
+  accessToken: string
+  refreshToken?: string
+  expiresIn?: number
 }
 
 /**
@@ -172,13 +211,13 @@ export interface TwitchRefreshResponse {
  * Desktop отправляет PKCE codeChallenge + state, backend формирует authUrl
  */
 export interface YouTubeBuildUrlRequest {
-  codeChallenge: string;
-  state: string;
-  redirectUri: string;
+  codeChallenge: string
+  state: string
+  redirectUri: string
 }
 
 export interface YouTubeBuildUrlResponse {
-  url: string;
+  url: string
 }
 
 /**
@@ -186,16 +225,16 @@ export interface YouTubeBuildUrlResponse {
  * Desktop получил code из callback, просит backend обменять на токены
  */
 export interface YouTubeExchangeRequest {
-  code: string;
-  codeVerifier: string;
-  redirectUri: string;
+  code: string
+  codeVerifier: string
+  redirectUri: string
 }
 
 export interface YouTubeExchangeResponse {
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
-  scope?: string[];
+  accessToken: string
+  refreshToken?: string
+  expiresIn?: number
+  scope?: string[]
 }
 
 /**
@@ -203,13 +242,13 @@ export interface YouTubeExchangeResponse {
  * Desktop просит backend обновить YouTube токен
  */
 export interface YouTubeRefreshRequest {
-  refreshToken: string;
+  refreshToken: string
 }
 
 export interface YouTubeRefreshResponse {
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
+  accessToken: string
+  refreshToken?: string
+  expiresIn?: number
 }
 
 // ============================================================
@@ -218,11 +257,11 @@ export interface YouTubeRefreshResponse {
 
 /** GET /api/stream-status?platform=twitch|kick&channelId=... */
 export interface StreamStatusResponse {
-  isLive: boolean;
-  title: string;
-  categoryId?: string;
-  categoryName?: string;
-  viewerCount?: number;
+  isLive: boolean
+  title: string
+  categoryId?: string
+  categoryName?: string
+  viewerCount?: number
 }
 
 /**
@@ -233,60 +272,60 @@ export interface StreamStatusResponse {
  * Optionally pass userAccessToken per-channel to use authenticated Helix calls.
  */
 export interface ChannelStatusRequest {
-  platform: "twitch" | "kick";
+  platform: 'twitch' | 'kick'
   /** For Twitch: the channel login (e.g. "ninja"). For Kick: the channel slug. */
-  channelLogin: string;
+  channelLogin: string
   /** Optional user access token — if provided, backend uses it instead of app token */
-  userAccessToken?: string;
+  userAccessToken?: string
 }
 
 export interface ChannelStatus {
-  platform: "twitch" | "kick";
-  channelLogin: string;
-  isLive: boolean;
-  title: string;
-  categoryName?: string;
-  viewerCount?: number;
+  platform: 'twitch' | 'kick'
+  channelLogin: string
+  isLive: boolean
+  title: string
+  categoryName?: string
+  viewerCount?: number
 }
 
 export interface ChannelsStatusResponse {
-  channels: ChannelStatus[];
+  channels: ChannelStatus[]
 }
 
 /** POST /api/update-stream */
 export interface UpdateStreamRequest {
-  platform: "twitch" | "kick";
-  channelId: string;
+  platform: 'twitch' | 'kick'
+  channelId: string
   /** User access token from the desktop's SQLite */
-  userAccessToken: string;
-  title?: string;
-  categoryId?: string;
+  userAccessToken: string
+  title?: string
+  categoryId?: string
 }
 
 export interface UpdateStreamResponse {
-  ok: boolean;
+  ok: boolean
 }
 
 /** GET /api/search-categories?platform=twitch|kick&query=... */
 export interface CategorySearchResult {
-  id: string;
-  name: string;
-  thumbnailUrl?: string;
+  id: string
+  name: string
+  thumbnailUrl?: string
 }
 
 export interface SearchCategoriesResponse {
-  categories: CategorySearchResult[];
+  categories: CategorySearchResult[]
 }
 
 // ============================================================
 
 /** GET /api/accounts — список аккаунтов */
 export interface AccountsResponse {
-  accounts: Array<{
-    platform: Platform;
-    username: string;
-    displayName: string;
-    avatarUrl?: string;
-    connectedAt: number;
-  }>;
+  accounts: {
+    platform: Platform
+    username: string
+    displayName: string
+    avatarUrl?: string
+    connectedAt: number
+  }[]
 }

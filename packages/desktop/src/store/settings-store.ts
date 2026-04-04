@@ -1,58 +1,61 @@
-import { getDb } from "./db";
-import type { AppSettings } from "@twirchat/shared/types";
-import { DEFAULT_SETTINGS } from "@twirchat/shared/types";
+import { getDb } from './db'
+import type { AppSettings } from '@twirchat/shared/types'
+import { DEFAULT_SETTINGS } from '@twirchat/shared/types'
 
 export const SettingsStore = {
   get(): AppSettings {
-    const db = getDb();
+    const db = getDb()
     const row = db
-      .query<{ value: string }, [string]>("SELECT value FROM settings WHERE key = ?")
-      .get("app_settings");
+      .query<{ value: string }, [string]>('SELECT value FROM settings WHERE key = ?')
+      .get('app_settings')
 
-    if (!row) return { ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay } };
+    if (!row) return { ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay } }
 
     try {
-      const parsed = JSON.parse(row.value) as Partial<AppSettings>;
+      const parsed = JSON.parse(row.value) as Partial<AppSettings>
       // Deep-merge with defaults so new fields added after the settings were saved
       // don't come back as undefined.
-      return deepMerge({ ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay } }, parsed);
+      return deepMerge({ ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay } }, parsed)
     } catch {
-      return { ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay } };
+      return { ...DEFAULT_SETTINGS, overlay: { ...DEFAULT_SETTINGS.overlay } }
     }
-  },
-
-  update(partial: Partial<AppSettings>): AppSettings {
-    const current = this.get();
-    const updated = deepMerge(current, partial);
-    const db = getDb();
-    db.run(
-      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      ["app_settings", JSON.stringify(updated)]
-    );
-    return updated;
   },
 
   set(settings: AppSettings): void {
-    const db = getDb();
+    const db = getDb()
     db.run(
-      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      ["app_settings", JSON.stringify(settings)]
-    );
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      ['app_settings', JSON.stringify(settings)],
+    )
   },
-};
+
+  update(partial: Partial<AppSettings>): AppSettings {
+    const current = this.get()
+    const updated = deepMerge(current, partial)
+    const db = getDb()
+    db.run(
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      ['app_settings', JSON.stringify(updated)],
+    )
+    return updated
+  },
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function deepMerge<T extends Record<string, any>>(target: T, source: Partial<T>): T {
-  const result = { ...target };
+  const result = { ...target }
   for (const key of Object.keys(source) as (keyof T)[]) {
-    const val = source[key];
+    const val = source[key]
     if (val !== undefined && val !== null) {
-      if (typeof val === "object" && !Array.isArray(val)) {
-        result[key] = deepMerge(target[key] as Record<string, unknown>, val as Record<string, unknown>) as T[keyof T];
+      if (typeof val === 'object' && !Array.isArray(val)) {
+        result[key] = deepMerge(
+          target[key] as Record<string, unknown>,
+          val as Record<string, unknown>,
+        ) as T[keyof T]
       } else {
-        result[key] = val as T[keyof T];
+        result[key] = val as T[keyof T]
       }
     }
   }
-  return result;
+  return result
 }
