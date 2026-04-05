@@ -18,6 +18,7 @@ import type {
   WatchedChannel,
 } from '@twirchat/shared/types'
 import { WatchedChannelStore } from '../store/watched-channels-store'
+import { WatchedChannelsLayoutStore } from '../store/watched-channels-layout-store'
 import { logger } from '@twirchat/shared/logger'
 import { sevenTVService } from '../seventv'
 
@@ -72,12 +73,10 @@ export class WatchedChannelManager {
     return ch
   }
 
-  /** Remove a watched channel (disconnects + removes from DB) */
   async removeChannel(id: string): Promise<void> {
     const entry = this.entries.get(id)
     if (entry) {
       this.unbindAdapter(entry)
-      // Unsubscribe from 7TV emotes for this channel
       sevenTVService
         .unsubscribeFromChannel(entry.watchedChannel.platform, entry.watchedChannel.channelSlug)
         .catch((error) => {
@@ -95,6 +94,11 @@ export class WatchedChannelManager {
       this.entries.delete(id)
     }
     WatchedChannelStore.remove(id)
+    WatchedChannelsLayoutStore.remove(id)
+    const remaining = WatchedChannelStore.findAll()
+    for (const ch of remaining) {
+      WatchedChannelsLayoutStore.cleanupStaleAssignments(ch.id, [id])
+    }
   }
 
   /** Get all current watched channels */
