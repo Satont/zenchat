@@ -21,6 +21,10 @@ const props = defineProps<{
   watchedMessages: Map<string, NormalizedChatMessage[]>
   watchedStatuses: Map<string, PlatformStatusInfo>
   watchedChannels: WatchedChannel[]
+  onAddWatchedChannel: (
+    platform: 'twitch' | 'kick' | 'youtube',
+    channelSlug: string,
+  ) => Promise<WatchedChannel>
 }>()
 
 const emit = defineEmits<{
@@ -78,6 +82,20 @@ const handleRemove = (panelId: string) => {
 const handleAssign = (panelId: string, channelId: string | null) => {
   layoutStore.assignChannel(panelId, channelId)
   emit('assignChannel', panelId, channelId)
+}
+
+const handleAddAndAssign = async (
+  panelId: string,
+  platform: 'twitch' | 'kick' | 'youtube',
+  channelSlug: string,
+) => {
+  try {
+    const newChannel = await props.onAddWatchedChannel(platform, channelSlug)
+    layoutStore.assignChannel(panelId, newChannel.id)
+    emit('assignChannel', panelId, newChannel.id)
+  } catch (err) {
+    console.error('[WatchedChannelsView] addAndAssign failed:', err)
+  }
 }
 
 const handleResize = (splitNodeId: string, sizes: number[]) => {
@@ -160,6 +178,7 @@ const handleDrop = (targetId: string) => {
       @split="handleSplit"
       @remove="handleRemove"
       @assign="handleAssign"
+      @add-and-assign="handleAddAndAssign"
       @resize="handleResize"
       @settings-change="handleSettingsChange"
       @send-watched="handleSendWatched"

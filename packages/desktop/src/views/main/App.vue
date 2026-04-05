@@ -370,15 +370,22 @@ function onTabChannelsUpdated({ tabId, channelNames }: { tabId: string; channelN
 // Watched channel actions
 // ----------------------------------------------------------------
 
+async function doAddWatchedChannel(
+  platform: 'twitch' | 'kick' | 'youtube',
+  channelSlug: string,
+): Promise<WatchedChannel> {
+  const ch = await rpc.request.addWatchedChannel({ channelSlug, platform })
+  if (!watchedChannels.value.find((c: WatchedChannel) => c.id === ch.id)) {
+    watchedChannels.value = [...watchedChannels.value, ch]
+  }
+  void refreshWatchedLiveStatuses()
+  return ch
+}
+
 async function onAddChannel(platform: 'twitch' | 'kick' | 'youtube', channelSlug: string) {
   showAddModal.value = false
   try {
-    const ch = await rpc.request.addWatchedChannel({ channelSlug, platform })
-    // Add to list if not already present
-    if (!watchedChannels.value.find((c: WatchedChannel) => c.id === ch.id)) {
-      watchedChannels.value = [...watchedChannels.value, ch]
-    }
-    void refreshWatchedLiveStatuses()
+    await doAddWatchedChannel(platform, channelSlug)
   } catch (error) {
     console.error('[App] addWatchedChannel failed:', error)
   }
@@ -573,6 +580,7 @@ async function onSendWatched({ text, channelId }: { text: string; channelId?: st
         :watched-messages="watchedMessages"
         :watched-statuses="watchedStatuses"
         :watched-channels="watchedChannels"
+        :on-add-watched-channel="doAddWatchedChannel"
         @tab-channels-updated="onTabChannelsUpdated"
         @settings-change="onSettingsChange"
         @send-watched="onSendWatched"

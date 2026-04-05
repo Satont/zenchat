@@ -32,6 +32,7 @@ const emit = defineEmits<{
   split: [panelId: string, direction: SplitDirection]
   remove: [panelId: string]
   assign: [panelId: string, channelId: string | null]
+  'add-and-assign': [panelId: string, platform: 'twitch' | 'kick' | 'youtube', channelSlug: string]
   resize: [nodeId: string, sizes: number[]]
   'settings-change': [settings: AppSettings]
   'send-watched': [payload: { text: string; channelId: string }]
@@ -83,6 +84,14 @@ const handlePanelAssign = (panelId: string, channelId: string | null) => {
   emit('assign', panelId, channelId)
 }
 
+const handlePanelAddAndAssign = (
+  panelId: string,
+  platform: 'twitch' | 'kick' | 'youtube',
+  channelSlug: string,
+) => {
+  emit('add-and-assign', panelId, platform, channelSlug)
+}
+
 const handleDragStart = (panelId: string) => {
   emit('dragstart', panelId)
 }
@@ -129,6 +138,7 @@ const handleSendWatched = (payload: { text: string; channelId: string }) => {
       @split="handlePanelSplit"
       @remove="handlePanelRemove"
       @assign="handlePanelAssign"
+      @add-and-assign="handlePanelAddAndAssign"
       @settings-change="handleSettingsChange"
       @send-watched="handleSendWatched"
       @dragstart="handleDragStart"
@@ -166,6 +176,7 @@ const handleSendWatched = (payload: { text: string; channelId: string }) => {
         @split="handlePanelSplit"
         @remove="handlePanelRemove"
         @assign="handlePanelAssign"
+        @add-and-assign="handlePanelAddAndAssign"
         @resize="(nodeId: string, sizes: number[]) => $emit('resize', nodeId, sizes)"
         @settings-change="handleSettingsChange"
         @send-watched="handleSendWatched"

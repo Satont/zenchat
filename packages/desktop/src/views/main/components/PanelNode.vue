@@ -29,6 +29,7 @@ const emit = defineEmits<{
   split: [panelId: string, direction: SplitDirection]
   remove: [panelId: string]
   assign: [panelId: string, channelId: string | null]
+  'add-and-assign': [panelId: string, platform: 'twitch' | 'kick' | 'youtube', channelSlug: string]
   'settings-change': [settings: AppSettings]
   'send-watched': [payload: { text: string; channelId: string }]
   dragstart: [panelId: string]
@@ -66,11 +67,16 @@ const watchedChannelMessages = computed(() => {
 
 const showMenu = ref(false)
 const showChannelSelector = ref(false)
+const newChannelPlatform = ref<'twitch' | 'kick' | 'youtube'>('twitch')
+const newChannelSlug = ref('')
 
-const availableChannels = computed(() => {
-  if (!props.watchedChannels) return []
-  return props.watchedChannels
-})
+const handleAddAndAssign = () => {
+  const slug = newChannelSlug.value.trim().toLowerCase()
+  if (!slug) return
+  emit('add-and-assign', props.panel.id, newChannelPlatform.value, slug)
+  newChannelSlug.value = ''
+  showChannelSelector.value = false
+}
 
 const handleSplitHorizontal = () => {
   emit('split', props.panel.id, 'horizontal')
@@ -85,16 +91,6 @@ const handleRemove = () => {
   emit('remove', props.panel.id)
 }
 
-const handleAssignChannel = (selectedChannelId: string) => {
-  emit('assign', props.panel.id, selectedChannelId)
-  showChannelSelector.value = false
-}
-
-const handleClearChannel = () => {
-  emit('assign', props.panel.id, null)
-  showChannelSelector.value = false
-}
-
 const handleSettingsChange = (s: AppSettings) => {
   emit('settings-change', s)
 }
@@ -105,6 +101,7 @@ const handleSendWatched = (payload: { text: string; channelId: string }) => {
 
 function toggleChannelSelector() {
   showChannelSelector.value = !showChannelSelector.value
+  newChannelSlug.value = ''
   showMenu.value = false
 }
 
@@ -231,20 +228,45 @@ const handleKeydown = (e: KeyboardEvent) => {
 
     <div v-if="showChannelSelector && (isEmpty || isWatched)" class="channel-selector">
       <div class="channel-selector-header">
-        <span>Select Channel</span>
+        <span>Add Channel</span>
         <button class="close-btn" @click="showChannelSelector = false">×</button>
       </div>
-      <div class="channel-list">
+      <div class="platform-row">
         <button
-          v-for="channel in availableChannels"
-          :key="channel.id"
-          class="channel-option"
-          @click="handleAssignChannel(channel.id)"
+          class="platform-btn"
+          :class="{ active: newChannelPlatform === 'twitch' }"
+          style="--p-color: #9146ff"
+          @click="newChannelPlatform = 'twitch'"
         >
-          <span class="channel-platform" :class="channel.platform">{{ channel.platform }}</span>
-          <span class="channel-name">{{ channel.displayName }}</span>
+          Twitch
+        </button>
+        <button
+          class="platform-btn"
+          :class="{ active: newChannelPlatform === 'kick' }"
+          style="--p-color: #53fc18"
+          @click="newChannelPlatform = 'kick'"
+        >
+          Kick
+        </button>
+        <button
+          class="platform-btn"
+          :class="{ active: newChannelPlatform === 'youtube' }"
+          style="--p-color: #ff0000"
+          @click="newChannelPlatform = 'youtube'"
+        >
+          YouTube
         </button>
       </div>
+      <input
+        v-model="newChannelSlug"
+        class="channel-input"
+        placeholder="Channel name"
+        @keydown.enter="handleAddAndAssign"
+        @keydown.escape="showChannelSelector = false"
+      />
+      <button class="btn-add" :disabled="!newChannelSlug.trim()" @click="handleAddAndAssign">
+        Add
+      </button>
     </div>
 
     <div class="panel-content">
@@ -430,7 +452,7 @@ const handleKeydown = (e: KeyboardEvent) => {
   border: 1px solid var(--c-border, #2a2a33);
   border-radius: 8px;
   padding: 8px;
-  min-width: 180px;
+  min-width: 200px;
   z-index: 100;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
@@ -461,61 +483,76 @@ const handleKeydown = (e: KeyboardEvent) => {
   color: var(--c-text, #e2e2e8);
 }
 
-.channel-list {
+.platform-row {
   display: flex;
-  flex-direction: column;
   gap: 4px;
-  max-height: 200px;
-  overflow-y: auto;
+  margin-bottom: 8px;
 }
 
-.channel-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border: none;
+.platform-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--c-border, #2a2a33);
+  color: var(--c-text-2, #8b8b99);
+  padding: 4px 0;
   border-radius: 4px;
-  background: transparent;
-  color: var(--c-text, #e2e2e8);
-  cursor: pointer;
-  text-align: left;
-  font-size: 13px;
-  transition: background 0.15s;
-}
-
-.channel-option:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.channel-platform {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 3px;
-  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-.channel-platform.twitch {
-  background: #9146ff;
+.platform-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--c-text, #e2e2e8);
+}
+
+.platform-btn.active {
+  background: var(--p-color);
+  border-color: var(--p-color);
   color: #fff;
 }
 
-.channel-platform.youtube {
-  background: #ff0000;
-  color: #fff;
-}
-
-.channel-platform.kick {
-  background: #53fc18;
+.platform-btn.active[style*='53fc18'] {
   color: #000;
 }
 
-.channel-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.channel-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--c-border, #2a2a33);
+  color: var(--c-text, #e2e2e8);
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  outline: none;
+}
+
+.channel-input:focus {
+  border-color: #a78bfa;
+}
+
+.btn-add {
+  width: 100%;
+  background: #a78bfa;
+  color: #fff;
+  border: none;
+  padding: 6px 0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-add:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .panel-content {
