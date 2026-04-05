@@ -411,8 +411,6 @@ export class KickAdapter extends BasePlatformAdapter {
         continue
       }
       const originalStart = match.index
-      const originalEnd = originalStart + fullMatch.length - 1
-
       // Calculate position in clean text (after removing emote tags)
       const cleanStart = originalStart - offsetDelta
       const cleanEnd = cleanStart + emoteName.length - 1

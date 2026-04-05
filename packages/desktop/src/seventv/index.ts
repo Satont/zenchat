@@ -24,8 +24,6 @@ class DesktopSevenTVService {
 
   // Subscribe to 7TV emotes for a channel (called when joining a channel)
   async subscribeToChannel(platform: Platform, channelId: string): Promise<void> {
-    const channelKey = this.getChannelKey(platform, channelId)
-
     // Send via backend WebSocket
     const message = {
       channelId,

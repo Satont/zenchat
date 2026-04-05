@@ -1,7 +1,3 @@
-import { logger } from '@twirchat/shared/logger'
-
-const log = logger('seventv:gql')
-
 const SEVENTV_GQL_ENDPOINT = 'https://7tv.io/v4/gql'
 
 // GraphQL query strings

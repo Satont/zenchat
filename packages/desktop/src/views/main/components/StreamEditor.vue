@@ -10,7 +10,11 @@
  * On mount it polls for the current status. The user can then edit and save.
  */
 import { onMounted, onUnmounted, ref } from 'vue'
-import type { CategorySearchResult } from '@twirchat/shared/protocol'
+import type {
+  CategorySearchResult,
+  SearchCategoriesResponse,
+  StreamStatusResponse,
+} from '@twirchat/shared/protocol'
 import { rpc } from '../main'
 
 const props = defineProps<{
@@ -59,10 +63,10 @@ function onCategoryInput() {
   searchTimer = setTimeout(async () => {
     searchLoading.value = true
     try {
-      const res = await rpc.request.searchCategories({
+      const res = (await rpc.request.searchCategories!({
         platform: props.platform,
         query: categoryQuery.value,
-      })
+      })) as SearchCategoriesResponse
       categoryResults.value = res.categories
     } catch {
       categoryResults.value = []
@@ -86,10 +90,10 @@ async function loadStatus() {
   loading.value = true
   loadError.value = null
   try {
-    const s = await rpc.request.getStreamStatus({
+    const s = (await rpc.request.getStreamStatus!({
       channelId: props.channelId,
       platform: props.platform,
-    })
+    })) as StreamStatusResponse
     isLive.value = s.isLive
     title.value = s.title
     categoryId.value = s.categoryId
@@ -141,7 +145,7 @@ async function save() {
   saving.value = true
   saveError.value = null
   try {
-    await rpc.request.updateStream({
+    await rpc.request.updateStream!({
       categoryId: editCategoryId.value,
       channelId: props.channelId,
       platform: props.platform,

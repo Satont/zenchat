@@ -208,6 +208,60 @@ export interface WatchedChannel {
 }
 
 // ============================================================
+// Hierarchical Layout Tree (v2)
+// ============================================================
+
+export type SplitDirection = 'horizontal' | 'vertical'
+
+export interface SplitNode {
+  type: 'split'
+  id: string
+  direction: SplitDirection
+  children: LayoutNode[]
+  flex: number // 0-100
+  minSize?: number // default 48
+}
+
+export type PanelContent =
+  | { type: 'main' }
+  | { type: 'watched'; channelId: string }
+  | { type: 'empty' }
+
+export interface PanelNode {
+  type: 'panel'
+  id: string
+  content: PanelContent
+  flex: number
+}
+
+export type LayoutNode = SplitNode | PanelNode
+
+// Legacy flat format (for migration)
+export interface LegacySplitConfig {
+  id: string
+  type: 'combined' | 'channel'
+  channelId?: string
+  size: number
+}
+
+export interface LegacyChatLayout {
+  version: 1
+  mode: 'combined' | 'split'
+  splits: LegacySplitConfig[]
+}
+
+// New hierarchical format
+export interface WatchedChannelsLayout {
+  version: 2
+  root: LayoutNode
+  meta?: {
+    createdAt: number
+    updatedAt: number
+    migratedFrom?: 'legacy'
+  }
+}
+
+// ============================================================
 // Twitch Badges API
 // ============================================================
 

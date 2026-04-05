@@ -67,7 +67,7 @@ onMounted(async () => {
     username: string
     displayName: string
   }) => {
-    const updated = await rpc.request.getAccounts()
+    const updated = (await rpc.request.getAccounts!()) as Account[]
     emit('accounts-updated', updated)
     addToast(platform as Platform, 'success', `Connected as ${displayName}`)
   }
@@ -85,7 +85,7 @@ onMounted(async () => {
 
   // Load persisted channels from the backend
   try {
-    const saved = await rpc.request.getChannels()
+    const saved = (await rpc.request.getChannels!()) as Partial<Record<Platform, string[]>>
     if (saved) {
       for (const platform of ['twitch', 'youtube', 'kick'] as Platform[]) {
         const slugs = saved[platform]
@@ -182,15 +182,15 @@ function avatarInitials(name: string): string {
 async function startAuth(platform: Platform) {
   authLoading.value[platform] = true
   try {
-    await rpc.request.authStart({ platform })
+    await rpc.request.authStart!({ platform })
   } finally {
     authLoading.value[platform] = false
   }
 }
 
 async function logout(platform: Platform) {
-  await rpc.request.authLogout({ platform })
-  const updated = await rpc.request.getAccounts()
+  await rpc.request.authLogout!({ platform })
+  const updated = (await rpc.request.getAccounts!()) as Account[]
   emit('accounts-updated', updated)
 }
 
@@ -201,7 +201,7 @@ async function joinChannel(platform: Platform) {
   }
   joiningChannel.value[platform] = true
   try {
-    await rpc.request.joinChannel({ channelSlug: slug, platform })
+    await rpc.request.joinChannel!({ channelSlug: slug, platform })
     if (!(joinedChannels.value[platform] ?? []).includes(slug)) {
       joinedChannels.value[platform] = [...(joinedChannels.value[platform] ?? []), slug]
     }
@@ -219,7 +219,7 @@ async function joinChannel(platform: Platform) {
 }
 
 async function leaveChannel(platform: Platform, slug: string) {
-  await rpc.request.leaveChannel({ channelSlug: slug, platform })
+  await rpc.request.leaveChannel!({ channelSlug: slug, platform })
   joinedChannels.value[platform] = (joinedChannels.value[platform] ?? []).filter((c) => c !== slug)
 }
 

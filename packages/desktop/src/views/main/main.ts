@@ -7,13 +7,20 @@ import type { TwirChatRPCSchema } from '../../shared/rpc'
 // Set up Electrobun RPC on the webview side
 // ----------------------------------------------------------------
 
-export const rpc = Electroview.defineRPC<TwirChatRPCSchema>({
+const baseRpc = Electroview.defineRPC<TwirChatRPCSchema>({
   handlers: {
     messages: {},
     requests: {},
   },
   maxRequestTime: 10_000,
 })
+
+type RpcRequests = NonNullable<typeof baseRpc.request>
+type RequiredRpcRequests = {
+  [K in keyof RpcRequests]-?: Exclude<RpcRequests[K], undefined>
+}
+
+export const rpc = baseRpc as typeof baseRpc & { request: RequiredRpcRequests }
 
 const view = new Electroview({ rpc })
 

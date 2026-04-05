@@ -11,7 +11,6 @@
 
 import { config } from '../config.ts'
 import type { UpdateStreamRequest, UpdateStreamResponse } from '@twirchat/shared'
-import { getTwitchAppToken } from './stream-status.ts'
 
 // ----------------------------------------------------------------
 // Twitch

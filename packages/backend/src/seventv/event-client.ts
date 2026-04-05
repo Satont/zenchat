@@ -286,7 +286,7 @@ export class SevenTVEventClient {
     this.startHeartbeat()
 
     // Resubscribe to all previous subscriptions
-    for (const [id, sub] of this.subscriptions) {
+    for (const [, sub] of this.subscriptions) {
       this.sendSubscribe(sub.type, sub.condition)
     }
 

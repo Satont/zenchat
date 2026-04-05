@@ -12,7 +12,6 @@ const log = logger('auth-server')
 let server: ReturnType<typeof Bun.serve> | null = null
 let sendToView: WebviewSender | null = null
 let onAuthSuccessCallback: ((platform: Platform, channelSlug?: string) => void) | null = null
-let onAutoJoinChannelCallback: ((platform: Platform, channelSlug: string) => void) | null = null
 
 export function setAuthServerRpcSender(sender: WebviewSender): void {
   sendToView = sender
@@ -25,10 +24,8 @@ export function setOnAuthSuccessCallback(
 }
 
 export function setOnAutoJoinChannelCallback(
-  callback: (platform: Platform, channelSlug: string) => void,
-): void {
-  onAutoJoinChannelCallback = callback
-}
+  _callback: (platform: Platform, channelSlug: string) => void,
+): void {}
 
 export function startAuthServer(): void {
   if (server) {

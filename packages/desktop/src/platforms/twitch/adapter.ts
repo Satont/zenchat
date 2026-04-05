@@ -19,7 +19,6 @@ import { LogLevel } from '@twurple/chat'
 import { getBackendUrl } from '../../runtime-config'
 import { AccountStore } from '../../store/account-store'
 import { refreshTwitchToken } from '../../auth/twitch'
-import { TWITCH_ANON_PREFIX } from '@twirchat/shared/constants'
 import type { TwitchBadgesResponse } from '@twirchat/shared/types'
 import { logger } from '@twirchat/shared/logger'
 
@@ -269,11 +268,11 @@ export class TwitchAdapter extends BasePlatformAdapter {
     })
 
     // Ban/timeout events (optional, for moderation features)
-    this.chatClient.onBan((channel, user, msg) => {
+    this.chatClient.onBan((channel, user, _msg) => {
       log.info(`[Twitch] ${user} was banned from ${channel}`)
     })
 
-    this.chatClient.onTimeout((channel, user, duration, msg) => {
+    this.chatClient.onTimeout((channel, user, duration, _msg) => {
       log.info(`[Twitch] ${user} was timed out for ${duration}s from ${channel}`)
     })
   }

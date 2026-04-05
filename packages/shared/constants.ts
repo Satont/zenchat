@@ -1,8 +1,3 @@
-import { homedir } from 'node:os'
-
-// Environment-aware configuration
-const isDev = process.env['NODE_ENV'] !== 'production'
-
 // Ports - can be overridden via env vars
 export const AUTH_SERVER_PORT = parseInt(process.env['AUTH_SERVER_PORT'] ?? '45821')
 export const OVERLAY_SERVER_PORT = parseInt(process.env['OVERLAY_SERVER_PORT'] ?? '45823')

@@ -111,6 +111,57 @@ void backgroundTask().catch((e) => log.error('Task failed', { error: String(e) }
 - Use `vue-tsc --noEmit` (NOT `tsgo`) for Vue SFC compatibility
 - Configured in `package.json` script
 
+## RPC Architecture
+
+TwirChat desktop uses Electrobun RPC for all communication between the main process (Bun) and the webview (browser context).
+
+### Core Rule
+
+**NEVER import Bun modules into frontend code. Always use RPC for persistence and server-side operations.**
+
+**Forbidden in frontend (`src/views/`):**
+
+- `bun:sqlite` - Use RPC `get*`, `set*` methods instead
+- `node:fs` - Use RPC for file operations
+- Direct store imports from `src/store/` - These use SQLite via Bun
+
+**Correct approach:**
+
+```typescript
+// ❌ WRONG - This will crash the browser
+import { ChatLayoutStore } from '../../store/chat-layout-store'
+const layout = ChatLayoutStore.get()
+
+// ✅ CORRECT - Use RPC
+const layout = await rpc.request.getWatchedChannelsLayout()
+```
+
+### Why This Rule Exists
+
+The desktop app has two distinct runtime environments:
+
+1. **Main process** (`src/bun/`): Full Bun/Node.js access, SQLite, file system
+2. **Webview** (`src/views/`): Browser context, no Bun APIs
+
+Vite can bundle code, but Bun modules like `bun:sqlite` will throw runtime errors in the browser.
+
+### Pattern: Server-Side Store + RPC
+
+For any new persistence feature:
+
+1. **Create server-side store** (`src/store/*-store.ts`):
+   - Uses `bun:sqlite` via `getDb()`
+   - Exported functions for CRUD operations
+
+2. **Add RPC methods** (`src/shared/rpc.ts` + `src/bun/index.ts`):
+   - Define request types in RPC schema
+   - Implement handlers in bun/index.ts using server-side store
+
+3. **Use in frontend** (`src/views/main/*.vue`):
+   - Call `rpc.request.*` methods
+   - Store data in reactive refs/composables
+   - Never import server-side stores directly
+
 ## ANTI-PATTERNS (THIS PACKAGE)
 
 - **NEVER** use HTTP polling for YouTube — use gRPC only (see `src/platforms/youtube/`)

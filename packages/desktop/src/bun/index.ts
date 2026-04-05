@@ -34,9 +34,16 @@ import { KickAdapter } from '../platforms/kick/adapter'
 import { YouTubeAdapter } from '../platforms/youtube/adapter'
 import { sevenTVService } from '../seventv'
 import { WatchedChannelManager } from '../watched-channels/manager'
+import { WatchedChannelsLayoutStore } from '../store/watched-channels-layout-store'
 import { logger } from '@twirchat/shared/logger'
 import type { DesktopToBackendMessage } from '@twirchat/shared'
-import type { NormalizedChatMessage } from '@twirchat/shared/types'
+import type {
+  NormalizedChatMessage,
+  LayoutNode,
+  PanelNode,
+  SplitDirection,
+  WatchedChannelsLayout,
+} from '@twirchat/shared/types'
 
 // Set process title to show "TwirChat" instead of "bun" in process managers
 process.title = 'TwirChat'
@@ -162,8 +169,8 @@ setOnAuthSuccessCallback(async (platform, channelSlug) => {
     // For Kick, use broadcasterUserId instead of slug
     let sevenTvChannelId = targetChannel
     if (platform === 'kick') {
-      const kickAdapter = adapter as import('../platforms/kick/adapter').KickAdapter
-      const broadcasterUserId = kickAdapter.getBroadcasterUserId()
+      const kickAdapterCast = adapter as import('../platforms/kick/adapter').KickAdapter
+      const broadcasterUserId = kickAdapterCast.getBroadcasterUserId()
       if (broadcasterUserId) {
         sevenTvChannelId = String(broadcasterUserId)
       }
@@ -278,8 +285,8 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>('bun', {
             // For Kick, use broadcasterUserId instead of slug
             let sevenTvChannelId = channelSlug
             if (platform === 'kick') {
-              const kickAdapter = adapter as import('../platforms/kick/adapter').KickAdapter
-              const broadcasterUserId = kickAdapter.getBroadcasterUserId()
+              const kickAdapterCast = adapter as import('../platforms/kick/adapter').KickAdapter
+              const broadcasterUserId = kickAdapterCast.getBroadcasterUserId()
               if (broadcasterUserId) {
                 sevenTvChannelId = String(broadcasterUserId)
               }
@@ -459,6 +466,7 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>('bun', {
 
       removeWatchedChannel: async ({ id }: { id: string }) => {
         await watchedChannelManager.removeChannel(id)
+        WatchedChannelsLayoutStore.remove(id)
       },
 
       getWatchedChannelMessages: ({ id }: { id: string }) => {
@@ -475,6 +483,211 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>('bun', {
 
       openExternalUrl: ({ url }) => {
         void openBrowser(url)
+      },
+
+      // ---- Watched Channels Layout ----
+
+      getWatchedChannelsLayout: ({ tabId }: { tabId: string }) => {
+        return WatchedChannelsLayoutStore.get(tabId)
+      },
+
+      setWatchedChannelsLayout: ({
+        tabId,
+        layout,
+      }: {
+        tabId: string
+        layout: WatchedChannelsLayout
+      }) => {
+        WatchedChannelsLayoutStore.set(tabId, layout)
+      },
+
+      splitPanel: ({
+        tabId,
+        panelId,
+        direction,
+      }: {
+        tabId: string
+        panelId: string
+        direction: SplitDirection
+      }) => {
+        const layout = WatchedChannelsLayoutStore.get(tabId)
+
+        const MAX_PANELS = 8
+        const countPanels = (node: LayoutNode): number => {
+          if (node.type === 'panel') return 1
+          return node.children.reduce((sum, child) => sum + countPanels(child), 0)
+        }
+
+        if (countPanels(layout.root) >= MAX_PANELS) {
+          throw new Error('Maximum panel limit reached (8)')
+        }
+
+        const findNodeById = (node: LayoutNode, id: string): PanelNode | null => {
+          if (node.type === 'panel' && node.id === id) return node
+          if (node.type === 'split') {
+            for (const child of node.children) {
+              const found = findNodeById(child, id)
+              if (found) return found
+            }
+          }
+          return null
+        }
+
+        const findParentOfNode = (
+          root: LayoutNode,
+          nodeId: string,
+        ): { node: LayoutNode; children: LayoutNode[] } | null => {
+          if (root.type === 'split') {
+            for (let i = 0; i < root.children.length; i++) {
+              const child = root.children[i]
+              if (!child) continue
+              if (child.id === nodeId) {
+                return { node: root, children: root.children }
+              }
+              const found = findParentOfNode(child, nodeId)
+              if (found) return found
+            }
+          }
+          return null
+        }
+
+        const panel = findNodeById(layout.root, panelId)
+        if (!panel || panel.type !== 'panel') {
+          throw new Error('Panel not found')
+        }
+
+        const newPanel: PanelNode = {
+          type: 'panel',
+          id: crypto.randomUUID(),
+          content: { type: 'empty' },
+          flex: 50,
+        }
+
+        const parent = findParentOfNode(layout.root, panelId)
+        if (parent && parent.node.type === 'split' && parent.node.direction === direction) {
+          const index = parent.children.findIndex((c) => c.id === panelId)
+          parent.children.splice(index + 1, 0, newPanel)
+          const flexPerChild = 100 / parent.children.length
+          parent.children.forEach((child) => (child.flex = flexPerChild))
+        } else {
+          const newSplit: LayoutNode = {
+            type: 'split',
+            id: crypto.randomUUID(),
+            direction,
+            children: [panel, newPanel],
+            flex: panel.flex,
+          }
+
+          panel.flex = 50
+
+          if (parent) {
+            const index = parent.children.findIndex((c) => c.id === panelId)
+            parent.children[index] = newSplit
+          } else {
+            layout.root = newSplit
+          }
+        }
+
+        WatchedChannelsLayoutStore.set(tabId, layout)
+        return { original: panel, newPanel }
+      },
+
+      removePanel: ({ tabId, panelId }: { tabId: string; panelId: string }) => {
+        const layout = WatchedChannelsLayoutStore.get(tabId)
+
+        const findNodeById = (node: LayoutNode, id: string): PanelNode | null => {
+          if (node.type === 'panel' && node.id === id) return node
+          if (node.type === 'split') {
+            for (const child of node.children) {
+              const found = findNodeById(child, id)
+              if (found) return found
+            }
+          }
+          return null
+        }
+
+        const findParentOfNode = (
+          root: LayoutNode,
+          nodeId: string,
+        ): { node: LayoutNode; children: LayoutNode[] } | null => {
+          if (root.type === 'split') {
+            for (let i = 0; i < root.children.length; i++) {
+              const child = root.children[i]
+              if (!child) continue
+              if (child.id === nodeId) {
+                return { node: root, children: root.children }
+              }
+              const found = findParentOfNode(child, nodeId)
+              if (found) return found
+            }
+          }
+          return null
+        }
+
+        const panelToRemove = findNodeById(layout.root, panelId)
+        if (panelToRemove?.type === 'panel' && panelToRemove.content.type === 'main') {
+          throw new Error('Cannot remove main panel')
+        }
+
+        const parent = findParentOfNode(layout.root, panelId)
+        if (!parent) throw new Error('Panel not found')
+
+        const index = parent.children.findIndex((c) => c.id === panelId)
+        if (index === -1) throw new Error('Panel not found in parent')
+
+        parent.children.splice(index, 1)
+
+        if (parent.children.length === 1) {
+          const onlyChild = parent.children[0]
+          if (onlyChild) {
+            const grandparent = findParentOfNode(layout.root, parent.node.id)
+            if (grandparent) {
+              const parentIndex = grandparent.children.findIndex((c) => c.id === parent.node.id)
+              if (parentIndex !== -1) {
+                grandparent.children[parentIndex] = onlyChild
+              }
+            } else {
+              layout.root = onlyChild
+            }
+          }
+        } else {
+          const flexPerChild = 100 / parent.children.length
+          parent.children.forEach((child) => (child.flex = flexPerChild))
+        }
+
+        WatchedChannelsLayoutStore.set(tabId, layout)
+      },
+
+      assignChannelToPanel: ({
+        tabId,
+        panelId,
+        channelId,
+      }: {
+        tabId: string
+        panelId: string
+        channelId: string | null
+      }) => {
+        const layout = WatchedChannelsLayoutStore.get(tabId)
+
+        const findNodeById = (node: LayoutNode, id: string): PanelNode | null => {
+          if (node.type === 'panel' && node.id === id) return node
+          if (node.type === 'split') {
+            for (const child of node.children) {
+              const found = findNodeById(child, id)
+              if (found) return found
+            }
+          }
+          return null
+        }
+
+        const panel = findNodeById(layout.root, panelId)
+        if (!panel || panel.type !== 'panel') {
+          throw new Error('Panel not found')
+        }
+
+        panel.content = channelId ? { type: 'watched', channelId } : { type: 'empty' }
+
+        WatchedChannelsLayoutStore.set(tabId, layout)
       },
     },
   },
@@ -798,8 +1011,8 @@ for (const [platform, slugs] of Object.entries(savedChannels)) {
         // For Kick, use broadcasterUserId instead of slug
         let sevenTvChannelId = slug
         if (platform === 'kick') {
-          const kickAdapter = adapter as import('../platforms/kick/adapter').KickAdapter
-          const broadcasterUserId = kickAdapter.getBroadcasterUserId()
+          const kickAdapterCast = adapter as import('../platforms/kick/adapter').KickAdapter
+          const broadcasterUserId = kickAdapterCast.getBroadcasterUserId()
           if (broadcasterUserId) {
             sevenTvChannelId = String(broadcasterUserId)
           }
@@ -870,8 +1083,8 @@ for (const account of accounts) {
         // For Kick, use broadcasterUserId instead of slug
         let sevenTvChannelId = channelSlug
         if (account.platform === 'kick') {
-          const kickAdapter = adapter as import('../platforms/kick/adapter').KickAdapter
-          const broadcasterUserId = kickAdapter.getBroadcasterUserId()
+          const kickAdapterCast = adapter as import('../platforms/kick/adapter').KickAdapter
+          const broadcasterUserId = kickAdapterCast.getBroadcasterUserId()
           if (broadcasterUserId) {
             sevenTvChannelId = String(broadcasterUserId)
           }

@@ -16,11 +16,14 @@ import type { ElectrobunRPCSchema, RPCSchema } from 'electrobun/bun'
 import type {
   Account,
   AppSettings,
+  LayoutNode,
   NormalizedChatMessage,
   NormalizedEvent,
   Platform,
   PlatformStatusInfo,
+  SplitDirection,
   WatchedChannel,
+  WatchedChannelsLayout,
 } from '@twirchat/shared/types'
 import type {
   ChannelStatusRequest,
@@ -35,7 +38,7 @@ import type {
 // Bun-side schema (what the webview calls into)
 // ----------------------------------------------------------------
 
-interface BunRequests {
+type BunRequests = {
   /** Return all stored accounts */
   getAccounts: { params: void; response: Account[] }
   /** Return current app settings */
@@ -135,6 +138,27 @@ interface BunRequests {
   }
   /** Open external URL in system browser */
   openExternalUrl: { params: { url: string }; response: void }
+
+  // ---- Watched Channels Layout (per-tab) ----
+  /** Get the layout tree for a specific watched channel tab */
+  getWatchedChannelsLayout: { params: { tabId: string }; response: WatchedChannelsLayout | null }
+  /** Persist a full layout tree for a specific watched channel tab */
+  setWatchedChannelsLayout: {
+    params: { tabId: string; layout: WatchedChannelsLayout }
+    response: void
+  }
+  /** Remove a panel by id within a tab's layout */
+  removePanel: { params: { tabId: string; panelId: string }; response: void }
+  /** Assign (or unassign) a watched channel to a panel within a tab's layout */
+  assignChannelToPanel: {
+    params: { tabId: string; panelId: string; channelId: string | null }
+    response: void
+  }
+  /** Split a panel into two in the given direction within a tab's layout */
+  splitPanel: {
+    params: { tabId: string; panelId: string; direction: SplitDirection }
+    response: { original: LayoutNode; newPanel: LayoutNode }
+  }
 }
 
 type BunMessages = Record<never, unknown>
@@ -145,7 +169,7 @@ type BunMessages = Record<never, unknown>
 
 type WebviewRequests = Record<never, unknown>
 
-interface WebviewMessages {
+type WebviewMessages = {
   /** A new chat message arrived */
   chat_message: NormalizedChatMessage
   /** A follow/sub/raid/… event arrived */
