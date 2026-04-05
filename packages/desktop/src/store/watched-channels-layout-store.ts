@@ -56,13 +56,19 @@ export const WatchedChannelsLayoutStore = {
       .query<{ value: string }, [string]>('SELECT value FROM settings WHERE key = ?')
       .get(getKey(tabId))
 
-    if (!row) return createDefaultTabLayout(tabId)
+    if (!row) {
+      const defaultLayout = createDefaultTabLayout(tabId)
+      this.set(tabId, defaultLayout)
+      return defaultLayout
+    }
 
     try {
       const parsed = JSON.parse(row.value) as WatchedChannelsLayout
       return sanitizeTabLayout(parsed, tabId)
     } catch {
-      return createDefaultTabLayout(tabId)
+      const defaultLayout = createDefaultTabLayout(tabId)
+      this.set(tabId, defaultLayout)
+      return defaultLayout
     }
   },
 
