@@ -19,7 +19,7 @@ export interface IPlatformAdapter {
 
   connect(channelSlug: string): Promise<void>
   disconnect(): Promise<void>
-  sendMessage(channelId: string, text: string): Promise<void>
+  sendMessage(channelId: string, text: string, replyToMessageId?: string): Promise<void>
 
   on<K extends keyof PlatformEventMap>(event: K, handler: PlatformEventHandler<K>): void
   off<K extends keyof PlatformEventMap>(event: K, handler: PlatformEventHandler<K>): void
@@ -60,5 +60,5 @@ export abstract class BasePlatformAdapter implements IPlatformAdapter {
 
   abstract connect(channelSlug: string): Promise<void>
   abstract disconnect(): Promise<void>
-  abstract sendMessage(channelId: string, text: string): Promise<void>
+  abstract sendMessage(channelId: string, text: string, replyToMessageId?: string): Promise<void>
 }

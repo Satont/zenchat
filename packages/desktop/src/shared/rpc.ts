@@ -63,7 +63,7 @@ type BunRequests = {
   }
   /** Send a chat message */
   sendMessage: {
-    params: { platform: Platform; channelId: string; text: string }
+    params: { platform: Platform; channelId: string; text: string; replyToMessageId?: string }
     response: void
   }
   /** Get current stream status (title, category, viewers, isLive) */
@@ -128,7 +128,7 @@ type BunRequests = {
   }
   /** Send a message via a watched channel */
   sendWatchedChannelMessage: {
-    params: { id: string; text: string }
+    params: { id: string; text: string; replyToMessageId?: string }
     response: void
   }
   /** Get current connection statuses for all watched channels */

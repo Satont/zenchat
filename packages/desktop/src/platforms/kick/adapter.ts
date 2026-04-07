@@ -33,6 +33,16 @@ interface KickChatMessage {
     }
     profile_picture?: string
   }
+  metadata?: {
+    original_sender: {
+      id: string
+      username: string
+    }
+    original_message: {
+      id: string
+      content: string
+    }
+  }
 }
 
 interface KickFollowEvent {
@@ -151,7 +161,7 @@ export class KickAdapter extends BasePlatformAdapter {
     })
   }
 
-  async sendMessage(_channelId: string, text: string): Promise<void> {
+  async sendMessage(_channelId: string, text: string, replyToMessageId?: string): Promise<void> {
     if (this.anonymous) {
       throw new Error('Cannot send messages in anonymous mode. Please log in to Kick.')
     }
@@ -165,10 +175,16 @@ export class KickAdapter extends BasePlatformAdapter {
     // Check if token needs refresh before sending
     await this.refreshTokenIfNeeded()
 
-    const body = {
+    const body: {
+      broadcaster_user_id: number
+      content: string
+      type: string
+      reply_to_message_id?: string
+    } = {
       broadcaster_user_id: this.broadcasterUserId ?? Number(this.platformUserId),
       content: text,
       type: 'user',
+      ...(replyToMessageId ? { reply_to_message_id: replyToMessageId } : {}),
     }
 
     const url = `${KICK_API_BASE}/chat`
@@ -445,6 +461,19 @@ export class KickAdapter extends BasePlatformAdapter {
       text: cleanText,
       timestamp: new Date(msg.created_at),
       type: 'message',
+      ...(msg.type === 'reply' && msg.metadata
+        ? {
+            reply: {
+              parentAuthor: {
+                displayName: msg.metadata.original_sender.username,
+                id: msg.metadata.original_sender.id,
+                username: msg.metadata.original_sender.username,
+              },
+              parentMessageId: msg.metadata.original_message.id,
+              parentMessageText: msg.metadata.original_message.content,
+            },
+          }
+        : {}),
     }
 
     this.emit('message', normalized)

@@ -41,6 +41,15 @@ export interface NormalizedChatMessage {
   emotes: Emote[]
   timestamp: Date
   type: 'message' | 'action' | 'system'
+  reply?: {
+    parentMessageId: string
+    parentMessageText: string
+    parentAuthor: {
+      id: string
+      username: string
+      displayName: string
+    }
+  }
 }
 
 export interface NormalizedEvent {

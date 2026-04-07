@@ -15,6 +15,14 @@ const props = defineProps<{
   chatTheme?: 'modern' | 'compact'
 }>()
 
+const emit = defineEmits<{
+  reply: [message: NormalizedChatMessage]
+}>()
+
+function onReply() {
+  emit('reply', props.message)
+}
+
 const isSystemMessage = computed(() => props.message.type === 'system')
 
 const systemAction = computed<'added' | 'removed' | 'renamed'>(() => {
@@ -291,6 +299,18 @@ onMounted(() => {
       :style="{ background: platformColor(message.platform) }"
     />
 
+    <!-- Reply Preview -->
+    <div v-if="message.reply" class="reply-preview compact-reply">
+      <span class="reply-icon">↩</span>
+      <span class="reply-author">{{ message.reply.parentAuthor.displayName }}</span
+      >:
+      <span class="reply-text">{{
+        message.reply.parentMessageText.length > 80
+          ? message.reply.parentMessageText.slice(0, 80) + '…'
+          : message.reply.parentMessageText
+      }}</span>
+    </div>
+
     <!-- Platform icon -->
     <span
       v-if="props.showPlatformIcon"
@@ -350,6 +370,24 @@ onMounted(() => {
     <span v-if="props.showTimestamp" class="timestamp compact-time">{{
       formatTime(message.timestamp)
     }}</span>
+
+    <!-- Reply button -->
+    <button v-if="showCopyButton" class="reply-btn" @click.stop="onReply" title="Reply to message">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="9 17 4 12 9 7"></polyline>
+        <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+      </svg>
+    </button>
 
     <!-- Copy button -->
     <button
@@ -436,6 +474,18 @@ onMounted(() => {
 
     <!-- Body -->
     <div class="msg-body">
+      <!-- Reply Preview -->
+      <div v-if="message.reply" class="reply-preview">
+        <span class="reply-icon">↩</span>
+        <span class="reply-author">{{ message.reply.parentAuthor.displayName }}</span
+        >:
+        <span class="reply-text">{{
+          message.reply.parentMessageText.length > 80
+            ? message.reply.parentMessageText.slice(0, 80) + '…'
+            : message.reply.parentMessageText
+        }}</span>
+      </div>
+
       <div class="msg-meta">
         <!-- Badges -->
         <span v-if="props.showBadges !== false && message.author.badges.length" class="badges">
@@ -489,6 +539,24 @@ onMounted(() => {
       </span>
     </div>
 
+    <!-- Reply button -->
+    <button v-if="showCopyButton" class="reply-btn" @click.stop="onReply" title="Reply to message">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="9 17 4 12 9 7"></polyline>
+        <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+      </svg>
+    </button>
+
     <!-- Copy button -->
     <button
       v-if="showCopyButton"
@@ -536,7 +604,7 @@ onMounted(() => {
   align-items: flex-start;
   gap: 10px;
   padding: 6px 14px;
-  padding-right: 40px;
+  padding-right: 64px;
   font-size: var(--font-size, 14px);
   line-height: 1.45;
   word-break: break-word;
@@ -706,6 +774,66 @@ onMounted(() => {
   text-underline-offset: 2px;
 }
 
+/* Reply Preview */
+.reply-preview {
+  font-size: 0.8em;
+  color: var(--c-text-2, #8b8b99);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.reply-author {
+  color: var(--c-text, #e2e2e8);
+  font-weight: 600;
+}
+
+.reply-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80ch;
+}
+
+.reply-icon {
+  opacity: 0.7;
+  font-size: 1.1em;
+}
+
+/* Reply button */
+.reply-btn {
+  position: absolute;
+  right: 34px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  padding: 4px 6px;
+  cursor: pointer;
+  color: var(--c-text-2, #8b8b99);
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s,
+    color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.msg:hover .reply-btn,
+.msg-compact:hover .reply-btn {
+  opacity: 1;
+}
+
+.reply-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--c-text, #e2e2e8);
+}
+
 /* Copy button */
 .copy-btn {
   position: absolute;
@@ -749,7 +877,7 @@ onMounted(() => {
   align-items: center;
   gap: 5px;
   padding: 3px 14px;
-  padding-right: 40px;
+  padding-right: 64px;
   font-size: var(--font-size, 14px);
   line-height: 1.5;
   word-break: break-word;
@@ -792,8 +920,20 @@ onMounted(() => {
   line-height: 1;
 }
 
+.compact-reply {
+  order: -1;
+  width: 100%;
+}
+
 .msg-compact .copy-btn {
   right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
+}
+
+.msg-compact .reply-btn {
+  right: 34px;
   top: 50%;
   transform: translateY(-50%);
   margin-left: 0;

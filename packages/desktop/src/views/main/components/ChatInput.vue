@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import type { PlatformStatusInfo, WatchedChannel } from '@twirchat/shared/types'
+import type {
+  NormalizedChatMessage,
+  PlatformStatusInfo,
+  WatchedChannel,
+} from '@twirchat/shared/types'
 
 const props = defineProps<{
   statuses: Map<string, PlatformStatusInfo>
@@ -8,11 +12,15 @@ const props = defineProps<{
   watchedChannel?: WatchedChannel | null
   /** Connection status for the watched channel */
   watchedChannelStatus?: PlatformStatusInfo | null
+  replyTarget?: NormalizedChatMessage | null
 }>()
 
 const emit = defineEmits<{
-  send: [payload: { platform: string; channelLogin: string; text: string }[]]
-  'send-watched': [payload: { text: string; channelId: string }]
+  send: [
+    payload: { platform: string; channelLogin: string; text: string; replyToMessageId?: string }[],
+  ]
+  'send-watched': [payload: { text: string; channelId: string; replyToMessageId?: string }]
+  'cancel-reply': []
 }>()
 
 const text = ref('')
@@ -98,11 +106,20 @@ function send() {
   }
 
   if (props.watchedChannel) {
-    emit('send-watched', { text: trimmed, channelId: props.watchedChannel.id })
+    emit('send-watched', {
+      text: trimmed,
+      channelId: props.watchedChannel.id,
+      replyToMessageId: props.replyTarget?.id,
+    })
   } else {
     const targets = sendablePlatforms.value
       .filter((p) => isEnabled(p.platform))
-      .map((p) => ({ channelLogin: p.channelLogin!, platform: p.platform, text: trimmed }))
+      .map((p) => ({
+        channelLogin: p.channelLogin!,
+        platform: p.platform,
+        text: trimmed,
+        replyToMessageId: props.replyTarget?.id,
+      }))
     if (targets.length === 0) {
       return
     }
@@ -160,6 +177,31 @@ function placeholderText(): string {
 
 <template>
   <div class="chat-input-bar">
+    <div v-if="replyTarget" class="reply-bar">
+      <span class="reply-bar-icon">↩</span>
+      <span class="reply-bar-body">
+        Replying to <strong>{{ replyTarget.author.displayName }}</strong
+        >:
+        {{ replyTarget.text.length > 80 ? replyTarget.text.slice(0, 80) + '…' : replyTarget.text }}
+      </span>
+      <button class="reply-bar-dismiss" title="Cancel reply" @click="emit('cancel-reply')">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
     <!-- Watched channel: single fixed chip -->
     <div v-if="watchedChannel" class="input-targets">
       <div
@@ -334,6 +376,53 @@ function placeholderText(): string {
   flex-direction: column;
   gap: 7px;
   background: var(--c-surface, #18181b);
+}
+
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 5px 10px;
+  border-left: 2px solid rgba(167, 139, 250, 0.5);
+  font-size: 12px;
+  color: var(--c-text-2, #8b8b99);
+}
+
+.reply-bar-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.reply-bar-body {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-bar-body strong {
+  color: var(--c-text, #e2e2e8);
+}
+
+.reply-bar-dismiss {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--c-text-2, #8b8b99);
+  padding: 0;
+  border-radius: 4px;
+}
+
+.reply-bar-dismiss:hover {
+  color: var(--c-text, #e2e2e8);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* ---- platform toggles ---- */

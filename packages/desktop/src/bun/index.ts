@@ -338,7 +338,7 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>('bun', {
         })
       },
 
-      sendMessage: ({ platform, channelId, text }) => {
+      sendMessage: ({ platform, channelId, text, replyToMessageId }) => {
         const adapter = aggregator.getAdapter(platform)
         if (!adapter) {
           log.warn('No adapter registered for platform', {
@@ -347,7 +347,7 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>('bun', {
           })
           return
         }
-        adapter.sendMessage(channelId, text).catch((err) => {
+        adapter.sendMessage(channelId, text, replyToMessageId).catch((err) => {
           log.error('Failed to send message', {
             platform,
             error: String(err),
@@ -473,8 +473,16 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>('bun', {
         return watchedChannelManager.getMessages(id)
       },
 
-      sendWatchedChannelMessage: async ({ id, text }: { id: string; text: string }) => {
-        await watchedChannelManager.sendMessage(id, text)
+      sendWatchedChannelMessage: async ({
+        id,
+        text,
+        replyToMessageId,
+      }: {
+        id: string
+        text: string
+        replyToMessageId?: string
+      }) => {
+        await watchedChannelManager.sendMessage(id, text, replyToMessageId)
       },
 
       getWatchedChannelStatuses: () => {

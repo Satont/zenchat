@@ -159,12 +159,12 @@ export class WatchedChannelManager {
   }
 
   /** Send a message via the watched channel's adapter */
-  async sendMessage(id: string, text: string): Promise<void> {
+  async sendMessage(id: string, text: string, replyToMessageId?: string): Promise<void> {
     const entry = this.entries.get(id)
     if (!entry) {
       throw new Error(`Watched channel ${id} not found`)
     }
-    await entry.adapter.sendMessage(entry.watchedChannel.channelSlug, text)
+    await entry.adapter.sendMessage(entry.watchedChannel.channelSlug, text, replyToMessageId)
   }
 
   /** Register a handler for incoming messages */

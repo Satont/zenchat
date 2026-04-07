@@ -117,7 +117,7 @@ export class TwitchAdapter extends BasePlatformAdapter {
     })
   }
 
-  async sendMessage(channelId: string, text: string): Promise<void> {
+  async sendMessage(channelId: string, text: string, replyToMessageId?: string): Promise<void> {
     if (this.anonymous) {
       throw new Error('Cannot send messages in anonymous mode. Please log in to Twitch.')
     }
@@ -132,7 +132,11 @@ export class TwitchAdapter extends BasePlatformAdapter {
     await this.refreshTokenIfNeeded()
 
     try {
-      await this.chatClient.say(channelId, text)
+      await this.chatClient.say(
+        channelId,
+        text,
+        replyToMessageId ? { replyTo: replyToMessageId } : undefined,
+      )
     } catch (error) {
       // If we get an auth error, try to refresh and retry once
       if (this.isAuthError(error)) {
@@ -141,7 +145,11 @@ export class TwitchAdapter extends BasePlatformAdapter {
         if (refreshed && this.chatClient) {
           // Reconnect with new token
           await this.reconnectWithNewToken()
-          await this.chatClient.say(channelId, text)
+          await this.chatClient.say(
+            channelId,
+            text,
+            replyToMessageId ? { replyTo: replyToMessageId } : undefined,
+          )
           return
         }
       }
@@ -375,6 +383,12 @@ export class TwitchAdapter extends BasePlatformAdapter {
     const msgId = tags.get('id') ?? `${Date.now()}`
     const timestamp = msg.date
 
+    const replyParentMsgId = tags.get('reply-parent-msg-id')
+    const replyParentMsgBody = tags.get('reply-parent-msg-body')
+    const replyParentUserLogin = tags.get('reply-parent-user-login')
+    const replyParentDisplayName = tags.get('reply-parent-display-name') ?? replyParentUserLogin
+    const replyParentUserId = tags.get('reply-parent-user-id')
+
     // Parse emotes from the parsed message
     const emotes: NormalizedChatMessage['emotes'] = []
     if (msg.emoteOffsets) {
@@ -430,6 +444,19 @@ export class TwitchAdapter extends BasePlatformAdapter {
       text,
       timestamp,
       type: isAction ? 'action' : 'message',
+      ...(replyParentMsgId && replyParentMsgBody && replyParentUserId
+        ? {
+            reply: {
+              parentAuthor: {
+                displayName: replyParentDisplayName ?? replyParentUserLogin ?? '',
+                id: replyParentUserId,
+                username: replyParentUserLogin ?? '',
+              },
+              parentMessageId: replyParentMsgId,
+              parentMessageText: replyParentMsgBody,
+            },
+          }
+        : {}),
     }
 
     this.emit('message', normalized)

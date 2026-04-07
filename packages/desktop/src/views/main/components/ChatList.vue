@@ -28,11 +28,16 @@ const props = defineProps<{
 const emit = defineEmits<{
   'go-to-platforms': []
   'settings-change': [settings: import('@twirchat/shared/types').AppSettings]
-  'send-watched': [payload: { text: string; channelId: string }]
+  'send-watched': [payload: { text: string; channelId: string; replyToMessageId?: string }]
 }>()
 
 const listEl = ref<HTMLElement | null>(null)
 const isAtBottom = ref(true)
+const replyTarget = ref<NormalizedChatMessage | null>(null)
+
+function onReply(msg: NormalizedChatMessage) {
+  replyTarget.value = msg
+}
 
 // ---- Channel status bar ----
 const channelStatuses = ref<ChannelStatus[]>([])
@@ -223,7 +228,9 @@ function formatViewers(n: number): string {
   return String(n)
 }
 
-async function onSend(targets: { platform: string; channelLogin: string; text: string }[]) {
+async function onSend(
+  targets: { platform: string; channelLogin: string; text: string; replyToMessageId?: string }[],
+) {
   await Promise.allSettled(
     targets.map((t) =>
       rpc.request
@@ -231,14 +238,17 @@ async function onSend(targets: { platform: string; channelLogin: string; text: s
           channelId: t.channelLogin,
           platform: t.platform as import('@twirchat/shared/types').Platform,
           text: t.text,
+          replyToMessageId: t.replyToMessageId,
         })
         .catch((error) => console.warn(`[ChatInput] send failed on ${t.platform}:`, error)),
     ),
   )
+  replyTarget.value = null
 }
 
-function onSendWatched(payload: { text: string; channelId: string }) {
+function onSendWatched(payload: { text: string; channelId: string; replyToMessageId?: string }) {
   emit('send-watched', payload)
+  replyTarget.value = null
 }
 
 function onAppearanceChange(s: import('@twirchat/shared/types').AppSettings) {
@@ -347,6 +357,7 @@ function onAppearanceChange(s: import('@twirchat/shared/types').AppSettings) {
             :show-badges="settings?.showBadges"
             :font-size="settings?.fontSize"
             :chat-theme="settings?.chatTheme"
+            @reply="onReply"
           />
         </template>
 
@@ -451,6 +462,8 @@ function onAppearanceChange(s: import('@twirchat/shared/types').AppSettings) {
       :statuses="statuses"
       :watched-channel="watchedChannel"
       :watched-channel-status="watchedChannelStatus"
+      :reply-target="replyTarget"
+      @cancel-reply="replyTarget = null"
       @send="onSend"
       @send-watched="onSendWatched"
     />
