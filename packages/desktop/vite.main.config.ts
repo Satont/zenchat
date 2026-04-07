@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import svgLoader from 'vite-svg-loader'
 import { resolve } from 'path'
 
 const __dirname = import.meta.dirname
@@ -9,7 +10,7 @@ export default defineConfig({
     emptyOutDir: true,
     outDir: resolve(__dirname, 'dist/main'),
   },
-  plugins: [vue()],
+  plugins: [vue(), svgLoader({ defaultImport: 'component' })],
   resolve: {
     alias: {
       '@twirchat/shared/types': resolve(__dirname, '../shared/types.ts'),
