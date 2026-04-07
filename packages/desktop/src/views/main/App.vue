@@ -32,6 +32,12 @@ const unreadEvents = ref(0)
 
 // ---- Watched channels ----
 const watchedChannels = ref<WatchedChannel[]>([])
+const tabChannelIds = ref<Set<string>>(new Set())
+
+const tabWatchedChannels = computed(() =>
+  watchedChannels.value.filter((ch) => tabChannelIds.value.has(ch.id)),
+)
+
 /** Active watched channel tab ('home' or WatchedChannel.id) */
 const activeWatchedTab = ref<string>('home')
 /** ChannelId → messages buffer */
@@ -109,6 +115,7 @@ async function loadInitialData() {
     }
     if (watched !== undefined) {
       watchedChannels.value = watched
+      tabChannelIds.value = new Set(watched.map((ch) => ch.id))
     }
 
     // Load current watched channel statuses (emitted before webview was ready)
@@ -385,7 +392,8 @@ async function doAddWatchedChannel(
 async function onAddChannel(platform: 'twitch' | 'kick' | 'youtube', channelSlug: string) {
   showAddModal.value = false
   try {
-    await doAddWatchedChannel(platform, channelSlug)
+    const ch = await doAddWatchedChannel(platform, channelSlug)
+    tabChannelIds.value = new Set([...tabChannelIds.value, ch.id])
   } catch (error) {
     console.error('[App] addWatchedChannel failed:', error)
   }
@@ -395,6 +403,7 @@ async function onRemoveChannel(id: string) {
   try {
     await rpc.request.removeWatchedChannel({ id })
     watchedChannels.value = watchedChannels.value.filter((c: WatchedChannel) => c.id !== id)
+    tabChannelIds.value = new Set([...tabChannelIds.value].filter((i) => i !== id))
     watchedMessages.value = new Map([...watchedMessages.value].filter(([k]) => k !== id))
     watchedStatuses.value = new Map([...watchedStatuses.value].filter(([k]) => k !== id))
     watchedLiveStatuses.value = new Map([...watchedLiveStatuses.value].filter(([k]) => k !== id))
@@ -549,7 +558,7 @@ async function onSendWatched({ text, channelId }: { text: string; channelId?: st
       <!-- Channel tab bar for watched channels -->
       <ChannelTabBar
         v-if="activeTab === 'chat'"
-        :watched-channels="watchedChannels"
+        :watched-channels="tabWatchedChannels"
         :active-tab-id="activeWatchedTab"
         :watched-statuses="watchedStatuses"
         :watched-live-statuses="watchedLiveStatuses"
