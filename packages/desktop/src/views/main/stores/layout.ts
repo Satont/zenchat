@@ -196,6 +196,87 @@ const movePanel = (sourceId: string, targetId: string, position: 'before' | 'aft
   return true
 }
 
+const dropPanel = (
+  sourceId: string,
+  targetId: string,
+  direction: 'left' | 'right' | 'top' | 'bottom',
+) => {
+  if (!layout.value || sourceId === targetId) return false
+
+  const sourcePanel = getPanel(sourceId)
+  if (!sourcePanel) return false
+
+  const sourceParent = findParentOfNode(layout.value.root, sourceId)
+  if (!sourceParent) return false
+
+  const sourceIndex = sourceParent.children.findIndex((c) => c.id === sourceId)
+  if (sourceIndex === -1) return false
+
+  sourceParent.children.splice(sourceIndex, 1)
+
+  if (sourceParent.children.length === 1) {
+    const onlyChild = sourceParent.children[0]
+    if (onlyChild) {
+      const grandparent = findParentOfNode(layout.value.root, sourceParent.node.id)
+      if (grandparent) {
+        const parentIndex = grandparent.children.findIndex((c) => c.id === sourceParent.node.id)
+        if (parentIndex !== -1) {
+          grandparent.children[parentIndex] = onlyChild
+        }
+      } else {
+        layout.value.root = onlyChild
+      }
+    }
+  }
+
+  const targetPanel = getPanel(targetId)
+  if (!targetPanel) {
+    void loadLayout(currentTabId.value)
+    return false
+  }
+
+  const targetParent = findParentOfNode(layout.value.root, targetId)
+  if (!targetParent) {
+    void loadLayout(currentTabId.value)
+    return false
+  }
+
+  const splitDirection: SplitDirection =
+    direction === 'left' || direction === 'right' ? 'vertical' : 'horizontal'
+  const isAfter = direction === 'right' || direction === 'bottom'
+
+  if (targetParent.node.type === 'split' && targetParent.node.direction === splitDirection) {
+    const targetIndex = targetParent.children.findIndex((c) => c.id === targetId)
+    if (targetIndex !== -1) {
+      const insertIndex = isAfter ? targetIndex + 1 : targetIndex
+      targetParent.children.splice(insertIndex, 0, sourcePanel)
+
+      const flexPerChild = 100 / targetParent.children.length
+      targetParent.children.forEach((child) => (child.flex = flexPerChild))
+    }
+  } else {
+    const targetIndex = targetParent.children.findIndex((c) => c.id === targetId)
+    if (targetIndex !== -1) {
+      const newSplit: LayoutNode = {
+        type: 'split',
+        id: crypto.randomUUID(),
+        direction: splitDirection,
+        flex: targetPanel.flex,
+        children: isAfter ? [targetPanel, sourcePanel] : [sourcePanel, targetPanel],
+      }
+
+      targetPanel.flex = 50
+      sourcePanel.flex = 50
+
+      targetParent.children[targetIndex] = newSplit
+    }
+  }
+
+  layout.value = { ...layout.value }
+  debouncedSave()
+  return true
+}
+
 const startDrag = (panelId: string) => {
   draggedPanelId.value = panelId
   return true
@@ -301,6 +382,7 @@ export function useLayoutStore() {
     assignChannel,
     updateFlex,
     movePanel,
+    dropPanel,
     startDrag,
     endDrag,
     setDropTarget,

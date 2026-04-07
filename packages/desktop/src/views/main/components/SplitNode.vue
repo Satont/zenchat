@@ -41,7 +41,7 @@ const emit = defineEmits<{
   dragend: []
   dragover: [panelId: string]
   dragleave: []
-  drop: [targetId: string]
+  drop: [targetId: string, direction: 'left' | 'right' | 'top' | 'bottom']
 }>()
 
 const isSplit = computed(() => props.node.type === 'split')
@@ -109,8 +109,8 @@ const handleDragLeave = () => {
   emit('dragleave')
 }
 
-const handleDrop = (targetId: string) => {
-  emit('drop', targetId)
+const handleDrop = (targetId: string, direction: 'left' | 'right' | 'top' | 'bottom') => {
+  emit('drop', targetId, direction)
 }
 
 const handleSettingsChange = (s: AppSettings) => {

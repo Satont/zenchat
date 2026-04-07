@@ -37,7 +37,7 @@ const emit = defineEmits<{
   dragend: []
   dragover: [panelId: string]
   dragleave: []
-  drop: [targetId: string]
+  drop: [targetId: string, direction: 'left' | 'right' | 'top' | 'bottom']
 }>()
 
 const isMain = computed(() => props.panel.content.type === 'main')
@@ -72,6 +72,7 @@ const youtubeAuthenticated = computed(
 
 const showMenu = ref(false)
 const showAddForm = ref(false)
+const dropZone = ref<'left' | 'right' | 'top' | 'bottom' | null>(null)
 
 const showForm = computed(() => isEmpty.value || showAddForm.value)
 
@@ -136,16 +137,28 @@ const handleDragOver = (e: DragEvent) => {
   if (e.dataTransfer) {
     e.dataTransfer.dropEffect = 'move'
   }
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  const relX = (e.clientX - rect.left) / rect.width
+  const relY = (e.clientY - rect.top) / rect.height
+  if (Math.abs(relX - 0.5) > Math.abs(relY - 0.5)) {
+    dropZone.value = relX < 0.5 ? 'left' : 'right'
+  } else {
+    dropZone.value = relY < 0.5 ? 'top' : 'bottom'
+  }
   emit('dragover', props.panel.id)
 }
 
 const handleDragLeave = () => {
+  dropZone.value = null
   emit('dragleave')
 }
 
 const handleDrop = (e: DragEvent) => {
   e.preventDefault()
-  emit('drop', props.panel.id)
+  const zone = dropZone.value ?? 'right'
+  dropZone.value = null
+  emit('drop', props.panel.id, zone)
 }
 
 const handleKeydown = (e: KeyboardEvent) => {
@@ -184,6 +197,11 @@ const handleKeydown = (e: KeyboardEvent) => {
     @dragleave="handleDragLeave"
     @drop="handleDrop"
   >
+    <div
+      v-if="isDropTarget && dropZone"
+      class="drop-zone-overlay"
+      :class="`drop-zone-${dropZone}`"
+    />
     <div
       class="panel-header"
       :class="{ 'is-drag-handle': isDraggable }"
@@ -462,8 +480,37 @@ const handleKeydown = (e: KeyboardEvent) => {
   opacity: 0.5;
 }
 
-.panel-node.is-drop-target {
-  border: 2px dashed #a78bfa;
-  background: rgba(167, 139, 250, 0.1);
+.drop-zone-overlay {
+  position: absolute;
+  background: rgba(88, 101, 242, 0.35);
+  border: 2px solid rgba(88, 101, 242, 0.8);
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 4px;
+  transition: all 0.08s ease;
+}
+.drop-zone-left {
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+}
+.drop-zone-right {
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+}
+.drop-zone-top {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+}
+.drop-zone-bottom {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
 }
 </style>

@@ -148,10 +148,10 @@ const handleDragLeave = () => {
   layoutStore.setDropTarget(null)
 }
 
-const handleDrop = (targetId: string) => {
+const handleDrop = (targetId: string, direction: 'left' | 'right' | 'top' | 'bottom') => {
   const draggedId = layoutStore.draggedPanelId.value
   if (draggedId && draggedId !== targetId) {
-    layoutStore.movePanel(draggedId, targetId, 'after')
+    layoutStore.dropPanel(draggedId, targetId, direction)
   }
   layoutStore.endDrag()
 }
