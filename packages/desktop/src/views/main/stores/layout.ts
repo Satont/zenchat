@@ -106,7 +106,7 @@ const assignChannel = async (panelId: string, channelId: string | null) => {
     const panel = getPanel(panelId)
     if (panel) {
       panel.content = channelId ? { type: 'watched', channelId } : { type: 'empty' }
-      debouncedSave()
+      await loadLayout(currentTabId.value)
     }
   } catch (e) {
     error.value = String(e)
@@ -157,14 +157,20 @@ const movePanel = (sourceId: string, targetId: string, position: 'before' | 'aft
   if (!sourcePanel || !targetPanel) return false
 
   const sourceParent = findParentOfNode(layout.value.root, sourceId)
-  if (!sourceParent) return false
+  const targetParent = findParentOfNode(layout.value.root, targetId)
+  if (!sourceParent || !targetParent) return false
 
   const sourceIndex = sourceParent.children.findIndex((c) => c.id === sourceId)
-  if (sourceIndex === -1) return false
+  let targetIndex = targetParent.children.findIndex((c) => c.id === targetId)
+  if (sourceIndex === -1 || targetIndex === -1) return false
 
   sourceParent.children.splice(sourceIndex, 1)
 
-  if (sourceParent.children.length === 1) {
+  if (sourceParent.node.id === targetParent.node.id && sourceIndex < targetIndex) {
+    targetIndex--
+  }
+
+  if (sourceParent.children.length === 1 && sourceParent.node.id !== targetParent.node.id) {
     const onlyChild = sourceParent.children[0]
     if (onlyChild) {
       const grandparent = findParentOfNode(layout.value.root, sourceParent.node.id)
@@ -179,24 +185,13 @@ const movePanel = (sourceId: string, targetId: string, position: 'before' | 'aft
     }
   }
 
-  const targetParent = findParentOfNode(layout.value.root, targetId)
-  if (!targetParent) {
-    void loadLayout(currentTabId.value)
-    return false
-  }
-
-  const targetIndex = targetParent.children.findIndex((c) => c.id === targetId)
-  if (targetIndex === -1) {
-    void loadLayout(currentTabId.value)
-    return false
-  }
-
   const insertIndex = position === 'before' ? targetIndex : targetIndex + 1
   targetParent.children.splice(insertIndex, 0, sourcePanel)
 
   const flexPerChild = 100 / targetParent.children.length
   targetParent.children.forEach((child) => (child.flex = flexPerChild))
 
+  layout.value = { ...layout.value }
   debouncedSave()
   return true
 }

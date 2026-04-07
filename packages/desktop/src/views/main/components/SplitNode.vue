@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Splitpanes, Pane } from 'splitpanes'
+import 'splitpanes/dist/splitpanes.css'
 import type {
   LayoutNode,
   SplitNode as SplitNodeType,
@@ -197,6 +198,7 @@ const handleSendWatched = (payload: { text: string; channelId: string }) => {
 }
 
 .split-node-pane {
+  height: 100%;
   overflow: hidden;
 }
 

@@ -50,8 +50,8 @@ function emitTabChannels() {
   emit('tab-channels-updated', { tabId: props.tabId, channelNames: names })
 }
 
-watch(layoutStore.allPanels, () => {
-  emitTabChannels()
+watch([() => layoutStore.allPanels.value, () => props.watchedChannels], () => emitTabChannels(), {
+  deep: true,
 })
 
 onMounted(() => {
@@ -165,6 +165,7 @@ const handleDrop = (targetId: string) => {
     </div>
     <SplitNode
       v-else-if="layoutStore.rootNode.value"
+      style="height: 100%"
       :node="layoutStore.rootNode.value"
       :messages="messages"
       :settings="settings"
