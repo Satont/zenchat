@@ -5,6 +5,7 @@
 > **Quick Summary**: Add a `⋮` hover button to chat messages that opens a context menu with moderation actions (Ban, Timeout, Delete message) — available only when the current user is authenticated on Twitch or Kick. Also includes non-destructive actions (Reply, Copy message, Copy username) for all users.
 >
 > **Deliverables**:
+>
 > - `ContextMenu.vue` — new reka-ui Popover-based component with all menu items
 > - `TwitchAdapter` — new `banUser()`, `timeoutUser()`, `deleteMessage()` methods via Helix REST API + broadcaster_id caching in `connect()`
 > - `KickAdapter` — new `banUser()`, `timeoutUser()`, `deleteMessage()` methods via Kick v1 REST API
@@ -24,16 +25,20 @@
 ## Context
 
 ### Original Request
+
 Issue #16: Add ban/timeout features for Kick and Twitch. Only works for broadcaster/moderator.
 
 ### Interview Summary
+
 **Key Discussions**:
+
 - Timeout duration: presets (1м/5м/10м/1ч/1д) + custom input field
 - Context menu contents: Reply, Copy message, Copy username + moderation (Delete, Timeout, Ban)
 - Delete message for Twitch: YES, include
 - UI trigger: `⋮` hover button (consistent with existing hover buttons pattern)
 
 **Research Findings**:
+
 - Twitch Helix API: `POST /helix/moderation/bans` (ban/timeout), `DELETE /helix/moderation/chat` (delete message)
   - Requires `broadcaster_id` (numeric!) — must fetch from login during `connect()`
   - Scopes: `moderator:manage:banned_users`, `moderator:manage:chat_messages`
@@ -42,7 +47,9 @@ Issue #16: Add ban/timeout features for Kick and Twitch. Only works for broadcas
   - Scopes: `moderation:ban`, `moderation:chat_message:manage`
 
 ### Metis Review
+
 **Identified Gaps** (addressed):
+
 - OAuth scopes are in `packages/backend/` NOT `packages/desktop/src/auth/` — plan corrected
 - Twitch `broadcaster_id` is numeric but `channelId` is a login string — fix: fetch+cache in `connect()`
 - `BasePlatformAdapter` moderation methods must be **optional** (not abstract) — YouTube adapter left untouched
@@ -55,9 +62,11 @@ Issue #16: Add ban/timeout features for Kick and Twitch. Only works for broadcas
 ## Work Objectives
 
 ### Core Objective
+
 Add right-click / hover-button moderation actions to chat messages for Twitch and Kick platforms, restricted to authenticated (broadcaster/moderator) users.
 
 ### Concrete Deliverables
+
 - `packages/desktop/tests/moderation.test.ts` (unit tests)
 - `packages/backend/src/auth/twitch.ts` (new OAuth scopes)
 - `packages/backend/src/auth/kick.ts` (new OAuth scopes)
@@ -70,6 +79,7 @@ Add right-click / hover-button moderation actions to chat messages for Twitch an
 - `packages/desktop/src/views/main/components/ChatMessage.vue` (⋮ button + menu integration)
 
 ### Definition of Done
+
 - [ ] `bun test packages/desktop/tests/moderation.test.ts` → PASS (0 failures)
 - [ ] `bun run check` passes (root monorepo: typecheck + lint + format)
 - [ ] `grep "moderator:manage:banned_users" packages/backend/src/auth/twitch.ts` → match found
@@ -78,6 +88,7 @@ Add right-click / hover-button moderation actions to chat messages for Twitch an
 - [ ] `grep "moderateMessage" packages/desktop/src/bun/index.ts` → match found
 
 ### Must Have
+
 - Ban user (permanent) on Twitch + Kick
 - Timeout user with 5 presets + custom input on Twitch + Kick
 - Delete message on Twitch + Kick
@@ -86,6 +97,7 @@ Add right-click / hover-button moderation actions to chat messages for Twitch an
 - `refreshTokenIfNeeded()` called before every moderation API request
 
 ### Must NOT Have (Guardrails)
+
 - NO unban flow — out of scope
 - NO moderation on `platform === 'youtube'` messages
 - NO moderation on `type === 'system'` messages
@@ -105,12 +117,14 @@ Add right-click / hover-button moderation actions to chat messages for Twitch an
 > **ZERO HUMAN INTERVENTION** — ALL verification is agent-executed. No exceptions.
 
 ### Test Decision
+
 - **Infrastructure exists**: YES (`packages/desktop/tests/`)
 - **Automated tests**: TDD (RED → GREEN) for adapter methods; tests-after for RPC handlers
 - **Framework**: `bun test`
 - **TDD Tasks**: Tasks 4 (stubs) + 9 (fill in) follow RED → GREEN cycle
 
 ### QA Policy
+
 Every task includes agent-executed QA scenarios.
 Evidence saved to `.sisyphus/evidence/task-{N}-{slug}.{ext}`.
 
@@ -154,18 +168,18 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 
 ### Dependency Matrix
 
-| Task | Depends On | Blocks |
-|------|-----------|--------|
-| 1    | —         | 5, 6, 7 |
-| 2    | —         | — |
-| 3    | —         | 5, 6 |
-| 4    | 1, 3      | 9 |
-| 5    | 1, 3      | 7, 9 |
-| 6    | 1, 3      | 7, 9 |
-| 7    | 1, 5, 6   | 10 |
-| 8    | —         | 10 |
-| 9    | 4, 5, 6   | F2 |
-| 10   | 7, 8      | F1-F4 |
+| Task | Depends On | Blocks  |
+| ---- | ---------- | ------- |
+| 1    | —          | 5, 6, 7 |
+| 2    | —          | —       |
+| 3    | —          | 5, 6    |
+| 4    | 1, 3       | 9       |
+| 5    | 1, 3       | 7, 9    |
+| 6    | 1, 3       | 7, 9    |
+| 7    | 1, 5, 6    | 10      |
+| 8    | —          | 10      |
+| 9    | 4, 5, 6    | F2      |
+| 10   | 7, 8       | F1-F4   |
 
 ### Agent Dispatch Summary
 
@@ -225,6 +239,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] `bun run typecheck` in `packages/desktop` passes with 0 errors after this task
 
   **QA Scenarios**:
+
   ```
   Scenario: RPC types are present and compile
     Tool: Bash
@@ -284,6 +299,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] `cd packages/backend && tsgo --noEmit` passes with 0 errors
 
   **QA Scenarios**:
+
   ```
   Scenario: All four scope strings present in correct files
     Tool: Bash
@@ -346,6 +362,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] `bun run typecheck` passes
 
   **QA Scenarios**:
+
   ```
   Scenario: Optional methods added, YouTube adapter unmodified
     Tool: Bash
@@ -368,9 +385,9 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Test duration conversion helper (to be extracted as `secondsToLabel` or inline in component — test the math):
     ```typescript
     test('timeout presets convert correctly', () => {
-      expect(60).toBe(60)       // 1m → 60s
-      expect(300).toBe(300)     // 5m → 300s
-      expect(3600).toBe(3600)   // 1h → 3600s
+      expect(60).toBe(60) // 1m → 60s
+      expect(300).toBe(300) // 5m → 300s
+      expect(3600).toBe(3600) // 1h → 3600s
       expect(86400).toBe(86400) // 1d → 86400s
     })
     ```
@@ -408,6 +425,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] Test count ≥ 5 (covers: ban success, timeout success, delete success, 403 error, 422 error)
 
   **QA Scenarios**:
+
   ```
   Scenario: Test file exists and runs (RED phase — failures are expected)
     Tool: Bash
@@ -430,10 +448,9 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - In `TwitchAdapter.connect(channelSlug: string)`, after the existing setup, add a fetch call:
     ```typescript
     // Fetch broadcaster numeric user ID (required for Helix moderation endpoints)
-    const res = await fetch(
-      `https://api.twitch.tv/helix/users?login=${channelSlug}`,
-      { headers: { 'Authorization': `Bearer ${this.accessToken}`, 'Client-Id': this.clientId } }
-    )
+    const res = await fetch(`https://api.twitch.tv/helix/users?login=${channelSlug}`, {
+      headers: { Authorization: `Bearer ${this.accessToken}`, 'Client-Id': this.clientId },
+    })
     const data = await res.json()
     this.broadcasterUserId = data.data?.[0]?.id ?? null
     ```
@@ -441,11 +458,13 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Guard: if `this.anonymous === true`, skip the fetch (no token available)
 
   **Step B — implement moderation methods**:
+
   ```typescript
   async banUser(channelId: string, targetUserId: string): Promise<void>
   async timeoutUser(channelId: string, targetUserId: string, durationSeconds: number): Promise<void>
   async deleteMessage(channelId: string, messageId: string): Promise<void>
   ```
+
   - Call `await this.refreshTokenIfNeeded()` at the start of each method
   - Guard: if `this.anonymous || !this.accessToken` → throw `{ code: 'NOT_AUTHENTICATED' }`
   - Guard: if `!this.broadcasterUserId` → throw `{ code: 'BROADCASTER_ID_MISSING' }`
@@ -490,6 +509,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] `bun run typecheck` passes
 
   **QA Scenarios**:
+
   ```
   Scenario: Moderation methods are defined and error codes present
     Tool: Bash
@@ -563,6 +583,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] `bun run typecheck` passes
 
   **QA Scenarios**:
+
   ```
   Scenario: Kick moderation methods implemented with unit conversion
     Tool: Bash
@@ -581,12 +602,14 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   **What to do**:
 
   **`getModerationRole` handler**:
+
   ```typescript
   getModerationRole: async ({ platform }) => {
     const account = accountStore.findByPlatform(platform)
     return account ? 'broadcaster' : 'none'
   }
   ```
+
   - This is pure local lookup — NO network calls
 
   **`moderateMessage` handler**:
@@ -628,6 +651,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] `bun run typecheck` passes
 
   **QA Scenarios**:
+
   ```
   Scenario: Both RPC handlers registered in bun/index.ts
     Tool: Bash
@@ -648,8 +672,8 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Props:
     ```typescript
     props: {
-      message: NormalizedChatMessage  // to access author, text, id, platform
-      isModerator: boolean            // controls visibility of moderation section
+      message: NormalizedChatMessage // to access author, text, id, platform
+      isModerator: boolean // controls visibility of moderation section
     }
     emits: ['reply', 'close']
     ```
@@ -708,6 +732,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] `bun run typecheck` passes
 
   **QA Scenarios**:
+
   ```
   Scenario: ContextMenu.vue exists with correct structure
     Tool: Bash
@@ -746,7 +771,6 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   6. `KickAdapter.banUser()` — mock POST → resolves void
   7. `KickAdapter.timeoutUser(channelId, userId, 3600)` — verify fetch called with `duration: 60` (3600s → 60min)
   8. `KickAdapter.deleteMessage(channelId, 'msg-123')` — verify DELETE to `.../chat/msg-123`
-
   - Look at existing test patterns in `packages/desktop/tests/aggregator.test.ts`
 
   **Must NOT do**:
@@ -775,6 +799,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] Tests cover: Twitch ban, Twitch timeout, Twitch delete, Twitch 403, Twitch anonymous guard, Kick ban, Kick timeout (with minutes conversion), Kick delete
 
   **QA Scenarios**:
+
   ```
   Scenario: All moderation tests pass (GREEN phase)
     Tool: Bash
@@ -852,6 +877,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] `bun run typecheck` passes (vue-tsc)
 
   **QA Scenarios**:
+
   ```
   Scenario: ⋮ button appears on hover for Twitch/Kick messages
     Tool: Playwright (playwright skill)
@@ -899,20 +925,20 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 > **Do NOT auto-proceed after verification. Wait for user's explicit approval before marking work complete.**
 
 - [ ] F1. **Plan Compliance Audit** — `oracle`
-  Read plan end-to-end. Verify: (1) `moderator:manage:banned_users` in `packages/backend/src/auth/twitch.ts`, (2) `moderation:ban` in `packages/backend/src/auth/kick.ts`, (3) `moderateMessage` RPC registered in both `rpc.ts` and `bun/index.ts`, (4) `ContextMenu.vue` exists, (5) `ChatMessage.vue` renders `⋮` button on hover, (6) `bun test tests/moderation.test.ts` passes, (7) NO moderation on `type=system` messages, (8) NO abstract moderation on `BasePlatformAdapter`. Search codebase with grep/read for each item.
-  Output: `Must Have [N/N] | Must NOT Have [N/N] | VERDICT: APPROVE/REJECT`
+      Read plan end-to-end. Verify: (1) `moderator:manage:banned_users` in `packages/backend/src/auth/twitch.ts`, (2) `moderation:ban` in `packages/backend/src/auth/kick.ts`, (3) `moderateMessage` RPC registered in both `rpc.ts` and `bun/index.ts`, (4) `ContextMenu.vue` exists, (5) `ChatMessage.vue` renders `⋮` button on hover, (6) `bun test tests/moderation.test.ts` passes, (7) NO moderation on `type=system` messages, (8) NO abstract moderation on `BasePlatformAdapter`. Search codebase with grep/read for each item.
+      Output: `Must Have [N/N] | Must NOT Have [N/N] | VERDICT: APPROVE/REJECT`
 
 - [ ] F2. **Code Quality Review** — `unspecified-high`
-  Run `bun run check` from monorepo root. Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log in prod code, `refreshTokenIfNeeded()` missing before API calls, adapter moderation methods declared as `abstract` (forbidden). Check AI slop: excessive comments, over-abstraction.
-  Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Types [PASS/FAIL] | Tests [N pass/N fail] | VERDICT`
+      Run `bun run check` from monorepo root. Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log in prod code, `refreshTokenIfNeeded()` missing before API calls, adapter moderation methods declared as `abstract` (forbidden). Check AI slop: excessive comments, over-abstraction.
+      Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Types [PASS/FAIL] | Tests [N pass/N fail] | VERDICT`
 
 - [ ] F3. **Real Manual QA** — `unspecified-high` (load `playwright` skill)
-  Start app in dev mode. Use Playwright to: (1) hover over a Twitch message → assert `⋮` button appears, (2) click `⋮` → assert menu opens with Reply/Copy message/Copy username + moderation section, (3) click `Copy message` → assert clipboard contains message text (evaluate `navigator.clipboard.readText()`), (4) hover over a YouTube message → assert NO moderation section in menu, (5) hover over a system message → assert NO `⋮` button. Save screenshots to `.sisyphus/evidence/`.
-  Output: `Scenarios [N/N pass] | VERDICT`
+      Start app in dev mode. Use Playwright to: (1) hover over a Twitch message → assert `⋮` button appears, (2) click `⋮` → assert menu opens with Reply/Copy message/Copy username + moderation section, (3) click `Copy message` → assert clipboard contains message text (evaluate `navigator.clipboard.readText()`), (4) hover over a YouTube message → assert NO moderation section in menu, (5) hover over a system message → assert NO `⋮` button. Save screenshots to `.sisyphus/evidence/`.
+      Output: `Scenarios [N/N pass] | VERDICT`
 
 - [ ] F4. **Scope Fidelity Check** — `deep`
-  For each task: diff `git log --oneline`, read actual changed files vs task spec. Verify: no unban UI added, no confirmation dialogs, no overlay changes, no moderation on YouTube/system messages. Check `YouTubeAdapter` was NOT modified. Flag any unaccounted changes.
-  Output: `Tasks [N/N compliant] | Unaccounted changes [CLEAN/N] | VERDICT`
+      For each task: diff `git log --oneline`, read actual changed files vs task spec. Verify: no unban UI added, no confirmation dialogs, no overlay changes, no moderation on YouTube/system messages. Check `YouTubeAdapter` was NOT modified. Flag any unaccounted changes.
+      Output: `Tasks [N/N compliant] | Unaccounted changes [CLEAN/N] | VERDICT`
 
 ---
 
@@ -935,6 +961,7 @@ commit 9: test(desktop): implement moderation tests (GREEN phase)
 ## Success Criteria
 
 ### Verification Commands
+
 ```bash
 # OAuth scopes present
 grep "moderator:manage:banned_users" packages/backend/src/auth/twitch.ts
@@ -952,6 +979,7 @@ bun run check
 ```
 
 ### Final Checklist
+
 - [ ] All "Must Have" present
 - [ ] All "Must NOT Have" absent
 - [ ] `bun test` passes
