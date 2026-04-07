@@ -112,7 +112,6 @@ export async function banUser(
       )
     }
 
-    const banData = data as KickBanResponse
     const durationSeconds = request.duration_minutes ? request.duration_minutes * 60 : undefined
 
     log.info('User banned on Kick', {
@@ -137,6 +136,7 @@ export async function banUser(
         userId: String(request.banned_user_id),
         isPermanent,
         durationSeconds: request.duration_minutes ? request.duration_minutes * 60 : undefined,
+        createdAt: new Date(),
         error: {
           code: error.code,
           status: error.status,

@@ -119,8 +119,8 @@ export async function banUser(
       success: true,
       userId: request.user_id,
       isPermanent,
-      durationSeconds: request.duration,
-      createdAt: new Date(banData.created_at),
+      durationSeconds: request.duration ?? undefined,
+      createdAt: new Date(banData?.created_at ?? Date.now()),
     }
   } catch (error) {
     if (error instanceof ModerationException) {
@@ -129,7 +129,8 @@ export async function banUser(
         success: false,
         userId: request.user_id,
         isPermanent,
-        durationSeconds: request.duration,
+        durationSeconds: request.duration ?? undefined,
+        createdAt: new Date(),
         error: {
           code: error.code,
           status: error.status,

@@ -34,7 +34,7 @@ describe('Twitch Moderation', () => {
           },
         ],
       }),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Twitch.banUser(TWITCH_TOKEN, TWITCH_BROADCASTER_ID, TWITCH_MODERATOR_ID, {
       user_id: '98765',
@@ -57,7 +57,7 @@ describe('Twitch Moderation', () => {
           },
         ],
       }),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Twitch.banUser(TWITCH_TOKEN, TWITCH_BROADCASTER_ID, TWITCH_MODERATOR_ID, {
       user_id: '98765',
@@ -80,7 +80,7 @@ describe('Twitch Moderation', () => {
         },
         { status: 409 },
       ),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Twitch.banUser(TWITCH_TOKEN, TWITCH_BROADCASTER_ID, TWITCH_MODERATOR_ID, {
       user_id: '98765',
@@ -102,7 +102,7 @@ describe('Twitch Moderation', () => {
         },
         { status: 403 },
       ),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Twitch.banUser(TWITCH_TOKEN, TWITCH_BROADCASTER_ID, TWITCH_MODERATOR_ID, {
       user_id: '98765',
@@ -113,7 +113,9 @@ describe('Twitch Moderation', () => {
   })
 
   it('should delete a message successfully', async () => {
-    global.fetch = mock(async () => new Response(null, { status: 204 })) as typeof global.fetch
+    global.fetch = mock(
+      async () => new Response(null, { status: 204 }),
+    ) as unknown as typeof global.fetch
 
     const result = await Twitch.deleteMessage(
       TWITCH_TOKEN,
@@ -136,7 +138,7 @@ describe('Twitch Moderation', () => {
         },
         { status: 404 },
       ),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Twitch.deleteMessage(
       TWITCH_TOKEN,
@@ -161,7 +163,7 @@ describe('Twitch Moderation', () => {
         ],
         pagination: {},
       }),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Twitch.isModerator(TWITCH_TOKEN, TWITCH_BROADCASTER_ID, '654321')
 
@@ -175,7 +177,7 @@ describe('Twitch Moderation', () => {
         data: [],
         pagination: {},
       }),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Twitch.isModerator(TWITCH_TOKEN, TWITCH_BROADCASTER_ID, '999999')
 
@@ -197,7 +199,7 @@ describe('Kick Moderation', () => {
           duration_minutes: null,
         },
       }),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Kick.banUser(KICK_TOKEN, KICK_CHANNEL_ID, {
       banned_user_id: 999,
@@ -218,7 +220,7 @@ describe('Kick Moderation', () => {
           duration_minutes: 5,
         },
       }),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Kick.banUser(KICK_TOKEN, KICK_CHANNEL_ID, {
       banned_user_id: 999,
@@ -237,7 +239,7 @@ describe('Kick Moderation', () => {
         },
         { status: 401 },
       ),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Kick.banUser(KICK_TOKEN, KICK_CHANNEL_ID, {
       banned_user_id: 999,
@@ -248,7 +250,9 @@ describe('Kick Moderation', () => {
   })
 
   it('should delete a message on Kick', async () => {
-    global.fetch = mock(async () => new Response(null, { status: 204 })) as typeof global.fetch
+    global.fetch = mock(
+      async () => new Response(null, { status: 204 }),
+    ) as unknown as typeof global.fetch
 
     const result = await Kick.deleteMessage(KICK_TOKEN, KICK_CHANNEL_ID, 'msg-kick-123')
 
@@ -264,7 +268,7 @@ describe('Kick Moderation', () => {
         },
         { status: 404 },
       ),
-    ) as typeof global.fetch
+    ) as unknown as typeof global.fetch
 
     const result = await Kick.deleteMessage(KICK_TOKEN, KICK_CHANNEL_ID, 'msg-invalid')
 
@@ -273,7 +277,9 @@ describe('Kick Moderation', () => {
   })
 
   it('should unban a user on Kick', async () => {
-    global.fetch = mock(async () => new Response(null, { status: 200 })) as typeof global.fetch
+    global.fetch = mock(
+      async () => new Response(null, { status: 200 }),
+    ) as unknown as typeof global.fetch
 
     const result = await Kick.unbanUser(KICK_TOKEN, KICK_CHANNEL_ID, 999)
 
