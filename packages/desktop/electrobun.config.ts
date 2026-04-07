@@ -27,8 +27,7 @@ const config: ElectrobunConfig = {
     },
 
     linux: {
-      bundleCEF: true,
-      defaultRenderer: 'cef',
+      bundleCEF: false,
       icon: 'assets/icon.png',
     },
 

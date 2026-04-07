@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-> **Quick Summary**: Fix confirmed memory bugs in platform adapters and Vue renderer, add virtual scrolling to the chat list, and provide honest baseline measurements to calibrate expectations about WebKit2GTK's inherent memory footprint on Linux.
+> **Quick Summary**: Fix confirmed memory bugs in platform adapters and Vue renderer, add virtual scrolling to the chat list, and provide honest baseline measurements to calibrate expectations about CEF's inherent memory footprint on Linux.
 >
 > **Deliverables**:
 >
@@ -14,7 +14,7 @@
 > - `App.vue`: O(n) array/Map allocation on every incoming message eliminated
 > - `ChatList.vue`: per-instance polling timer replaced with shared composable
 > - `ChatList.vue`: full DOM virtualization via `virtua` VList (renders only visible rows)
-> - Post-fix private RSS measurement + WebKit2GTK baseline explanation documented
+> - Post-fix private RSS measurement + CEF baseline explanation documented
 >
 > **Estimated Effort**: Medium
 > **Parallel Execution**: YES — 3 waves + final
@@ -32,13 +32,13 @@ User sees ~400MB RSS in `htop` on Linux with 1 platform + 1 channel active, stab
 
 **Key Discussions**:
 
-- **Measurement**: `htop` RES column on Linux — includes shared library pages (WebKit2GTK, libc, etc.) charged to the process but physically shared with other apps
+- **Measurement**: `htop` RES column on Linux — includes shared library pages (CEF/Chromium Embedded Framework, libc, etc.) charged to the process but physically shared with other apps
 - **Profile**: Stable at startup, not growing — rules out runaway leak; points to high baseline + fixable bugs
 - **Scale**: 1 platform, 1 channel — no multi-platform amplification
 
 **Research Findings**:
 
-- **WebKit2GTK baseline**: On Linux, WebKit2GTK contributes ~150–250MB to htop RES as shared library pages. These are **not reducible** without changing the rendering engine. The actual private app memory is measured via `/proc/$PID/smaps` (USS: `Private_Clean + Private_Dirty`)
+- **CEF baseline**: On Linux, the desktop app uses CEF (Chromium Embedded Framework), configured in `packages/desktop/electrobun.config.ts` (`bundleCEF: true`, `defaultRenderer: 'cef'`). CEF contributes ~150–300MB to htop RES as shared Chromium pages. These are **not reducible** without changing the rendering engine. The actual private app memory is measured via `/proc/$PID/smaps` (USS: `Private_Clean + Private_Dirty`)
 - **Real bugs found**: 6 confirmed issues in adapters and Vue renderer (see tasks)
 - **Misdiagnosis corrected**: `mentionColorCache` in `ChatMessage.vue` is already module-scoped (not per-instance); the real problems are unnecessary `reactive()` wrapper overhead and unbounded Map growth
 
@@ -59,7 +59,7 @@ User sees ~400MB RSS in `htop` on Linux with 1 platform + 1 channel active, stab
 
 ### Core Objective
 
-Fix confirmed memory bugs and excessive allocations. Provide a measured before/after comparison. Calibrate user expectations about WebKit2GTK's inherent shared-memory footprint on Linux.
+Fix confirmed memory bugs and excessive allocations. Provide a measured before/after comparison. Calibrate user expectations about CEF's (Chromium Embedded Framework) inherent shared-memory footprint on Linux.
 
 ### Concrete Deliverables
 
@@ -87,7 +87,7 @@ Fix confirmed memory bugs and excessive allocations. Provide a measured before/a
 - All 6 confirmed bugs fixed
 - `virtua` used for virtual scrolling (specifically, not `vue-virtual-scroller` or `@tanstack/virtual`)
 - Auto-scroll behavior preserved after virtua integration
-- Final measurement documents WebKit2GTK shared-page explanation
+- Final measurement documents CEF shared-page explanation
 
 ### Must NOT Have (Guardrails)
 
@@ -149,7 +149,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 ├── F1: Plan compliance audit [oracle]
 ├── F2: Code quality review [unspecified-high]
 ├── F3: Real manual QA [unspecified-high + playwright skill]
-└── F4: Post-fix measurement + WebKit2GTK baseline documentation [quick]
+└── F4: Post-fix measurement + CEF baseline documentation [quick]
 → Present consolidated results → Get explicit user okay
 ```
 
@@ -182,13 +182,21 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 - [ ] 1. Measure baseline private RSS before any code changes
 
   **What to do**:
-  - Start the desktop app: `bun run --cwd packages/desktop start` (this runs `electrobun dev`, which spawns `src/bun/index.ts` setting `process.title = 'TwirChat'`)
-  - Wait 90 seconds for stable idle memory state (no channel connection needed — idle baseline is sufficient and reproducible)
+  - Start the desktop app with BOTH Vite and Electrobun running in parallel:
+    ```bash
+    bun run --cwd packages/desktop dev
+    ```
+    This runs `bun run --parallel hmr start` which spawns Vite (port 5173) AND `bun src/bun/index.ts` (which sets `process.title = 'TwirChat'`) simultaneously. Wait for both to be ready (~15 seconds).
+  - Take **two measurements** to cover both idle and loaded states:
+    1. **Idle measurement** (after app starts, before any messages): wait 30 seconds
+    2. **Loaded measurement** (after injecting 150 messages via seed script): run `bun packages/desktop/tests/fixtures/seed-chat.ts` then wait 30 more seconds
+  - IMPORTANT: The seed script (`tests/fixtures/seed-chat.ts`) does NOT exist yet in this task — this task only creates the **idle** baseline. The full 2-part measurement is finalized in F4. For this task, capture the **idle** baseline only.
   - Run the measurement commands below and save output to `.sisyphus/evidence/memory-baseline.txt`
 
   **Must NOT do**:
   - Do NOT modify any source files in this task
   - Do NOT start any code changes before this task is complete and baseline is recorded
+  - Do NOT use `bun run --cwd packages/desktop start` — this runs `electrobun dev` without Vite, which leaves the main window blank
 
   **Recommended Agent Profile**:
   - **Category**: `quick`
@@ -202,24 +210,24 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - **Blocked By**: None (can start immediately)
 
   **References**:
-  - `packages/desktop/src/bun/index.ts` — sets `process.title = 'TwirChat'`; this is the main Bun process spawned by `electrobun dev`
-  - `packages/desktop/package.json` — scripts: `"start": "electrobun dev"`, `"dev": "bun run --parallel hmr start"`
+  - `packages/desktop/src/bun/index.ts` — sets `process.title = 'TwirChat'`; spawned as part of `dev` script
+  - `packages/desktop/package.json` — `"dev": "bun run --parallel hmr start"`, `"hmr:main": "vite --config vite.main.config.ts --port 5173"`, `"start": "bun src/bun/index.ts"`
 
   **Acceptance Criteria**:
 
   **QA Scenarios (MANDATORY)**:
 
   ```
-  Scenario: Record baseline private RSS
+  Scenario: Record baseline idle private RSS
     Tool: Bash
-    Preconditions: App started via 'bun run --cwd packages/desktop start', idle (no channel), 90+ seconds elapsed
+    Preconditions: App started via 'bun run --cwd packages/desktop dev', both Vite and bun process running, 30+ seconds elapsed
     Steps:
       1. PID=$(pgrep TwirChat)
-         # Fallback if empty: PID=$(pgrep -f "src/bun/index.ts" | head -1)
+         # Fallback if empty: PID=$(pgrep -f "src/bun/index.ts" | tr '\n' ' ' | awk '{print $1}')
       2. echo "=== Date: $(date) ===" > .sisyphus/evidence/memory-baseline.txt
       3. echo "=== htop RES (VmRSS) ===" >> .sisyphus/evidence/memory-baseline.txt
       4. grep VmRSS /proc/$PID/status >> .sisyphus/evidence/memory-baseline.txt
-      5. echo "=== Private RSS (USS = Private_Clean + Private_Dirty) ===" >> .sisyphus/evidence/memory-baseline.txt
+      5. echo "=== Idle Private RSS (USS = Private_Clean + Private_Dirty) ===" >> .sisyphus/evidence/memory-baseline.txt
       6. awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print "USS:", sum/1024, "MB"}' /proc/$PID/smaps >> .sisyphus/evidence/memory-baseline.txt
       7. cat .sisyphus/evidence/memory-baseline.txt
     Expected Result: File has VmRSS line (e.g. "VmRSS: 400000 kB") and USS line (e.g. "USS: 95 MB")
@@ -228,7 +236,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   ```
 
   **Evidence to Capture**:
-  - [ ] `.sisyphus/evidence/memory-baseline.txt` — must contain VmRSS and USS values
+  - [ ] `.sisyphus/evidence/memory-baseline.txt` — must contain VmRSS and USS values (idle baseline)
 
   **Commit**: NO — no code changes in this task
 
@@ -485,7 +493,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
     }
     ```
   - CRITICAL: After removing `reactive()`, verify that any template or computed that reads from `mentionColorCache` still re-renders correctly. If a computed property reads `mentionColorCache.get(key)` directly, it will no longer be reactive. In that case: the data for rendering mentions should come from the message props (which ARE reactive), not the cache directly. The cache is a lookup store; the rendered output should re-derive from message text when the component re-renders due to prop changes. If the template uses `mentionColorCache` in a `v-for` or interpolation, you must use a different approach (e.g., a `ref<Map>` that is replaced on cache update, or keep `reactive()` if removing it breaks rendering).
-  - Run `bun run fix` from `packages/desktop` after the change
+  - Run `bun run fix` from the **monorepo root** (`/home/satont/Projects/twirchat`) after the change
 
   **Must NOT do**:
   - Do NOT introduce an LRU cache library
@@ -598,7 +606,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   ```
 
   Import `triggerRef` from `'vue'` if not already imported.
-  - Run `bun run fix` from `packages/desktop` after all 3 changes
+  - Run `bun run fix` from the **monorepo root** (`/home/satont/Projects/twirchat`) after all 3 changes
 
   **Must NOT do**:
   - Do NOT migrate `messages`, `events`, or `watchedMessages` to Pinia
@@ -711,7 +719,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
     - Import and call `useChannelStatuses()` to get `channelStatuses`
     - Everything else in ChatList.vue stays the same — `channelStatuses` is used the same way as before
 
-  - Run `bun run fix` from `packages/desktop` after changes
+  - Run `bun run fix` from the **monorepo root** (`/home/satont/Projects/twirchat`) after changes
 
   **Must NOT do**:
   - Do NOT use Pinia for this — module singleton is simpler and sufficient
@@ -827,6 +835,70 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 
   **Step 4: Run `bun run fix` from monorepo root** + `bun run --cwd packages/desktop typecheck`
 
+  **Step 5: Create a Playwright-testable test harness for virtua verification**
+
+  `packages/desktop/src/views/main/main.ts` blocks Vue mounting until Electrobun's `bunSocket` is open, which never happens in a plain browser (Playwright). To allow Playwright-based verification of VList rendering without modifying production code:
+
+  Create `packages/desktop/src/views/main/test-harness.html` and `packages/desktop/src/views/main/test-harness.ts` — a self-contained minimal Vue page that mounts ChatList directly with 200 seed messages, served by the Vite dev server on a separate URL. This does NOT require Electrobun RPC and does NOT need `waitForSocket`.
+
+  ```html
+  <!-- packages/desktop/src/views/main/test-harness.html -->
+  <!doctype html>
+  <html>
+    <head><meta charset="UTF-8" /><title>Test Harness</title></head>
+    <body style="margin:0;height:100vh;display:flex;flex-direction:column">
+      <div id="harness" style="flex:1;overflow:hidden"></div>
+      <script type="module" src="./test-harness.ts"></script>
+    </body>
+  </html>
+  ```
+
+  ```typescript
+  // packages/desktop/src/views/main/test-harness.ts
+  import { createApp, ref } from 'vue'
+  import { defineComponent, h } from 'vue'
+  import ChatList from './components/ChatList.vue'
+  import type { NormalizedChatMessage } from '../../../shared/types'
+
+  // Import types from shared — read packages/shared/types.ts for exact field names
+  // Generate 200 fake messages matching the real NormalizedChatMessage shape exactly
+  const messages = ref<NormalizedChatMessage[]>(
+    Array.from({ length: 200 }, (_, i) => ({
+      id: `test-${i}`,
+      platform: 'twitch' as const,
+      channel: 'test',
+      channelId: 'c1',
+      username: `user${i}`,
+      displayName: `User ${i}`,
+      text: `Test message ${i}`,
+      timestamp: Date.now() - i * 1000,
+      badges: [],
+      emotes: [],
+      color: '#ff6b6b',
+      // Add any other required fields from NormalizedChatMessage
+    }))
+  )
+
+  const HarnessApp = defineComponent({
+    setup() {
+      return () =>
+        h('div', { style: 'height:100vh;overflow:hidden' }, [
+          h(ChatList, {
+            messages: messages.value,
+            accounts: [],
+            statuses: [],
+          }),
+        ])
+    },
+  })
+
+  createApp(HarnessApp).mount('#harness')
+  ```
+
+  The Vite dev server (`bun run --cwd packages/desktop dev`) automatically serves `.html` files at their path. This file will be available at `http://localhost:5173/test-harness.html`.
+
+  **IMPORTANT**: Read `packages/shared/types.ts` and `ChatList.vue`'s props interface before writing test-harness.ts to get exact field names and prop names. Match them exactly or the page will have TypeScript errors.
+
   **Must NOT do**:
   - Do NOT use `vue-virtual-scroller` — use only `virtua`
   - Do NOT apply virtua to the watched-channels view or EventsFeed
@@ -863,20 +935,33 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 
   The renderer (`App.vue`) is populated via Electrobun RPC `chat_message` events dispatched from the Bun main process — NOT from the backend WebSocket. To inject messages in a test scenario without requiring real platform credentials:
 
-  **Step A: Add a dev-only HTTP test endpoint to `packages/desktop/src/bun/index.ts`**
+  **Step A: Add a NEW dev-only `Bun.serve()` HTTP server in `packages/desktop/src/bun/index.ts`**
 
-  Inside the existing `Bun.serve()` fetch handler (or alongside it), add a dev-only route gated behind `import.meta.env.NODE_ENV !== 'production'` (or `process.env.NODE_ENV !== 'production'`):
+  `bun/index.ts` does NOT have any existing `Bun.serve()` call — it uses only Electrobun APIs (`BrowserWindow`, `defineElectrobunRPC`). You must CREATE a brand-new `Bun.serve()` block, gated by a dev env check, on port **45824** (chosen to avoid conflict with overlay server port 45823):
 
   ```typescript
-  // ADD ONLY IN DEV/TEST MODE — gate with env check
-  if (process.env.NODE_ENV !== 'production' && url.pathname === '/dev/inject-chat') {
-    const body = (await req.json()) as NormalizedChatMessage
-    sendToView.chat_message(body) // sendToView is the existing WebviewSender cast
-    return new Response('ok')
+  // DEV-ONLY: HTTP endpoint for test message injection
+  // This Bun.serve() is NEW — there is no existing HTTP server in bun/index.ts
+  if (process.env.NODE_ENV !== 'production') {
+    Bun.serve({
+      port: 45824,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (url.pathname === '/dev/inject-chat' && req.method === 'POST') {
+          const body = (await req.json()) as NormalizedChatMessage
+          sendToView.chat_message(body)
+          return new Response('ok')
+        }
+        return new Response('not found', { status: 404 })
+      },
+    })
   }
   ```
 
-  Find the exact variable name for `sendToView` in `bun/index.ts` (the cast: `rpc.send as unknown as WebviewSender`) and use it. The port this HTTP server runs on should be findable in `bun/index.ts` (e.g. port 3001 or similar — read the file to confirm).
+  Read `packages/desktop/src/bun/index.ts` to find:
+  - The exact variable name for the WebviewSender cast (search for `as unknown as WebviewSender`) — use that variable name in place of `sendToView`
+  - The import path for `NormalizedChatMessage` (likely from `@twirchat/shared` or `../../../shared/types`)
+  - Add this block AFTER the `BrowserWindow` and RPC setup (so `sendToView` is already defined)
 
   **Step B: Create `packages/desktop/tests/fixtures/seed-chat.ts`**
 
@@ -925,10 +1010,10 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
     Preconditions: Code change applied
     Steps:
       1. grep '"virtua"' packages/desktop/package.json
-      2. grep "from 'virtua'" packages/desktop/src/views/main/components/ChatList.vue
+      2. grep "from 'virtua/vue'" packages/desktop/src/views/main/components/ChatList.vue
       3. grep "VList" packages/desktop/src/views/main/components/ChatList.vue
       4. Assert: all 3 greps return results
-    Expected Result: Package present in dependencies AND imported AND VList used in template
+    Expected Result: Package present in dependencies AND imported from 'virtua/vue' AND VList used in template
     Failure Indicators: Any grep returns empty
     Evidence: .sisyphus/evidence/task-8-virtua-import.txt (redirect grep output here)
 
@@ -944,6 +1029,17 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
     Failure Indicators: .reverse() still present anywhere in the template
     Evidence: .sisyphus/evidence/task-8-no-reverse.txt
 
+  Scenario: VList uses reverse prop for bottom-anchor scroll
+    Tool: Bash
+    Steps:
+      1. grep -n ":reverse\|reverse=" packages/desktop/src/views/main/components/ChatList.vue
+      2. Assert: VList has :reverse="true" or reverse prop present
+      3. grep -n "scrollTop\|scrollHeight\|onScroll\|scroll(" packages/desktop/src/views/main/components/ChatList.vue
+      4. Assert: no manual scroll manipulation (virtua handles it via reverse prop)
+    Expected Result: VList has reverse prop; no manual scroll hacks present
+    Failure Indicators: No reverse prop on VList, OR manual scrollTop manipulation still present
+    Evidence: .sisyphus/evidence/task-8-reverse-prop.txt
+
   Scenario: Dev test endpoint present in bun/index.ts
     Tool: Bash
     Steps:
@@ -951,92 +1047,92 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
       2. Assert: endpoint definition found
       3. grep -n "NODE_ENV.*production\|production.*NODE_ENV" packages/desktop/src/bun/index.ts
       4. Assert: env guard present near the endpoint
-    Expected Result: Dev endpoint exists and is guarded by env check
-    Failure Indicators: No endpoint found, or no env guard
+      5. grep -n "45824" packages/desktop/src/bun/index.ts
+      6. Assert: port 45824 present (this is the dev HTTP server port)
+    Expected Result: Dev endpoint on port 45824 exists and is guarded by env check
+    Failure Indicators: No endpoint found, no env guard, or wrong port
     Evidence: .sisyphus/evidence/task-8-dev-endpoint.txt
 
-  Scenario: Message injection works and messages appear in app
-    Tool: Bash + OS screenshot
-    Preconditions:
-      1. Start app: bun run --cwd packages/desktop start
-      2. Run seed script: bun packages/desktop/tests/fixtures/seed-chat.ts
-      3. Wait 10 seconds for messages to render
-    Steps:
-      1. Verify seed script exits with code 0 and "Injected 150 messages" output
-      2. Take screenshot using scrot (or gnome-screenshot, or import):
-         scrot -d 2 .sisyphus/evidence/task-8-render-check.png
-         # Or: import -window root .sisyphus/evidence/task-8-render-check.png
-      3. Verify screenshot file exists and is non-empty (> 10KB)
-         ls -la .sisyphus/evidence/task-8-render-check.png
-    Expected Result: Screenshot taken showing app window; seed script completed without error
-    Failure Indicators: Seed script errors, screenshot file missing or < 10KB
-    Evidence: .sisyphus/evidence/task-8-render-check.png
-  ```
-
-  **IMPORTANT**: Read `packages/desktop/src/backend-connection.ts` first to get the exact backend URL/port and the exact `BackendToDesktopMessage` type shape before writing this fixture. Match the shape exactly.
-
-  **QA Scenarios (MANDATORY)**:
-
-  ```
-  Scenario: VList renders only visible messages (virtualization works)
-    Tool: Bash + Playwright
-    Preconditions:
-      1. Start mock backend: bun packages/desktop/tests/fixtures/seed-chat.ts &
-      2. Start app in dev mode: bun run --cwd packages/desktop dev
-      3. Wait 30s for 150 messages to be injected
-      4. Open http://localhost:5173 in Playwright browser
-    Steps:
-      1. page.goto('http://localhost:5173')
-         Note: In dev:hmr mode the Vue app loads here; Electrobun-specific RPC may be absent
-         but the mock backend WS connection populates the chat state
-      2. await page.waitForSelector('[class*="message"], .chat-message', { timeout: 15000 })
-      3. const count = await page.evaluate(() =>
-           document.querySelectorAll('[class*="message"]:not([class*="container"]):not([class*="list"])').length
-         )
-      4. Assert: count < 40 (virtua renders only visible items; without virtualization it would be 150)
-    Expected Result: DOM has far fewer nodes than the 150 injected messages
-    Failure Indicators: count >= 100 (no virtualization happening)
-    Evidence: .sisyphus/evidence/task-8-dom-count.txt
-
-  Scenario: No [...activeMessages].reverse() in template
+  Scenario: Dev endpoint responds to HTTP POST (smoke test)
     Tool: Bash
+    Preconditions:
+      Start the app: bun run --cwd packages/desktop dev
+      Wait 20 seconds for bun/index.ts to start (Bun.serve on port 45824 must be running)
     Steps:
-      1. grep -n "\.reverse()" packages/desktop/src/views/main/components/ChatList.vue
-      2. Assert: no output (template reverse removed)
-    Expected Result: Template array clone+reverse eliminated
-    Failure Indicators: .reverse() still present in template
-    Evidence: .sisyphus/evidence/task-8-no-reverse.txt
+      1. curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:45824/dev/inject-chat \
+           -H "Content-Type: application/json" \
+           -d '{"id":"test-1","platform":"twitch","channel":"test","channelId":"c1","username":"u1","displayName":"U1","text":"hello","timestamp":0,"badges":[],"emotes":[],"color":"#ff0000"}'
+         # Field names are illustrative — read packages/shared/types.ts for exact fields
+      2. Assert: response HTTP status is 200
+    Expected Result: Dev endpoint returns 200 (message dispatched to renderer via sendToView)
+    Failure Indicators: Connection refused (server not running), 404, or non-200 status
+    Evidence: .sisyphus/evidence/task-8-endpoint-smoke.txt (save curl output with -v flag)
 
-  Scenario: virtua package installed and imported
+  Scenario: Seed script exits 0 and logs completion
     Tool: Bash
+    Preconditions: App already running (from previous scenario)
     Steps:
-      1. grep "virtua" packages/desktop/package.json
-      2. grep "from 'virtua'" packages/desktop/src/views/main/components/ChatList.vue
-      3. Assert: both greps return results
-    Expected Result: Package installed and imported
-    Evidence: .sisyphus/evidence/task-8-virtua-import.txt
+      1. bun packages/desktop/tests/fixtures/seed-chat.ts
+      2. Assert: exit code 0
+      3. Assert: output contains "Injected 150 messages"
+    Expected Result: Seed script sends 150 messages successfully
+    Failure Indicators: Non-zero exit code, connection error, or missing output
+    Evidence: .sisyphus/evidence/task-8-seed-output.txt (redirect stdout here)
 
-  Scenario: App screenshot shows chat rendering correctly
+  Scenario: VList renders only visible rows (virtualization working)
     Tool: Playwright
-    Preconditions: App running with 150 injected messages
+    Preconditions:
+      1. Vite dev server running: bun run --cwd packages/desktop dev
+      2. Wait 15 seconds for Vite to be ready
     Steps:
-      1. page.goto('http://localhost:5173')
-      2. await page.waitForTimeout(3000)
-      3. await page.screenshot({ path: '.sisyphus/evidence/task-8-render-check.png', fullPage: false })
-      4. Assert: screenshot shows message content visible (not blank page)
-    Expected Result: Chat messages visually rendered in screenshot
-    Evidence: .sisyphus/evidence/task-8-render-check.png
+      1. page.goto('http://localhost:5173/test-harness.html')
+         (This is the standalone harness without waitForSocket — mounts immediately)
+      2. await page.waitForSelector('[data-testid="chat-list"], .chat-list, [class*="vlist"]', { timeout: 10000 })
+         # VList renders with a container element; adjust selector after reading ChatList.vue
+      3. const visibleCount = await page.evaluate(() =>
+           document.querySelectorAll('[class*="message"], [class*="chat-message"]').length
+         )
+      4. Assert: visibleCount > 0 AND visibleCount < 50
+         (virtua renders only viewport-visible rows; 200 items seeded, only ~10-30 visible)
+      5. await page.screenshot({ path: '.sisyphus/evidence/task-8-virtua-render.png' })
+    Expected Result: DOM contains fewer than 50 message nodes (virtualization active); page screenshot saved
+    Failure Indicators: visibleCount >= 150 (no virtualization), or page blank/error
+    Evidence: .sisyphus/evidence/task-8-virtua-render.png + .sisyphus/evidence/task-8-dom-count.txt
+
+  Scenario: Auto-scroll to bottom on new messages (bottom-anchor behavior)
+    Tool: Playwright
+    Preconditions: test-harness.html loaded (from previous scenario)
+    Steps:
+      1. const initialScrollHeight = await page.evaluate(() =>
+           document.querySelector('[class*="vlist"], [data-testid="chat-list"]')?.scrollHeight ?? 0
+         )
+      2. const isAtBottom = await page.evaluate(() => {
+           const el = document.querySelector('[class*="vlist"], [data-testid="chat-list"]')
+           if (!el) return false
+           return Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 10
+         })
+      3. Assert: isAtBottom is true (VList with reverse=true starts at bottom)
+    Expected Result: Scroll position is at the bottom after initial render
+    Failure Indicators: isAtBottom is false (scroll not anchored to bottom)
+    Evidence: .sisyphus/evidence/task-8-scroll-position.txt (save evaluate results)
   ```
+
+  **IMPORTANT**: Read `packages/desktop/src/bun/index.ts` and `packages/shared/types.ts` to get the exact variable name for the WebviewSender cast and exact `NormalizedChatMessage` field names before writing this fixture. Match all exactly.
 
   **Evidence to Capture**:
   - [ ] `.sisyphus/evidence/task-8-virtua-import.txt`
   - [ ] `.sisyphus/evidence/task-8-no-reverse.txt`
+  - [ ] `.sisyphus/evidence/task-8-reverse-prop.txt`
   - [ ] `.sisyphus/evidence/task-8-dev-endpoint.txt`
-  - [ ] `.sisyphus/evidence/task-8-render-check.png`
+  - [ ] `.sisyphus/evidence/task-8-endpoint-smoke.txt`
+  - [ ] `.sisyphus/evidence/task-8-seed-output.txt`
+  - [ ] `.sisyphus/evidence/task-8-virtua-render.png`
+  - [ ] `.sisyphus/evidence/task-8-dom-count.txt`
+  - [ ] `.sisyphus/evidence/task-8-scroll-position.txt`
 
   **Commit**: YES
   - Message: `feat(chat-list): add virtua VList for DOM virtualization`
-  - Files: `packages/desktop/src/views/main/components/ChatList.vue`, `packages/desktop/src/bun/index.ts` (dev endpoint), `packages/desktop/package.json`, `bun.lock`, `packages/desktop/tests/fixtures/seed-chat.ts`
+  - Files: `packages/desktop/src/views/main/components/ChatList.vue`, `packages/desktop/src/bun/index.ts` (dev endpoint), `packages/desktop/package.json`, `bun.lock`, `packages/desktop/tests/fixtures/seed-chat.ts`, `packages/desktop/src/views/main/test-harness.html`, `packages/desktop/src/views/main/test-harness.ts`
   - Pre-commit: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck`
 
 ---
@@ -1056,20 +1152,56 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
       Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Tests [N pass/N fail] | VERDICT`
 
 - [ ] F3. **Real Manual QA** — `unspecified-high`
-      Use the dev HTTP endpoint and `seed-chat.ts` fixture from Task 8 for message injection: 1. Start app: `bun run --cwd packages/desktop start` 2. Run seed: `bun packages/desktop/tests/fixtures/seed-chat.ts` 3. Wait 10 seconds for messages to render
-      Verify all code-based QA scenarios from Tasks 5–8: grep for no .reverse() in ChatList, grep for virtua import, grep for no reactive(new Map) in ChatMessage, grep for triggerRef in App.vue, grep for no local pollTimer in ChatList. Take OS screenshot with `scrot -d 2 .sisyphus/evidence/final-qa/screenshot.png`. Verify seed-chat exits 0 with "Injected 150 messages". Capture all evidence to `.sisyphus/evidence/final-qa/`.
-      Output: `Code Verification [N/N pass] | Screenshot captured [YES/NO] | Seed injection [PASS/FAIL] | VERDICT`
+      Use the dev HTTP endpoint and `seed-chat.ts` fixture from Task 8 for message injection:
+      1. Start app: `bun run --cwd packages/desktop dev` (starts Vite + bun/index.ts in parallel)
+      2. Wait 20 seconds for both processes to be ready
+      3. Run seed: `bun packages/desktop/tests/fixtures/seed-chat.ts`
+      4. Assert: seed exits 0 with "Injected 150 messages"
+      5. Verify dev endpoint responds: `curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:45824/dev/inject-chat -H "Content-Type: application/json" -d '{"id":"f3-test",...}'` → Assert 200
 
-- [ ] F4. **Post-fix Measurement + Baseline Documentation** — `quick`
-      Start the app via `bun run --cwd packages/desktop start`. Wait 90 seconds for stable idle state (no channel connection required — measure idle, same conditions as Task 1 baseline). Get PID: `PID=$(pgrep TwirChat)` (fallback: `pgrep -f "src/bun/index.ts" | head -1`). Run:
+      Verify all code-based QA scenarios from Tasks 5–8 via grep:
+      - grep for no .reverse() in ChatList
+      - grep for `from 'virtua/vue'` in ChatList (virtua import)
+      - grep for VList `:reverse` prop in ChatList (bottom-anchor scroll)
+      - grep for no `reactive(new Map` in ChatMessage
+      - grep for triggerRef in App.vue
+      - grep for no local pollTimer in ChatList
+
+      Capture all evidence to `.sisyphus/evidence/final-qa/`.
+      Output: `Code Verification [N/N pass] | Endpoint smoke [PASS/FAIL] | Seed injection [PASS/FAIL] | VERDICT`
+
+- [ ] F4. **Post-fix Measurement + CEF Baseline Documentation** — `quick`
+      **Two-phase measurement** to cover both idle and loaded workload:
+
+      **Phase 1 — Idle measurement** (same conditions as Task 1 baseline):
+      1. Start app: `bun run --cwd packages/desktop dev` (starts Vite + bun/index.ts — same command as Task 1)
+      2. Wait 30 seconds for stable idle state
+      3. Get PID: `PID=$(pgrep TwirChat)` (fallback: `PID=$(pgrep -f "src/bun/index.ts" | tr '\n' ' ' | awk '{print $1}')`)
+      4. Run:
+
   ```bash
-  echo "=== Date: $(date) ===" > .sisyphus/evidence/memory-after.txt
+  echo "=== Post-fix Idle ===" > .sisyphus/evidence/memory-after.txt
+  echo "=== Date: $(date) ===" >> .sisyphus/evidence/memory-after.txt
   grep VmRSS /proc/$PID/status >> .sisyphus/evidence/memory-after.txt
-  awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print "USS:", sum/1024, "MB"}' /proc/$PID/smaps >> .sisyphus/evidence/memory-after.txt
+  awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print "Idle USS:", sum/1024, "MB"}' /proc/$PID/smaps >> .sisyphus/evidence/memory-after.txt
   ```
-  Compare with `.sisyphus/evidence/memory-baseline.txt`. Report delta. Append to `.sisyphus/evidence/memory-after.txt`:
-  > "Note: htop RES includes shared WebKit2GTK pages (~150–250MB on Linux) that are charged to the process but physically shared with the OS. The actual app-private memory is the USS figure above. These shared pages cannot be reduced without changing the rendering engine."
-  > Output: `Baseline USS: X MB → Post-fix USS: Y MB (delta: Z MB) | VERDICT`
+
+      **Phase 2 — Loaded measurement** (after seeding 150 messages to exercise renderer + adapters):
+      1. Run seed: `bun packages/desktop/tests/fixtures/seed-chat.ts`
+      2. Wait 30 seconds for messages to settle
+      3. Get updated PID if needed: `PID=$(pgrep TwirChat)`
+      4. Run:
+
+  ```bash
+  echo "=== Post-fix Loaded (150 messages) ===" >> .sisyphus/evidence/memory-after.txt
+  grep VmRSS /proc/$PID/status >> .sisyphus/evidence/memory-after.txt
+  awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print "Loaded USS:", sum/1024, "MB"}' /proc/$PID/smaps >> .sisyphus/evidence/memory-after.txt
+  ```
+
+      Compare idle baseline from `.sisyphus/evidence/memory-baseline.txt` with idle and loaded values here. Report delta.
+      Append to `.sisyphus/evidence/memory-after.txt`:
+      "Note: htop RES includes shared CEF (Chromium Embedded Framework) pages (~150–300MB on Linux) that are charged to the process but physically shared with the OS. The actual app-private memory is the USS figure above. These shared pages cannot be reduced without changing the rendering engine. CEF is configured in packages/desktop/electrobun.config.ts (bundleCEF: true, defaultRenderer: 'cef')."
+      Output: `Baseline Idle USS: X MB → Post-fix Idle USS: Y MB → Post-fix Loaded USS: Z MB | VERDICT`
 
 ---
 
@@ -1100,13 +1232,29 @@ bun run check                                    # Expected: no errors
 bun run --cwd packages/desktop typecheck         # Expected: vue-tsc no errors
 bun test --cwd packages/desktop tests/           # Expected: all tests pass
 
-# Memory (after app starts + 1 channel connected for 90s):
-PID=$(pgrep TwirChat)
-awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print sum/1024, "MB USS"}' /proc/$PID/smaps
-# Expected: measurably lower than baseline USS
+# Start app correctly (Vite + bun process in parallel):
+bun run --cwd packages/desktop dev
 
-# DOM node count (via Playwright after 150 injected messages):
-# Expected: < 40 chat message nodes visible (virtua renders only visible items)
+# Memory — idle (same as baseline, after 30s):
+PID=$(pgrep TwirChat)
+awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print sum/1024, "MB USS idle"}' /proc/$PID/smaps
+
+# Memory — loaded (after running seed-chat.ts + 30s):
+bun packages/desktop/tests/fixtures/seed-chat.ts
+sleep 30
+PID=$(pgrep TwirChat)
+awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print sum/1024, "MB USS loaded"}' /proc/$PID/smaps
+# Expected: loaded USS measurably close to or lower than baseline USS
+
+# Virtua integration check:
+grep "from 'virtua/vue'" packages/desktop/src/views/main/components/ChatList.vue
+grep "VList" packages/desktop/src/views/main/components/ChatList.vue
+# Expected: both return results
+
+# Dev endpoint smoke test (app must be running):
+curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:45824/dev/inject-chat \
+  -H "Content-Type: application/json" -d '{"id":"check-1","platform":"twitch","channel":"t","channelId":"c","username":"u","displayName":"U","text":"hi","timestamp":0,"badges":[],"emotes":[],"color":"#fff"}'
+# Expected: 200
 ```
 
 ### Final Checklist
@@ -1117,4 +1265,4 @@ awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print sum/1024, "MB USS"}' /proc
 - [ ] `bun run --cwd packages/desktop typecheck` passes (vue-tsc)
 - [ ] `bun test tests/` passes from `packages/desktop`
 - [ ] Baseline and post-fix USS measurements recorded
-- [ ] WebKit2GTK shared-page explanation documented
+- [ ] CEF shared-page explanation documented

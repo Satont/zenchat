@@ -86,15 +86,15 @@ business logic into focused composables.
 
 ### Definition of Done
 
-- [ ] `vue-tsc --noEmit` exits 0 after every wave
-- [ ] `bun run lint` exits 0
-- [ ] `bun run format:check` exits 0
-- [ ] Zero inline `<svg>` **platform icon** tags in overlay + all task-scoped components (see task list)
+- [ ] `vue-tsc --noEmit` (from `packages/desktop`) exits 0 after every wave
+- [ ] `bun run lint` (from repo root `/home/satont/Projects/twirchat`) exits 0
+- [ ] `bun run format:check` (from repo root) exits 0
+- [ ] Zero `platformIconSvg()` v-html calls remain in `src/views/` — all replaced by imported SVG components
 - [ ] Zero duplicate local `platformColor`/`platformIconSvg` function/const definitions (imports OK)
-- [ ] `App.vue` non-platform UI SVGs (nav, update icons) are OUT OF SCOPE for this refactor — not checked
-- [ ] `ChatMessage.vue` badge `v-html="badge.imageUrl"` dynamic SVG injection is OUT OF SCOPE — badges come from API, not hardcoded
-- [ ] All state that was in custom singletons now in Pinia stores
-- [ ] Overlay (`src/views/overlay/App.vue`) imports `platformColor` from shared utility
+- [ ] Non-platform UI SVGs in App.vue, StreamEditor.vue, PlatformsPanel.vue, ChatList.vue are explicitly OUT OF SCOPE
+- [ ] `badge.imageUrl` `v-html` in ChatMessage.vue is OUT OF SCOPE (API-dynamic SVG, not hardcoded)
+- [ ] All state that was in custom singletons now in Pinia stores (4 stores: accounts, settings, channelStatus, layout)
+- [ ] Overlay (`src/views/overlay/App.vue`) imports `platformColor` from `src/views/shared/utils/platform.ts` (no platform icon SVGs — overlay uses color dot only)
 
 ### Must Have
 
@@ -728,23 +728,27 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
   - Files: `src/views/main/composables/*.ts`
   - Pre-commit: `vue-tsc --noEmit`
 
-- [ ] 7. Refactor `overlay/App.vue` (SVG + shared platform utility)
+- [ ] 7. Refactor `overlay/App.vue` (import shared platform utility — NO SVG icons)
 
   **What to do**:
-  - In `packages/desktop/src/views/overlay/App.vue`:
-    - Remove the local `platformColor()` function definition (inline duplicate)
-    - Import `platformColor` from `'../shared/utils/platform'`
-    - Remove any inline `<svg>` blocks for platform icons
-    - Import platform SVG icon components from `'../../assets/icons/platforms/twitch.svg'` etc.
-    - Use `<TwitchIcon />`, `<YouTubeIcon />`, `<KickIcon />` where platform icon SVGs were inline
-  - The overlay has NO Pinia, NO Electrobun RPC — it uses a plain WebSocket for messages
-  - Keep the WebSocket connection logic entirely untouched
+  - The overlay at `packages/desktop/src/views/overlay/App.vue` renders platform as a colored dot only:
+    ```html
+    <span class="platform-dot" :style="{ background: platformColor(dm.msg.platform) }"></span>
+    ```
+  - There are NO platform icon SVGs in the overlay — just a `platformColor()` local function duplicate
+  - Task: ONLY replace the local `platformColor()` function with an import:
+    ```ts
+    import { platformColor } from '../shared/utils/platform'
+    ```
+  - Remove the local `platformColor()` function definition (lines 135–155 approx)
+  - The `.platform-dot` rendering stays exactly as-is
 
   **Must NOT do**:
+  - Do NOT import `TwitchIcon`, `YouTubeIcon`, or `KickIcon` — overlay has no platform icons, only a dot
   - Do NOT add Pinia to the overlay
   - Do NOT import from `electrobun/view` or `rpc`
   - Do NOT add `createPinia()` to `src/views/overlay/main.ts`
-  - Do NOT touch any other overlay logic (WS, message display, animations)
+  - Do NOT touch WebSocket logic, dot rendering, animations, or any other overlay logic
 
   **Recommended Agent Profile**:
   - **Category**: `quick`
@@ -752,15 +756,14 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
 
   **Parallelization**:
   - **Can Run In Parallel**: YES (Wave 2, parallel with T3–T6)
-  - **Blocked By**: Task 1 (needs shared platform utility and SVG files)
+  - **Blocked By**: Task 1 (needs shared platform utility)
   - **Blocks**: Nothing
 
   **References**:
 
   **Pattern References**:
-  - `packages/desktop/src/views/overlay/App.vue` — full file; find `platformColor` local def and inline SVGs to replace
+  - `packages/desktop/src/views/overlay/App.vue:135` — local `platformColor` function to remove
   - `packages/desktop/src/views/shared/utils/platform.ts` (Task 1 output) — import source
-  - `packages/desktop/src/assets/icons/platforms/*.svg` (Task 1 output) — SVG component imports
 
   **Acceptance Criteria**:
 
@@ -783,22 +786,22 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
     Expected Result: No local definition (imported from shared utility)
     Evidence: .sisyphus/evidence/task-7-no-dup.txt
 
-  Scenario: No inline SVG in overlay
+  Scenario: platformColor imported from shared utility in overlay
     Tool: Bash
     Steps:
-      1. Run: grep -c "<svg" packages/desktop/src/views/overlay/App.vue
-      2. Assert: output is "0"
-    Expected Result: Zero inline SVGs
-    Evidence: .sisyphus/evidence/task-7-no-svg.txt
+      1. Run: grep -n "from.*shared/utils/platform" packages/desktop/src/views/overlay/App.vue
+      2. Assert: at least one match containing platformColor
+    Expected Result: Import from shared utility present
+    Evidence: .sisyphus/evidence/task-7-import.txt
   ```
 
   **Evidence to Capture**:
   - [ ] task-7-typecheck.txt
   - [ ] task-7-no-dup.txt
-  - [ ] task-7-no-svg.txt
+  - [ ] task-7-import.txt
 
   **Commit**: YES
-  - Message: `refactor(overlay): use shared platform utility and SVG components`
+  - Message: `refactor(overlay): import platformColor from shared platform utility`
   - Files: `src/views/overlay/App.vue`
   - Pre-commit: `vue-tsc --noEmit`
 
@@ -849,13 +852,14 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
     Expected Result: Clean compilation
     Evidence: .sisyphus/evidence/task-8-typecheck.txt
 
-  Scenario: No inline SVG in ChatMessage.vue
+  Scenario: No inline SVG platform icons in ChatMessage.vue (v-html platformIconSvg removed)
     Tool: Bash
     Steps:
-      1. Run: grep -c "<svg" packages/desktop/src/views/main/components/ChatMessage.vue
+      1. Run: grep -c "platformIconSvg\|v-html.*platform.*icon" packages/desktop/src/views/main/components/ChatMessage.vue
       2. Assert: output is "0"
-    Expected Result: Zero inline SVGs
-    Evidence: .sisyphus/evidence/task-8-no-svg.txt
+    Expected Result: platformIconSvg() calls replaced by SVG component imports
+    Evidence: .sisyphus/evidence/task-8-no-platform-svg.txt
+    Note: Non-platform UI icons (copy, reply SVGs) may remain inline — ONLY platform icons must be replaced
 
   Scenario: No local platformColor definition
     Tool: Bash
@@ -867,7 +871,7 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
   ```
 
   **Evidence to Capture**:
-  - [ ] task-8-typecheck.txt, task-8-no-svg.txt, task-8-no-dup.txt
+  - [ ] task-8-typecheck.txt, task-8-no-platform-svg.txt, task-8-no-dup.txt
 
   **Commit**: NO (group with T9–T13)
 
@@ -921,17 +925,18 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
     Expected Result: setInterval removed from component
     Evidence: .sisyphus/evidence/task-9-no-setinterval.txt
 
-  Scenario: No inline SVG in ChatList.vue
+  Scenario: No local platformColor definition in ChatList.vue
     Tool: Bash
     Steps:
-      1. Run: grep -c "<svg" packages/desktop/src/views/main/components/ChatList.vue
-      2. Assert: output is "0"
-    Expected Result: Zero inline SVGs
-    Evidence: .sisyphus/evidence/task-9-no-svg.txt
+      1. Run: grep -n "function platformColor\|const platformColor" packages/desktop/src/views/main/components/ChatList.vue
+      2. Assert: no output (import replaces local definition)
+    Expected Result: platformColor imported from shared utility, not defined locally
+    Evidence: .sisyphus/evidence/task-9-no-platform-dup.txt
+    Note: Non-platform UI icons (empty-state SVG etc.) may remain inline — ONLY platformColor local def must be removed
   ```
 
   **Evidence to Capture**:
-  - [ ] task-9-typecheck.txt, task-9-no-setinterval.txt, task-9-no-svg.txt
+  - [ ] task-9-typecheck.txt, task-9-no-setinterval.txt, task-9-no-platform-dup.txt
 
   **Commit**: NO (group with T8, T10–T13)
 
@@ -1039,35 +1044,35 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
     Expected Result: Clean compilation
     Evidence: .sisyphus/evidence/task-11-typecheck.txt
 
-  Scenario: No inline SVG in PlatformsPanel.vue
+  Scenario: accounts Pinia store is used in PlatformsPanel.vue
     Tool: Bash
     Steps:
-      1. Run: grep -c "<svg" packages/desktop/src/views/main/components/PlatformsPanel.vue
-      2. Assert: output is "0"
-    Expected Result: Zero inline SVGs
-    Evidence: .sisyphus/evidence/task-11-no-svg.txt
+      1. Run: grep -n "useAccountsStore" packages/desktop/src/views/main/components/PlatformsPanel.vue
+      2. Assert: at least one match
+    Expected Result: Pinia accounts store integrated in PlatformsPanel
+    Evidence: .sisyphus/evidence/task-11-pinia-usage.txt
+    Note: PlatformsPanel does not use platform icon SVGs or platformColor — only accounts store and useRpcListener are the key deliverables here
   ```
 
   **Evidence to Capture**:
-  - [ ] task-11-typecheck.txt, task-11-no-svg.txt
+  - [ ] task-11-typecheck.txt, task-11-pinia-usage.txt
 
   **Commit**: NO (group with T8–T10, T12–T13)
 
-- [ ] 12. Refactor `StreamEditor.vue` (usePolling + SVG)
+- [ ] 12. Refactor `StreamEditor.vue` (usePolling only)
 
   **What to do**:
   - In `packages/desktop/src/views/main/components/StreamEditor.vue`:
-    - Replace `setInterval`-based category search polling with `usePolling(fn, interval)`
-    - Replace any `setInterval` for stream status refresh with `usePolling`
-    - Import platform SVG components; replace inline `<svg>` elements
-    - Import `platformColor` from shared utility; remove local def
-    - Keep category search debounce in the component (it's not generic enough for a composable)
+    - Replace the `setInterval` (line ~110-114) stream status polling with `usePolling(fn, interval)`; call `start()` in `onMounted`
+    - `StreamEditor.vue` does NOT use `platformColor` or platform icon SVGs — no SVG work needed here
+    - Keep category search debounce in the component (not generic enough for a composable)
     - Keep save flow (title/category RPC calls) in the component
 
   **Must NOT do**:
   - Do NOT use Pinia here (StreamEditor is self-contained per-channel state)
   - Do NOT extract save flow into a composable
   - Do NOT change the RPC calls to the backend
+  - Do NOT remove existing UI icon SVGs (edit/save button icons) — they are not platform icons
 
   **Recommended Agent Profile**:
   - **Category**: `unspecified-high`
@@ -1075,7 +1080,7 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
 
   **Parallelization**:
   - **Can Run In Parallel**: YES (Wave 3)
-  - **Blocked By**: Tasks 4 (usePolling), 1 (SVGs)
+  - **Blocked By**: Task 4 (usePolling)
   - **Blocks**: Nothing
 
   **References**:
@@ -1109,81 +1114,83 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
 
   **Commit**: NO (group with T8–T11, T13)
 
-- [ ] 13. SVG-swap for remaining 14 components (SVG-only, no new composables)
+- [ ] 13. Replace `platformColor`/`platformIconSvg` in 4 platform-aware components (no new composables)
 
   **What to do**:
-  - For EACH of the following components, do ONLY:
-    1. Import platform SVG components from `'../../../assets/icons/platforms/'` (or `'../../../../assets/icons/platforms/'` for `ui/` subdirectory)
-    2. Replace inline `<svg>` and `v-html` SVG injections with `<TwitchIcon />` / `<YouTubeIcon />` / `<KickIcon />`
-    3. Import `platformColor` from `'../../shared/utils/platform'`; remove any local `platformColor` or `platformIconSvg` definition
-  - Target components:
-    - `ChatPanel.vue`
-    - `ChatInput.vue`
-    - `ChannelTabBar.vue`
-    - `LayoutToolbar.vue`
-    - `SplitViewToolbar.vue`
-    - `AddChannelForm.vue`
-    - `AddChannelModal.vue`
-    - `SettingsPanel.vue`
-    - `EventsFeed.vue`
-    - `EmoteTooltip.vue`
-    - `DragOverlay.vue`
-    - `PanelNode.vue`
-    - `SplitNode.vue`
-    - `ui/ChatAppearancePopover.vue`
+  - Only these 4 components from the original "14" list actually use `platformColor` or platform-related patterns:
+    - `ChatPanel.vue` — uses `platformColor` (3 occurrences)
+    - `ChatInput.vue` — uses `platformColor` (3 occurrences)
+    - `ChannelTabBar.vue` — uses `platformColor` (3 occurrences)
+    - `EventsFeed.vue` — uses `platformColor`/platform display (4 occurrences)
+  - For each of these 4 files:
+    1. Import `platformColor` from `'../../shared/utils/platform'`
+    2. Remove any local `platformColor` or `platformIconSvg` function/const definition
+    3. If any use `platformIconSvg()` via `v-html`: import the SVG component instead (`TwitchIcon` etc.) and replace with `<TwitchIcon />`
+  - The remaining 10 files from the original list (`AddChannelForm`, `AddChannelModal`, `DragOverlay`, `EmoteTooltip`, `LayoutToolbar`, `PanelNode`, `SettingsPanel`, `SplitNode`, `SplitViewToolbar`, `ui/ChatAppearancePopover`) do NOT use platformColor or platform icons — do NOT touch them
 
   **CRITICAL — Must NOT do**:
+  - Do NOT touch the 10 non-platform components listed above
   - Do NOT add ANY new composables in this task
   - Do NOT add Pinia usage in this task
   - Do NOT touch `WatchedChannelsView.vue` — that is Task 14 ONLY
-  - Do NOT touch `ChatSplitView.vue` unless it has inline SVGs (check first)
+  - Do NOT remove non-platform UI SVGs (scroll, icons, buttons) — only platform icon SVGs are in scope
   - Do NOT change component logic, template structure, or CSS class names
-  - This task is PURELY: SVG file → component import, `v-html svg` → SVG component, platformColor local def → import
 
   **Recommended Agent Profile**:
-  - **Category**: `unspecified-high`
-    - Reason: Many files but mechanical changes; needs careful read per file to avoid mistakes
+  - **Category**: `quick`
+    - Reason: Only 4 files, mechanical platformColor import swap
   - **Skills**: []
 
   **Parallelization**:
   - **Can Run In Parallel**: YES (Wave 3, with T8–T12)
   - **Blocked By**: Task 1 (SVG files + platform utility)
-  - **Blocks**: Task 14 (layout migration proceeds after all Wave 3 complete)
+  - **Blocks**: Task 14
 
   **References**:
 
   **Pattern References**:
-  - Each of the 14 component files — read each one before editing
-  - `packages/desktop/src/views/shared/utils/platform.ts` (Task 1)
-  - `packages/desktop/src/assets/icons/platforms/*.svg` (Task 1)
+  - `packages/desktop/src/views/main/components/ChatPanel.vue` — read before editing
+  - `packages/desktop/src/views/main/components/ChatInput.vue` — read before editing
+  - `packages/desktop/src/views/main/components/ChannelTabBar.vue` — read before editing
+  - `packages/desktop/src/views/main/components/EventsFeed.vue` — read before editing
+  - `packages/desktop/src/views/shared/utils/platform.ts` (Task 1) — import source
   - `packages/desktop/src/views/main/components/ChatMessage.vue` (after Task 8) — reference for correct import pattern
 
   **QA Scenarios**:
 
   ```
-  Scenario: All 14 components compile cleanly
+  Scenario: 4 target components compile cleanly
     Tool: Bash
     Steps:
       1. Run: cd packages/desktop && vue-tsc --noEmit 2>&1
-      2. Assert: exit code 0, no errors in any of the 14 component files
+      2. Assert: exit code 0, no errors in ChatPanel.vue, ChatInput.vue, ChannelTabBar.vue, EventsFeed.vue
     Expected Result: Clean compilation
     Evidence: .sisyphus/evidence/task-13-typecheck.txt
 
-  Scenario: Zero inline SVGs across all 14 components
-    Tool: Bash
-    Steps:
-      1. Run: grep -rn "<svg" packages/desktop/src/views/main/components/ --include="*.vue" | grep -v "ChatMessage.vue\|ChatList.vue\|PlatformsPanel.vue\|StreamEditor.vue\|WatchedChannelsView.vue\|App.vue"
-      2. Assert: no output
-    Expected Result: Zero inline SVGs in the 14 target components
-    Evidence: .sisyphus/evidence/task-13-no-svg.txt
-
-  Scenario: No duplicate platformColor definitions in target components
+  Scenario: No duplicate platformColor definitions in the 4 components
     Tool: Bash
     Steps:
       1. Run: grep -rn "function platformColor\|const platformColor" packages/desktop/src/views/main/components/ChatPanel.vue packages/desktop/src/views/main/components/ChatInput.vue packages/desktop/src/views/main/components/ChannelTabBar.vue packages/desktop/src/views/main/components/EventsFeed.vue
       2. Assert: no output
-    Expected Result: All use import, none define locally
+    Expected Result: All import platformColor, none define it locally
     Evidence: .sisyphus/evidence/task-13-no-dup.txt
+
+  Scenario: platformColor imported from shared utility in all 4 files
+    Tool: Bash
+    Steps:
+      1. Run: grep -rn "from.*shared/utils/platform" packages/desktop/src/views/main/components/ChatPanel.vue packages/desktop/src/views/main/components/ChatInput.vue packages/desktop/src/views/main/components/ChannelTabBar.vue packages/desktop/src/views/main/components/EventsFeed.vue
+      2. Assert: 4 matches (one per file)
+    Expected Result: All 4 files import from shared utility
+    Evidence: .sisyphus/evidence/task-13-imports.txt
+  ```
+
+  **Evidence to Capture**:
+  - [ ] task-13-typecheck.txt, task-13-no-dup.txt, task-13-imports.txt
+
+  **Commit**: YES (this + T8–T12 all at once)
+  - Message: `refactor(desktop): migrate components to composables, Pinia, and SVG components`
+  - Files: `src/views/main/components/ChatPanel.vue`, `ChatInput.vue`, `ChannelTabBar.vue`, `EventsFeed.vue` (+ T8/T9/T10/T11/T12 files)
+  - Pre-commit: `vue-tsc --noEmit`
   ```
 
   **Evidence to Capture**:
@@ -1260,25 +1267,30 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
 
   Scenario: WatchedChannelsView renders and layout persists
     Tool: Playwright
-    Preconditions: App running (dev:hmr)
+    Preconditions: App running via `cd packages/desktop && bun run dev` (starts Vite HMR on http://localhost:5173 + Electrobun). At least one watched channel tab must exist (added previously or via the + button). Navigate to http://localhost:5173 in Playwright.
     Steps:
-      1. Navigate to app, open WatchedChannelsView tab
-      2. Add a panel via drag-drop or split button
-      3. Assert: new panel appears in DOM (selector `.panel-node` count increases)
-      4. Refresh app (re-open webview)
-      5. Assert: layout persists (same `.panel-node` count as before refresh)
+      1. Navigate to http://localhost:5173 in Playwright
+      2. Wait for selector `.tab-bar` to be visible (timeout: 15s)
+      3. If there is a watched channel tab (any `.tab-wrapper .tab`), click it; if none exist, click `.tab.tab-add` (the + button), fill AddChannelForm, then click the new tab
+      4. Wait for selector `.panel-node` to appear (timeout: 10s)
+      5. Click button with class `.panel-add-btn` inside the first `.panel-node` (title="Split right")
+      6. Assert: `.panel-node` count in DOM is ≥ 2
+      7. Reload the page (playwright page.reload())
+      8. Wait for selector `.panel-node` again
+      9. Assert: `.panel-node` count matches the count from step 6 (layout persisted via RPC)
     Expected Result: Layout renders and persists via Pinia + RPC
-    Failure Indicators: Console errors about Pinia, blank screen, layout reset on refresh
+    Failure Indicators: Console errors about "pinia" or "defineStore", blank screen, `.panel-node` count reset to 1 on reload
     Evidence: .sisyphus/evidence/task-14-layout-renders.png
 
   Scenario: Drag-drop panel reordering works
     Tool: Playwright
-    Preconditions: App running with 2+ panels in layout
+    Preconditions: App running (http://localhost:5173), WatchedChannelsView open with 2+ `.panel-node` elements visible
     Steps:
-      1. Hover over a panel's drag handle (selector `.drag-handle` or similar)
-      2. Drag panel to another position
-      3. Assert: panels reorder in DOM
-      4. Assert: no console errors about reactive state
+      1. Navigate to http://localhost:5173, click a watched channel tab in `.tab-bar`
+      2. Wait for at least 2 `.panel-node` elements to appear
+      3. Use Playwright dragTo: drag `.panel-node:first-child .panel-header` to `.panel-node:last-child .panel-header`
+      4. Assert: the order of `.panel-node` elements changed (compare nth-child text before vs after)
+      5. Assert: no browser console errors containing "pinia" or "reactive"
     Expected Result: Drag-drop works after Pinia migration
     Evidence: .sisyphus/evidence/task-14-drag-drop.png
 
@@ -1314,12 +1326,30 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
       Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
 
 - [ ] F2. **Code Quality Review** — `unspecified-high`
-      Run `vue-tsc --noEmit` (in `packages/desktop`) + `bun run lint` + `bun run format:check`. Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log left in prod, commented-out code, unused imports. Check AI slop: excessive comments, over-abstraction, generic names.
+      Run: (1) `cd packages/desktop && vue-tsc --noEmit`, (2) `cd /home/satont/Projects/twirchat && bun run lint`, (3) `cd /home/satont/Projects/twirchat && bun run format:check`. Note: `lint` and `format:check` scripts exist only at repo root, not in `packages/desktop`. Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log left in prod, commented-out code, unused imports. Check AI slop: excessive comments, over-abstraction, generic names.
       Output: `TypeCheck [PASS/FAIL] | Lint [PASS/FAIL] | Format [PASS/FAIL] | Files [N clean/N issues] | VERDICT`
 
 - [ ] F3. **Real Manual QA** — `unspecified-high` + `playwright` skill
-      Start from clean state. Open app, verify: platform icons render in ChatMessage, ChatList, ChannelTabBar, EventsFeed, overlay. Verify Pinia store reactivity (add account → list updates). Verify layout drag-drop works. Verify chat scroll lock. Verify composable cleanup (no console errors on channel switch). Save screenshots to `.sisyphus/evidence/final-qa/`.
-      Output: `Scenarios [N/N pass] | Integration [N/N] | Edge Cases [N tested] | VERDICT`
+      Start from clean state. Start app via `cd packages/desktop && bun run dev`. Navigate to http://localhost:5173 in Playwright.
+
+      **Scenario A — Platform icons render in main window:**
+      Navigate to http://localhost:5173. Wait for `.chat-list` to appear. Assert DOM contains `<img>` or `<svg>` elements that are platform icon SVG components (NOT `v-html` raw SVG blobs). Check `ChatMessage.vue` renders platform icons as `<PlatformIcon />` component tree. Screenshot: `.sisyphus/evidence/final-qa/F3-platform-icons.png`.
+
+      **Scenario B — Overlay shows platform color dot (no icon):**
+      Navigate to http://localhost:45823 in a new Playwright tab. Assert DOM contains `.platform-dot` element with inline `background` style (the color). Assert NO `<img>` or SVG icon component is rendered for the platform. Screenshot: `.sisyphus/evidence/final-qa/F3-overlay-dot.png`.
+
+      **Scenario C — Pinia stores initialise (deterministic Bash check):**
+      Run: `grep -n "defineStore" packages/desktop/src/views/main/stores/accounts.ts packages/desktop/src/views/main/stores/settings.ts packages/desktop/src/views/main/stores/channelStatus.ts packages/desktop/src/views/main/stores/layout.ts`
+      Assert: 4 matches (one per file). This verifies all 4 stores are Pinia stores without requiring OAuth. Save output: `.sisyphus/evidence/final-qa/F3-pinia-stores.txt`.
+
+      **Scenario D — Layout drag-drop and persistence:**
+      In Playwright at http://localhost:5173, click a watched channel tab (`.tab-wrapper .tab:first-child`). Drag `.panel-node:first-child .panel-header` to `.panel-node:last-child .panel-header`. Assert panels reorder. Reload page. Assert panel count unchanged. Screenshot: `.sisyphus/evidence/final-qa/F3-drag-drop.png`.
+
+      **Scenario E — Chat scroll lock composable cleanup:**
+      Open http://localhost:5173, navigate to chat tab. Scroll up in `.chat-list`. Assert new messages do NOT auto-scroll. Scroll to bottom. Assert auto-scroll resumes. Switch to another tab. Assert no console errors containing "Cannot set properties of undefined" or "removeEventListener". Screenshot: `.sisyphus/evidence/final-qa/F3-scroll-lock.png`.
+
+      Save all screenshots to `.sisyphus/evidence/final-qa/`.
+      Output: `Scenarios [5/5 pass] | Integration [N/N] | Edge Cases [N tested] | VERDICT`
 
 - [ ] F4. **Scope Fidelity Check** — `deep`
       For each task: read "What to do", read actual diff. Verify 1:1 — everything in spec was built (no missing), nothing beyond spec was built (no creep). Check "Must NOT do" compliance. Flag unaccounted changes.
@@ -1343,33 +1373,36 @@ Wave FINAL (4 parallel reviewers — after ALL tasks):
 ### Verification Commands
 
 ```bash
-# Run from packages/desktop
-vue-tsc --noEmit                              # Expected: exit 0, 0 errors
-bun run lint                                  # Expected: exit 0
-bun run format:check                          # Expected: exit 0
+# Type check — run from packages/desktop
+cd packages/desktop && vue-tsc --noEmit    # Expected: exit 0, 0 errors
 
-# No platform inline SVGs remain (platform icons only — non-platform UI SVGs in App.vue are out of scope)
-# Check each task's components directly instead of a blanket check
-grep -c "<svg" src/views/overlay/App.vue      # Expected: 0
-grep -c "<svg" src/views/main/components/ChatMessage.vue   # Expected: 0 (platform icons removed; badge v-html dynamic SVG allowed — from API, not inline markup)
-grep -c "<svg" src/views/main/components/ChatList.vue      # Expected: 0
-grep -c "<svg" src/views/main/components/PlatformsPanel.vue # Expected: 0
-grep -c "<svg" src/views/main/components/StreamEditor.vue   # Expected: 0
+# Lint and format — run from REPO ROOT (packages/desktop has no lint/format scripts)
+cd /home/satont/Projects/twirchat && bun run lint          # Expected: exit 0
+cd /home/satont/Projects/twirchat && bun run format:check  # Expected: exit 0
 
-# No duplicate platformColor/platformIconSvg DEFINITIONS (imports/usages are fine — only local definitions are banned)
-grep -rn "function platformColor\|const platformColor\|function platformIconSvg\|const platformIconSvg" src/views/ --include="*.vue" --include="*.ts" | grep -v "shared/utils/platform.ts" | wc -l  # Expected: 0
+# No platformIconSvg() usage remains
+grep -rn "platformIconSvg" packages/desktop/src/views/ --include="*.vue" --include="*.ts" | wc -l  # Expected: 0
 
-# All components import platformColor from shared utility (not define it locally)
-grep -rn "from.*shared/utils/platform\|from.*shared/utils/platform" src/views/ --include="*.vue" --include="*.ts" | wc -l  # Expected: >= 9 (all previous consumers)
+# No duplicate platformColor/platformIconSvg FUNCTION DEFINITIONS (local defs banned, imports OK)
+grep -rn "function platformColor\|const platformColor\|function platformIconSvg\|const platformIconSvg" packages/desktop/src/views/ --include="*.vue" --include="*.ts" | grep -v "shared/utils/platform.ts" | wc -l  # Expected: 0
+
+# All consumers import platformColor from shared utility
+grep -rn "from.*shared/utils/platform" packages/desktop/src/views/ --include="*.vue" --include="*.ts" | wc -l  # Expected: >= 9
+
+# Pinia stores and composables exist
+ls packages/desktop/src/views/main/stores/        # Expected: accounts.ts, settings.ts, channelStatus.ts, layout.ts
+ls packages/desktop/src/views/main/composables/   # Expected: useMessageParsing.ts, usePolling.ts, useChatScroll.ts, useRpcListener.ts
 ```
 
 ### Final Checklist
 
 - [ ] All "Must Have" deliverables present
 - [ ] All "Must NOT Have" guardrails satisfied
-- [ ] `vue-tsc --noEmit` exits 0
-- [ ] `bun run lint` exits 0
-- [ ] Zero platform inline SVGs in task-scoped components (overlay, ChatMessage, ChatList, PlatformsPanel, StreamEditor, T13 components)
-- [ ] Zero duplicate local platformColor/platformIconSvg definitions
-- [ ] Pinia installed and all 4 stores working
-- [ ] Overlay uses shared platform utility
+- [ ] `vue-tsc --noEmit` (from `packages/desktop`) exits 0
+- [ ] `bun run lint` (from repo root) exits 0
+- [ ] Zero `platformIconSvg()` calls remain in `src/views/` (all replaced by SVG component imports)
+- [ ] Zero duplicate local `platformColor`/`platformIconSvg` function definitions (imports OK)
+- [ ] Non-platform UI SVGs in App.vue, StreamEditor.vue, PlatformsPanel.vue, ChatList.vue left intact (out of scope)
+- [ ] `badge.imageUrl` v-html in ChatMessage.vue left intact (API-dynamic SVG, not hardcoded inline — out of scope)
+- [ ] Pinia installed and all 4 stores working (accounts, settings, channelStatus, layout)
+- [ ] Overlay imports `platformColor` from shared utility (colored dot — no platform icon SVGs in overlay)
