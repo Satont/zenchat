@@ -118,6 +118,52 @@ export function resume(): void {
   _isPaused = false
 }
 
+// Recording mode: one-shot keydown listener for rebinding
+let _recordingCallback: ((combo: string | null) => void) | null = null
+
+function recordingKeydown(event: KeyboardEvent): void {
+  event.preventDefault()
+  event.stopImmediatePropagation()
+
+  if (!_recordingCallback) return
+
+  if (event.key === 'Escape') {
+    const cb = _recordingCallback
+    stopKeyRecording()
+    cb(null)
+    return
+  }
+
+  const parts: string[] = []
+  if (event.ctrlKey) parts.push('ctrl')
+  if (event.shiftKey) parts.push('shift')
+  if (event.altKey) parts.push('alt')
+
+  const mainKey = event.key.toLowerCase()
+  if (['control', 'shift', 'alt', 'meta'].includes(mainKey)) return
+
+  parts.push(mainKey)
+  const combo = parts.join('+')
+
+  const cb = _recordingCallback
+  stopKeyRecording()
+  cb(combo)
+}
+
+export function startKeyRecording(callback: (combo: string | null) => void): void {
+  _recordingCallback = callback
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', recordingKeydown, { capture: true })
+  }
+}
+
+export function stopKeyRecording(): void {
+  _recordingCallback = null
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', recordingKeydown, { capture: true })
+  }
+}
+
 export function useHotkeys(
   settingsRef: Ref<AppSettings | null>,
   handlers: HotkeyHandlers,

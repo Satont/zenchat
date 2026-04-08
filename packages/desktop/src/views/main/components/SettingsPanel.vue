@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { AppSettings, HotkeySettings } from '@twirchat/shared/types'
 import { DEFAULT_SETTINGS } from '@twirchat/shared/types'
 import { rpc } from '../main'
-import { pause, resume } from '../composables/useHotkeys'
+import { pause, resume, startKeyRecording, stopKeyRecording } from '../composables/useHotkeys'
 
 const props = defineProps<{
   settings: AppSettings | null
@@ -108,44 +108,21 @@ const hotkeysConfig: Record<keyof HotkeySettings, { label: string; description: 
   },
 }
 
-function onRecordKeydown(e: KeyboardEvent): void {
-  e.preventDefault()
-  e.stopImmediatePropagation()
-
-  if (!recordingAction.value) return
-
-  if (e.key === 'Escape') {
-    stopRecording()
-    return
-  }
-
-  // Build key combo string
-  const parts: string[] = []
-  if (e.ctrlKey) parts.push('ctrl')
-  if (e.shiftKey) parts.push('shift')
-  if (e.altKey) parts.push('alt')
-
-  const mainKey = e.key.toLowerCase()
-  // Skip modifier-only keypresses
-  if (['control', 'shift', 'alt', 'meta'].includes(mainKey)) return
-
-  parts.push(mainKey)
-  const combo = parts.join('+')
-
-  local.value.hotkeys[recordingAction.value] = combo
-  stopRecording()
-}
-
 function startRecording(action: keyof HotkeySettings): void {
   recordingAction.value = action
   pause()
-  window.addEventListener('keydown', onRecordKeydown, { capture: true })
+  startKeyRecording((combo) => {
+    if (combo !== null) {
+      local.value.hotkeys[action] = combo
+    }
+    stopRecording()
+  })
 }
 
 function stopRecording(): void {
   recordingAction.value = null
   resume()
-  window.removeEventListener('keydown', onRecordKeydown, { capture: true })
+  stopKeyRecording()
 }
 </script>
 
