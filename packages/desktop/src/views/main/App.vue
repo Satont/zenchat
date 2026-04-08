@@ -13,6 +13,9 @@ import EventsFeed from './components/EventsFeed.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import ChannelTabBar from './components/ChannelTabBar.vue'
 import AddChannelModal from './components/AddChannelModal.vue'
+import TabSelectorModal from './components/TabSelectorModal.vue'
+import type { TabItem } from './components/TabSelectorModal.vue'
+import { useHotkeys } from './composables/useHotkeys'
 import { rpc } from './main'
 import { attemptMigration } from './services/migration'
 import type {
@@ -49,6 +52,19 @@ const tabWatchedChannels = computed(() =>
   watchedChannels.value.filter((ch) => tabChannelIds.value.has(ch.id)),
 )
 
+const tabSelectorItems = computed<TabItem[]>(() => {
+  const items: TabItem[] = [{ id: 'home', label: 'My channels' }]
+  for (const ch of tabWatchedChannels.value) {
+    items.push({
+      id: ch.id,
+      label: ch.displayName,
+      platform: ch.platform,
+      isLive: watchedLiveStatuses.value.get(ch.id) ?? false,
+    })
+  }
+  return items
+})
+
 /** Active watched channel tab ('home' or WatchedChannel.id) */
 const activeWatchedTab = ref<string>('home')
 /** ChannelId → messages buffer */
@@ -59,6 +75,7 @@ const watchedStatuses = ref<Map<string, PlatformStatusInfo>>(new Map())
 const watchedLiveStatuses = ref<Map<string, boolean>>(new Map())
 const tabChannelNames = ref<Map<string, string[]>>(new Map())
 const showAddModal = ref(false)
+const showTabSelector = ref(false)
 
 // ---- Sidebar collapse ----
 const SIDEBAR_COLLAPSE_KEY = 'twirchat:sidebar-collapsed'
@@ -225,6 +242,21 @@ async function loadInitialData() {
   await attemptMigration()
 }
 
+useHotkeys(settings, {
+  newTab: () => {
+    showAddModal.value = true
+  },
+  nextTab: () => {
+    cycleTab(1)
+  },
+  prevTab: () => {
+    cycleTab(-1)
+  },
+  tabSelector: () => {
+    showTabSelector.value = true
+  },
+})
+
 onMounted(() => {
   loadInitialData()
 })
@@ -378,6 +410,17 @@ function switchTab(tab: typeof activeTab.value) {
   if (tab === 'events') {
     unreadEvents.value = 0
   }
+}
+
+function cycleTab(direction: 1 | -1) {
+  if (activeTab.value !== 'chat') {
+    activeTab.value = 'chat'
+  }
+  const tabList = ['home', ...[...tabChannelIds.value]]
+  if (tabList.length <= 1) return
+  const currentIdx = tabList.indexOf(activeWatchedTab.value)
+  const nextIdx = (currentIdx + direction + tabList.length) % tabList.length
+  activeWatchedTab.value = tabList[nextIdx]!
 }
 
 function onSettingsSaved(s: AppSettings) {
@@ -660,10 +703,24 @@ async function onSendWatched({ text, channelId }: { text: string; channelId?: st
 
     <!-- Add channel modal -->
     <AddChannelModal
+      data-testid="add-channel-modal"
       v-if="showAddModal"
       :youtube-authenticated="youtubeAuthenticated"
       @confirm="onAddChannel"
       @cancel="showAddModal = false"
+    />
+
+    <TabSelectorModal
+      v-if="showTabSelector"
+      :tabs="tabSelectorItems"
+      :active-tab-id="activeWatchedTab"
+      @select="
+        (id) => {
+          activeWatchedTab = id
+          activeTab = 'chat'
+        }
+      "
+      @close="showTabSelector = false"
     />
 
     <!-- Update notification toast -->
