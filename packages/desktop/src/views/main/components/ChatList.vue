@@ -445,7 +445,7 @@ function onAppearanceChange(s: import('@twirchat/shared/types').AppSettings) {
         <button
           v-if="!isAtBottom && activeMessages.length > 0"
           class="scroll-pill"
-          @click="scrollToBottom"
+          @click="() => scrollToBottom()"
         >
           <svg
             width="14"

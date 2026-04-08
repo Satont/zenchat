@@ -7,7 +7,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<AppSettings | null>(null)
   const loading = ref(false)
 
-  async function loadSettings() {
+  async function loadSettings(): Promise<void> {
     loading.value = true
     try {
       const result = await rpc.request.getSettings()
@@ -19,7 +19,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function saveSettings(newSettings: AppSettings) {
+  async function saveSettings(newSettings: AppSettings): Promise<void> {
     settings.value = newSettings
     await rpc.request.saveSettings(newSettings)
   }

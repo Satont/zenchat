@@ -4,12 +4,14 @@ import { rpc } from '../main'
 import type {
   LayoutNode,
   PanelNode,
+  SplitNode,
   SplitDirection,
   WatchedChannelsLayout,
 } from '@twirchat/shared/types'
 
 const MAX_PANELS = 8
 const DEFAULT_FLEX = 100
+const SAVE_DEBOUNCE_MS = 500
 
 export const useLayoutStore = defineStore('layout', () => {
   const layout = ref<WatchedChannelsLayout | null>(null)
@@ -45,7 +47,7 @@ export const useLayoutStore = defineStore('layout', () => {
     return allPanels.value.find((p) => p.id === id) ?? null
   }
 
-  const loadLayout = async (tabId: string) => {
+  const loadLayout = async (tabId: string): Promise<void> => {
     currentTabId.value = tabId
     isLoading.value = true
     error.value = null
@@ -60,7 +62,7 @@ export const useLayoutStore = defineStore('layout', () => {
     }
   }
 
-  const saveLayout = async () => {
+  const saveLayout = async (): Promise<void> => {
     if (!layout.value || !currentTabId.value) return
     try {
       await rpc.request.setWatchedChannelsLayout?.({
@@ -72,12 +74,12 @@ export const useLayoutStore = defineStore('layout', () => {
     }
   }
 
-  const debouncedSave = () => {
+  const debouncedSave = (): void => {
     if (saveTimeout) clearTimeout(saveTimeout)
-    saveTimeout = setTimeout(() => saveLayout(), 500)
+    saveTimeout = setTimeout(() => void saveLayout(), SAVE_DEBOUNCE_MS)
   }
 
-  const splitPanel = async (panelId: string, direction: SplitDirection) => {
+  const splitPanel = async (panelId: string, direction: SplitDirection): Promise<void> => {
     if (!layout.value || !currentTabId.value) return
     try {
       await rpc.request.splitPanel?.({ tabId: currentTabId.value, panelId, direction })
@@ -87,7 +89,7 @@ export const useLayoutStore = defineStore('layout', () => {
     }
   }
 
-  const removePanel = async (panelId: string) => {
+  const removePanel = async (panelId: string): Promise<void> => {
     if (!layout.value || !currentTabId.value) return
     try {
       await rpc.request.removePanel?.({ tabId: currentTabId.value, panelId })
@@ -97,7 +99,7 @@ export const useLayoutStore = defineStore('layout', () => {
     }
   }
 
-  const assignChannel = async (panelId: string, channelId: string | null) => {
+  const assignChannel = async (panelId: string, channelId: string | null): Promise<void> => {
     if (!layout.value || !currentTabId.value) return
     try {
       await rpc.request.assignChannelToPanel?.({
@@ -115,7 +117,7 @@ export const useLayoutStore = defineStore('layout', () => {
     }
   }
 
-  const updateFlex = async (nodeId: string, flex: number) => {
+  const updateFlex = async (nodeId: string, flex: number): Promise<void> => {
     if (!layout.value) return
     const updateNode = (node: LayoutNode): boolean => {
       if ('id' in node && node.id === nodeId) {
@@ -133,10 +135,9 @@ export const useLayoutStore = defineStore('layout', () => {
     debouncedSave()
   }
 
-  const findParentOfNode = (
-    root: LayoutNode,
-    nodeId: string,
-  ): { node: LayoutNode; children: LayoutNode[] } | null => {
+  type ParentContext = { node: SplitNode; children: LayoutNode[] }
+
+  const findParentOfNode = (root: LayoutNode, nodeId: string): ParentContext | null => {
     if (root.type === 'split') {
       for (let i = 0; i < root.children.length; i++) {
         const child = root.children[i]
@@ -151,7 +152,7 @@ export const useLayoutStore = defineStore('layout', () => {
     return null
   }
 
-  const movePanel = (sourceId: string, targetId: string, position: 'before' | 'after') => {
+  const movePanel = (sourceId: string, targetId: string, position: 'before' | 'after'): boolean => {
     if (!layout.value || sourceId === targetId) return false
 
     const sourcePanel = getPanel(sourceId)
@@ -202,7 +203,7 @@ export const useLayoutStore = defineStore('layout', () => {
     sourceId: string,
     targetId: string,
     direction: 'left' | 'right' | 'top' | 'bottom',
-  ) => {
+  ): boolean => {
     if (!layout.value || sourceId === targetId) return false
 
     const sourcePanel = getPanel(sourceId)
@@ -289,21 +290,21 @@ export const useLayoutStore = defineStore('layout', () => {
     return true
   }
 
-  const startDrag = (panelId: string) => {
+  const startDrag = (panelId: string): boolean => {
     draggedPanelId.value = panelId
     return true
   }
 
-  const endDrag = () => {
+  const endDrag = (): void => {
     draggedPanelId.value = null
     dropTargetId.value = null
   }
 
-  const setDropTarget = (panelId: string | null) => {
+  const setDropTarget = (panelId: string | null): void => {
     dropTargetId.value = panelId
   }
 
-  const applyPreset2x2 = () => {
+  const applyPreset2x2 = (): void => {
     if (!layout.value) return
     layout.value.root = {
       type: 'split',
@@ -336,7 +337,7 @@ export const useLayoutStore = defineStore('layout', () => {
     debouncedSave()
   }
 
-  const applyPreset3Vertical = () => {
+  const applyPreset3Vertical = (): void => {
     if (!layout.value) return
     layout.value.root = {
       type: 'split',
@@ -352,7 +353,7 @@ export const useLayoutStore = defineStore('layout', () => {
     debouncedSave()
   }
 
-  const applyPreset3Horizontal = () => {
+  const applyPreset3Horizontal = (): void => {
     if (!layout.value) return
     layout.value.root = {
       type: 'split',
@@ -368,7 +369,7 @@ export const useLayoutStore = defineStore('layout', () => {
     debouncedSave()
   }
 
-  const resetLayout = () => {
+  const resetLayout = (): void => {
     if (!currentTabId.value) return
     void loadLayout(currentTabId.value)
   }

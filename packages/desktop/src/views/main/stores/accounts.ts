@@ -7,7 +7,7 @@ export const useAccountsStore = defineStore('accounts', () => {
   const accounts = ref<Account[]>([])
   const loading = ref(false)
 
-  async function loadAccounts() {
+  async function loadAccounts(): Promise<void> {
     loading.value = true
     try {
       const result = await rpc.request.getAccounts()
@@ -19,7 +19,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     }
   }
 
-  function setAccounts(newAccounts: Account[]) {
+  function setAccounts(newAccounts: Account[]): void {
     accounts.value = newAccounts
   }
 

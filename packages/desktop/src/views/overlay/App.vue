@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { NormalizedChatMessage, NormalizedEvent } from '@twirchat/shared/types'
-import { platformColor } from '../../shared/utils/platform'
+import { platformColor } from '../shared/utils/platform'
 
 // ----------------------------------------------------------------
 // Config from URL query params

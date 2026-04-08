@@ -1,4 +1,4 @@
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, type ComputedRef } from 'vue'
 
 import type { Emote, NormalizedChatMessage, Platform } from '@twirchat/shared/types'
 
@@ -65,7 +65,10 @@ function highlightMentions(escaped: string, platform: string): string {
   })
 }
 
-export function useMessageParsing(message: NormalizedChatMessage) {
+export function useMessageParsing(message: NormalizedChatMessage): {
+  messageParts: ComputedRef<MessagePart[]>
+  processText: (text: string) => string
+} {
   const messageParts = computed((): MessagePart[] => {
     const parts: MessagePart[] = []
 
