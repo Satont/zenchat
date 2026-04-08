@@ -124,7 +124,7 @@ async function loadInitialData() {
       accountsStore.setAccounts(accs)
     }
     if (setts !== undefined) {
-      settingsStore.settings.value = setts
+      settings.value = setts
     }
     if (statList !== undefined) {
       channelStatusStore.setStatuses(statList)
@@ -378,11 +378,11 @@ function switchTab(tab: typeof activeTab.value) {
 }
 
 function onSettingsSaved(s: AppSettings) {
-  settingsStore.settings.value = s
+  settings.value = s
 }
 
 function onSettingsChange(s: AppSettings) {
-  settingsStore.settings.value = s
+  settings.value = s
 }
 
 function dismissUpdate() {
