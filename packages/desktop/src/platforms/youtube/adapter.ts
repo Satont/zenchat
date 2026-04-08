@@ -694,6 +694,11 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       return
     }
 
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout)
+      this.reconnectTimeout = null
+    }
+
     // Clean up current connection
     if (this.liveChat) {
       this.liveChat.stop()
