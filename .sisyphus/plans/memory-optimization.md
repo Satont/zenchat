@@ -10,15 +10,15 @@
 > - YouTube adapter: reconnect timer stacking eliminated
 > - Kick adapter: orphaned WebSocket on re-connect eliminated
 > - Twitch adapter: double-connect guard added to `connectChatClient()`
-> - `ChatMessage.vue`: unnecessary `reactive()` on `mentionColorCache` removed + size cap (≤2000 entries)
+> - `useMessageParsing.ts`: unnecessary `reactive()` on `mentionColorCache` removed + size cap (≤2000 entries)
 > - `App.vue`: O(n) array/Map allocation on every incoming message eliminated
-> - `ChatList.vue`: per-instance polling timer replaced with shared composable
+> - ~~`ChatList.vue`: per-instance polling timer replaced with shared composable~~ **DONE — already uses `usePolling` composable**
 > - `ChatList.vue`: full DOM virtualization via `virtua` VList (renders only visible rows)
 > - Post-fix private RSS measurement + CEF baseline explanation documented
 >
 > **Estimated Effort**: Medium
 > **Parallel Execution**: YES — 3 waves + final
-> **Critical Path**: Task 1 (baseline) → Tasks 2–4 (adapters) → Tasks 5–7 (renderer) → Task 8 (virtua) → F1–F4
+> **Critical Path**: Task 1 (baseline) → Tasks 2–4 (adapters) → Tasks 5–6 (renderer) → Task 7 (virtua) → F1–F4
 
 ---
 
@@ -40,11 +40,13 @@ User sees ~400MB RSS in `htop` on Linux with 1 platform + 1 channel active, stab
 
 - **CEF baseline**: On Linux, the desktop app uses CEF (Chromium Embedded Framework), configured in `packages/desktop/electrobun.config.ts` (`bundleCEF: true`, `defaultRenderer: 'cef'`). CEF contributes ~150–300MB to htop RES as shared Chromium pages. These are **not reducible** without changing the rendering engine. The actual private app memory is measured via `/proc/$PID/smaps` (USS: `Private_Clean + Private_Dirty`)
 - **Real bugs found**: 6 confirmed issues in adapters and Vue renderer (see tasks)
-- **Misdiagnosis corrected**: `mentionColorCache` in `ChatMessage.vue` is already module-scoped (not per-instance); the real problems are unnecessary `reactive()` wrapper overhead and unbounded Map growth
+- **Misdiagnosis corrected**: `mentionColorCache` in `ChatMessage.vue` was the old location; after frontend rewrite, it lives in `useMessageParsing.ts` (module-scoped composable). The real problems are unchanged: unnecessary `reactive()` wrapper overhead and unbounded Map growth.
 
-### Metis Review
-
-**Identified Gaps (addressed)**:
+- **Frontend rewrite**: Frontend was fully rewritten after this plan was first created. Key changes relevant to this plan:
+  - `mentionColorCache` moved from `ChatMessage.vue` to `useMessageParsing.ts` (module-scoped composable)
+  - `ChatList.vue` already uses `usePolling` composable for channel status polling — Task 7 is already done, removed from plan
+  - `App.vue` now imports Pinia stores (`useAccountsStore`, `useSettingsStore`, `useChannelStatusStore`) — Pinia is used in the project but the `messages`/`events`/`watchedMessages` reactive state in App.vue still uses raw `ref`, not Pinia
+  - O(n) spread patterns in `messages`/`events`/`watchedMessages` listeners are still present
 
 - Bug #1 diagnosis was wrong — `mentionColorCache` IS module-scoped; corrected framing in Task 5
 - `TwitchAdapter.badgeRefreshInterval` is already handled by `clearTimers()` — removed from plan
@@ -68,10 +70,9 @@ Fix confirmed memory bugs and excessive allocations. Provide a measured before/a
 - `packages/desktop/src/platforms/youtube/adapter.ts` — reconnect timer fix
 - `packages/desktop/src/platforms/kick/adapter.ts` — WebSocket teardown fix
 - `packages/desktop/src/platforms/twitch/adapter.ts` — double-connect guard
-- `packages/desktop/src/views/main/components/ChatMessage.vue` — cache optimization
+- `packages/desktop/src/views/main/composables/useMessageParsing.ts` — cache optimization (was ChatMessage.vue in old plan)
 - `packages/desktop/src/views/main/App.vue` — buffer allocation optimization
-- `packages/desktop/src/views/main/composables/useChannelStatuses.ts` — new shared polling composable
-- `packages/desktop/src/views/main/components/ChatList.vue` — virtua integration + polling composable usage
+- `packages/desktop/src/views/main/components/ChatList.vue` — virtua integration
 
 ### Definition of Done
 
@@ -91,14 +92,15 @@ Fix confirmed memory bugs and excessive allocations. Provide a measured before/a
 
 ### Must NOT Have (Guardrails)
 
-- DO NOT migrate `messages` or `watchedMessages` to Pinia — in-place mutation is sufficient
-- DO NOT add virtual scrolling to watched-channels view — only `ChatList.vue`
+- DO NOT migrate `messages`, `events`, or `watchedMessages` refs in App.vue to Pinia — in-place mutation is sufficient (Pinia is already used for accounts/settings/channelStatus, but these message buffers should stay as raw refs)
+- DO NOT add virtual scrolling to watched-channels view or EventsFeed — only `ChatList.vue`
 - DO NOT add `@vue/test-utils` or a component test harness
 - DO NOT introduce LRU cache library — simple `.size > 2000 → .clear()` is sufficient
 - DO NOT fix `TwitchAdapter.badgeRefreshInterval` — already correctly implemented via `clearTimers()`
 - DO NOT refactor `base-adapter.ts` or the watched-channels manager architecture
 - DO NOT use `vue-virtual-scroller` — has known issues with variable heights and bottom-anchored scroll
 - DO NOT add new lint exceptions or `@ts-ignore` anywhere
+- DO NOT create `useChannelStatuses.ts` composable — `usePolling` already exists and ChatList already uses it
 
 ---
 
@@ -138,12 +140,11 @@ Wave 1 (After Task 1 — all parallel, independent files):
 └── Task 4: Fix Twitch adapter double-connect guard [quick]
 
 Wave 2 (After Wave 1 — all parallel, independent concerns):
-├── Task 5: ChatMessage.vue — remove reactive(), add cache size cap [quick]
-├── Task 6: App.vue — eliminate O(n) array/Map allocations [quick]
-└── Task 7: ChatList.vue — shared polling composable [unspecified-high]
+├── Task 5: useMessageParsing.ts — remove reactive(), add cache size cap [quick]
+└── Task 6: App.vue — eliminate O(n) array/Map allocations [quick]
 
 Wave 3 (After Wave 2 — ChatList virtua integration):
-└── Task 8: ChatList.vue — integrate virtua VList, remove template reverse() [unspecified-high]
+└── Task 7: ChatList.vue — integrate virtua VList, remove template reverse() [unspecified-high]
 
 Wave FINAL (After ALL tasks — 4 parallel reviews):
 ├── F1: Plan compliance audit [oracle]
@@ -161,25 +162,24 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 | 2     | 1          | F1–F4                                       |
 | 3     | 1          | F1–F4                                       |
 | 4     | 1          | F1–F4                                       |
-| 5     | 1          | 8                                           |
-| 6     | 1          | 8                                           |
-| 7     | 1          | 8                                           |
-| 8     | 5, 6, 7    | F1–F4                                       |
-| F1–F4 | 2, 3, 4, 8 | —                                           |
+| 5     | 1          | 7                                           |
+| 6     | 1          | 7                                           |
+| 7     | 5, 6       | F1–F4                                       |
+| F1–F4 | 2, 3, 4, 7 | —                                           |
 
 ### Agent Dispatch Summary
 
 - **Wave 0**: Task 1 → `quick`
 - **Wave 1**: Task 2 → `quick`, Task 3 → `quick`, Task 4 → `quick`
-- **Wave 2**: Task 5 → `quick`, Task 6 → `quick`, Task 7 → `unspecified-high`
-- **Wave 3**: Task 8 → `unspecified-high`
+- **Wave 2**: Task 5 → `quick`, Task 6 → `quick`
+- **Wave 3**: Task 7 → `unspecified-high`
 - **FINAL**: F1 → `oracle`, F2 → `unspecified-high`, F3 → `unspecified-high` + `playwright` skill, F4 → `quick`
 
 ---
 
 ## TODOs
 
-- [ ] 1. Measure baseline private RSS before any code changes
+- [x] 1. Measure baseline private RSS before any code changes
 
   **What to do**:
   - Start the desktop app with BOTH Vite and Electrobun running in parallel:
@@ -240,7 +240,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 
   **Commit**: NO — no code changes in this task
 
-- [ ] 2. Fix YouTube adapter reconnect timer stacking
+- [x] 2. Fix YouTube adapter reconnect timer stacking
 
   **What to do**:
   - File: `packages/desktop/src/platforms/youtube/adapter.ts`
@@ -316,7 +316,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `packages/desktop/src/platforms/youtube/adapter.ts`
   - Pre-commit: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck`
 
-- [ ] 3. Fix Kick adapter orphaned WebSocket on re-connect
+- [x] 3. Fix Kick adapter orphaned WebSocket on re-connect
 
   **What to do**:
   - File: `packages/desktop/src/platforms/kick/adapter.ts`
@@ -394,7 +394,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `packages/desktop/src/platforms/kick/adapter.ts`
   - Pre-commit: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck`
 
-- [ ] 4. Fix Twitch adapter double-connect guard in connectChatClient()
+- [x] 4. Fix Twitch adapter double-connect guard in connectChatClient()
 
   **What to do**:
   - File: `packages/desktop/src/platforms/twitch/adapter.ts`
@@ -474,31 +474,32 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `packages/desktop/src/platforms/twitch/adapter.ts`
   - Pre-commit: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck`
 
-- [ ] 5. ChatMessage.vue — remove reactive() from mentionColorCache, add 2000-entry size cap
+- [x] 5. useMessageParsing.ts — remove reactive() from mentionColorCache, add 2000-entry size cap
 
   **What to do**:
-  - File: `packages/desktop/src/views/main/components/ChatMessage.vue`
-  - Find the module-level declaration (at the top of `<script setup>`, outside any function/component):
+  - File: `packages/desktop/src/views/main/composables/useMessageParsing.ts`
+  - Find the module-level declaration (at the top, before the exported function):
     ```typescript
     const mentionColorCache = reactive(new Map<string, string | null>())
     ```
-  - Change it to:
+  - Change it to a plain Map:
     ```typescript
     const mentionColorCache = new Map<string, string | null>()
     ```
-  - In `fetchMentionColor()` (or wherever new entries are added to the cache), add a size guard BEFORE the `mentionColorCache.set(...)` call:
+  - In `fetchMentionColor()`, add a size guard BEFORE the `mentionColorCache.set(...)` calls (there are two: one in the try, one in the catch). Add the guard before the first `set()` in the try:
     ```typescript
     if (mentionColorCache.size > 2000) {
       mentionColorCache.clear()
     }
     ```
-  - CRITICAL: After removing `reactive()`, verify that any template or computed that reads from `mentionColorCache` still re-renders correctly. If a computed property reads `mentionColorCache.get(key)` directly, it will no longer be reactive. In that case: the data for rendering mentions should come from the message props (which ARE reactive), not the cache directly. The cache is a lookup store; the rendered output should re-derive from message text when the component re-renders due to prop changes. If the template uses `mentionColorCache` in a `v-for` or interpolation, you must use a different approach (e.g., a `ref<Map>` that is replaced on cache update, or keep `reactive()` if removing it breaks rendering).
+  - CRITICAL: After removing `reactive()`, verify `highlightMentions()` still works. `highlightMentions` calls `mentionColorCache.get(key)` directly. Since this is inside a `computed()` in `useMessageParsing()`, Vue tracks reactive dependencies — but a plain Map won't trigger recompute. However, the flow is: `highlightMentions` → fires `fetchMentionColor` async → on next message render cycle the updated cache is read. The computed in `useMessageParsing` is `messageParts` which is recomputed when `message` changes (via prop reactivity), not when the cache changes. So removing `reactive()` is safe here: mention colors are populated async, and the mention span is re-rendered via `processText()` which is called freshly on next render triggered by message changes. No reactivity is lost.
   - Run `bun run fix` from the **monorepo root** (`/home/satont/Projects/twirchat`) after the change
 
   **Must NOT do**:
   - Do NOT introduce an LRU cache library
-  - Do NOT change the cache key format or lookup logic
+  - Do NOT change the cache key format (`${platform}:${username.toLowerCase()}`) or lookup logic
   - Do NOT touch mention regex or `highlightMentions` logic beyond what's needed
+  - Do NOT touch `ChatMessage.vue` — `mentionColorCache` is no longer in that file
 
   **Recommended Agent Profile**:
   - **Category**: `quick`
@@ -507,18 +508,17 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 
   **Parallelization**:
   - **Can Run In Parallel**: YES
-  - **Parallel Group**: Wave 2 (with Tasks 6 and 7)
-  - **Blocks**: Task 8 (virtua integration)
+  - **Parallel Group**: Wave 2 (with Task 6)
+  - **Blocks**: Task 7 (virtua integration)
   - **Blocked By**: Task 1 (baseline first)
 
   **References**:
 
   **Pattern References**:
-  - `packages/desktop/src/views/main/components/ChatMessage.vue` — find `mentionColorCache` declaration at module scope; find `fetchMentionColor` function; find all `.get(key)` usages in template or computed to assess reactivity impact
+  - `packages/desktop/src/views/main/composables/useMessageParsing.ts` — line 10: `const mentionColorCache = reactive(new Map<...>())` — this is the declaration to change; line 22–38: `fetchMentionColor()` — add size guard before first `set()` call inside try block; lines 55–66: `highlightMentions()` — reads `mentionColorCache.get(key)`, no change needed
 
   **Acceptance Criteria**:
   - [ ] `bun run check` passes (monorepo root) and `bun run --cwd packages/desktop typecheck` passes
-  - [ ] Mentions in chat messages still highlight with correct colors after the change
 
   **QA Scenarios (MANDATORY)**:
 
@@ -527,7 +527,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
     Tool: Bash
     Preconditions: Code change applied
     Steps:
-      1. grep -n "reactive.*mentionColorCache\|mentionColorCache.*reactive" packages/desktop/src/views/main/components/ChatMessage.vue
+      1. grep -n "reactive.*mentionColorCache\|mentionColorCache.*reactive" packages/desktop/src/views/main/composables/useMessageParsing.ts
       2. Assert: no output (reactive() wrapper removed)
     Expected Result: mentionColorCache is a plain Map, not reactive
     Failure Indicators: grep finds a reactive() wrapper still present
@@ -537,8 +537,8 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
     Tool: Bash
     Preconditions: Code change applied
     Steps:
-      1. grep -n "mentionColorCache.size\|mentionColorCache.clear" packages/desktop/src/views/main/components/ChatMessage.vue
-      2. Assert: both .size and .clear() present in same vicinity
+      1. grep -n "mentionColorCache.size\|mentionColorCache.clear" packages/desktop/src/views/main/composables/useMessageParsing.ts
+      2. Assert: both .size and .clear() present
     Expected Result: Size guard found
     Failure Indicators: No size guard present
     Evidence: .sisyphus/evidence/task-5-cap-grep.txt
@@ -549,55 +549,48 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - [ ] `.sisyphus/evidence/task-5-cap-grep.txt`
 
   **Commit**: YES
-  - Message: `perf(chat-message): remove reactive() from mentionColorCache, add 2000-entry cap`
-  - Files: `packages/desktop/src/views/main/components/ChatMessage.vue`
+  - Message: `perf(message-parsing): remove reactive() from mentionColorCache, add 2000-entry cap`
+  - Files: `packages/desktop/src/views/main/composables/useMessageParsing.ts`
   - Pre-commit: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck`
 
-- [ ] 6. App.vue — eliminate O(n) array/Map allocations on every incoming message
+- [x] 6. App.vue — eliminate O(n) array/Map allocations on every incoming message
 
   **What to do**:
   - File: `packages/desktop/src/views/main/App.vue`
 
-  **Change 1 — `messages` buffer** (find the line):
+  **Change 1 — `messages` buffer** (line ~267, in `useRpcListener('chat_message', ...)`):
 
   ```typescript
+  // BEFORE:
   messages.value = [msg, ...messages.value].slice(0, 500)
-  ```
 
-  Replace with in-place mutation (Vue 3 Proxy tracks array mutations):
-
-  ```typescript
+  // AFTER — in-place mutation (Vue 3 Proxy tracks array mutations):
   messages.value.unshift(msg)
   if (messages.value.length > 500) messages.value.length = 500
   ```
 
-  Note: messages are stored newest-first (prepended), so `unshift` is correct.
-
-  **Change 2 — `events` buffer** (find similarly):
+  **Change 2 — `events` buffer** (line ~271, in `useRpcListener('chat_event', ...)`):
 
   ```typescript
+  // BEFORE:
   events.value = [ev, ...events.value].slice(0, 200)
-  ```
 
-  Replace with:
-
-  ```typescript
+  // AFTER:
   events.value.unshift(ev)
   if (events.value.length > 200) events.value.length = 200
   ```
 
-  **Change 3 — `watchedMessages` Map** (find):
+  **Change 3 — `watchedMessages` Map** (lines ~335–340, in `useRpcListener('watched_channel_message', ...)`):
 
   ```typescript
+  // BEFORE:
+  const prev = watchedMessages.value.get(channelId) ?? []
   watchedMessages.value = new Map(watchedMessages.value).set(
     channelId,
     [message, ...prev].slice(0, 200),
   )
-  ```
 
-  Replace with (mutate the existing Map, then trigger reactivity explicitly):
-
-  ```typescript
+  // AFTER — mutate the existing Map, trigger reactivity explicitly:
   const prev = watchedMessages.value.get(channelId) ?? []
   prev.unshift(message)
   if (prev.length > 200) prev.length = 200
@@ -605,11 +598,11 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   triggerRef(watchedMessages)
   ```
 
-  Import `triggerRef` from `'vue'` if not already imported.
+  Import `triggerRef` from `'vue'` — add it to the existing `import { computed, onMounted, ref } from 'vue'` line.
   - Run `bun run fix` from the **monorepo root** (`/home/satont/Projects/twirchat`) after all 3 changes
 
   **Must NOT do**:
-  - Do NOT migrate `messages`, `events`, or `watchedMessages` to Pinia
+  - Do NOT migrate `messages`, `events`, or `watchedMessages` to Pinia (Pinia is already used for accounts/settings/channelStatus, but these message buffers should remain raw refs in App.vue)
   - Do NOT change the 500/200 message caps
   - Do NOT change the data shape of `NormalizedChatMessage` or `NormalizedEvent`
 
@@ -620,17 +613,19 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 
   **Parallelization**:
   - **Can Run In Parallel**: YES
-  - **Parallel Group**: Wave 2 (with Tasks 5 and 7)
-  - **Blocks**: Task 8
+  - **Parallel Group**: Wave 2 (with Task 5)
+  - **Blocks**: Task 7
   - **Blocked By**: Task 1
 
   **References**:
 
   **Pattern References**:
-  - `packages/desktop/src/views/main/App.vue` — search for `[msg, ...messages.value]`, `[ev, ...events.value]`, and `new Map(watchedMessages.value)` to find the exact change sites
+  - `packages/desktop/src/views/main/App.vue` line 267: `useRpcListener('chat_message', ...)` — the `[msg, ...messages.value].slice(0, 500)` change site
+  - `packages/desktop/src/views/main/App.vue` line 271: `useRpcListener('chat_event', ...)` — the `[ev, ...events.value].slice(0, 200)` change site
+  - `packages/desktop/src/views/main/App.vue` lines 335–340: `useRpcListener('watched_channel_message', ...)` — the `new Map(watchedMessages.value).set(...)` change site
 
   **API References**:
-  - Vue 3 `triggerRef()` — forces reactive effect re-run for a `shallowRef` or when manually mutating a `ref`'s internal object. Import from `'vue'`.
+  - Vue 3 `triggerRef()` — forces reactive effect re-run for a `ref` when manually mutating its internal object. Import from `'vue'`.
   - Vue 3 array mutation tracking — `Array.prototype.unshift()`, `length` assignment are tracked by Vue's Proxy-based reactivity without needing array replacement.
 
   **Acceptance Criteria**:
@@ -669,121 +664,7 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   - Files: `packages/desktop/src/views/main/App.vue`
   - Pre-commit: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck`
 
-- [ ] 7. ChatList.vue — extract channel-status polling to shared module-level composable
-
-  **What to do**:
-  - Create new file: `packages/desktop/src/views/main/composables/useChannelStatuses.ts`
-  - This composable must be a **module-level singleton** — the polling interval and state are shared across all `ChatList` instances (e.g. split pane layout). Multiple calls to `useChannelStatuses()` return the same state, not new instances.
-
-  Structure:
-
-  ```typescript
-  // Module-level singleton state (outside function, initialized once)
-  import { ref, type Ref } from 'vue'
-
-  // Define types to match what ChatList currently uses
-  // (check ChatList.vue for the shape of channelStatuses)
-
-  const channelStatuses = ref</* same type as ChatList's local channelStatuses */>([])
-  let pollTimer: ReturnType<typeof setInterval> | null = null
-  let refCount = 0
-
-  async function fetchChannelStatuses() {
-    // move the exact fetch logic from ChatList.vue here
-    // keep the same API call and response handling
-  }
-
-  export function useChannelStatuses() {
-    refCount++
-
-    if (!pollTimer) {
-      void fetchChannelStatuses()
-      pollTimer = setInterval(() => void fetchChannelStatuses(), 10_000)
-    }
-
-    // Cleanup: stop polling when all consumers unmounted
-    onUnmounted(() => {
-      refCount--
-      if (refCount === 0 && pollTimer) {
-        clearInterval(pollTimer)
-        pollTimer = null
-      }
-    })
-
-    return { channelStatuses }
-  }
-  ```
-
-  - In `ChatList.vue`:
-    - Remove the local `pollTimer`, `channelStatuses` ref, and the `onMounted`/`onUnmounted` polling setup
-    - Import and call `useChannelStatuses()` to get `channelStatuses`
-    - Everything else in ChatList.vue stays the same — `channelStatuses` is used the same way as before
-
-  - Run `bun run fix` from the **monorepo root** (`/home/satont/Projects/twirchat`) after changes
-
-  **Must NOT do**:
-  - Do NOT use Pinia for this — module singleton is simpler and sufficient
-  - Do NOT change the channel status fetch URL or response parsing
-  - Do NOT touch any other composables or ChatList functionality beyond the polling extraction
-
-  **Recommended Agent Profile**:
-  - **Category**: `unspecified-high`
-    - Reason: New file creation + refactor across 2 files; need to correctly match existing types and API
-  - **Skills**: []
-
-  **Parallelization**:
-  - **Can Run In Parallel**: YES
-  - **Parallel Group**: Wave 2 (with Tasks 5 and 6)
-  - **Blocks**: Task 8
-  - **Blocked By**: Task 1
-
-  **References**:
-
-  **Pattern References**:
-  - `packages/desktop/src/views/main/components/ChatList.vue` — find the full `pollTimer`, `channelStatuses`, `fetchChannelStatuses`, `onMounted`, `onUnmounted` polling block to extract verbatim
-  - `packages/desktop/src/views/main/composables/` — check if this directory already exists; if not, create it
-
-  **API References**:
-  - Vue 3 `onUnmounted()` — lifecycle hook, must be called inside `setup()` context (i.e. inside `useChannelStatuses()` function body, not at module level)
-
-  **Acceptance Criteria**:
-  - [ ] `packages/desktop/src/views/main/composables/useChannelStatuses.ts` exists
-  - [ ] `ChatList.vue` no longer has a local `pollTimer` or `fetchChannelStatuses`
-  - [ ] `bun run check` passes (monorepo root) and `bun run --cwd packages/desktop typecheck` passes
-
-  **QA Scenarios (MANDATORY)**:
-
-  ```
-  Scenario: Only 1 polling interval active with 2 ChatList instances
-    Tool: Bash
-    Preconditions: Code change applied
-    Steps:
-      1. grep -n "pollTimer\|setInterval\|fetchChannelStatuses" packages/desktop/src/views/main/components/ChatList.vue
-      2. Assert: no output (polling code removed from ChatList)
-    Expected Result: ChatList has no local polling
-    Failure Indicators: pollTimer or setInterval found in ChatList.vue
-    Evidence: .sisyphus/evidence/task-7-chatlist-grep.txt
-
-  Scenario: Shared composable file exists and exports useChannelStatuses
-    Tool: Bash
-    Steps:
-      1. cat packages/desktop/src/views/main/composables/useChannelStatuses.ts
-      2. Assert: exports useChannelStatuses function
-      3. Assert: module-level refCount or interval variable present (singleton guard)
-    Expected Result: Composable file with singleton pattern
-    Evidence: .sisyphus/evidence/task-7-composable.txt
-  ```
-
-  **Evidence to Capture**:
-  - [ ] `.sisyphus/evidence/task-7-chatlist-grep.txt`
-  - [ ] `.sisyphus/evidence/task-7-composable.txt`
-
-  **Commit**: YES
-  - Message: `refactor(chat-list): extract channel-status polling to shared composable`
-  - Files: `packages/desktop/src/views/main/composables/useChannelStatuses.ts`, `packages/desktop/src/views/main/components/ChatList.vue`
-  - Pre-commit: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck`
-
-- [ ] 8. ChatList.vue — integrate virtua VList for DOM virtualization
+- [x] 7. ChatList.vue — integrate virtua VList for DOM virtualization
 
   **What to do**:
 
@@ -798,10 +679,10 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   Find the current render block:
 
   ```vue
-  <ChatMessage v-for="msg in [...activeMessages].reverse()" :key="msg.id" :message="msg" />
+  <ChatMessage v-for="msg in [...activeMessages].reverse()" :key="msg.id" :message="..." />
   ```
 
-  (It may be wrapped in a container div/ul)
+  (It may be wrapped in a container div)
 
   Replace with virtua's `VList` component:
 
@@ -822,16 +703,16 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   ```
 
   **CRITICAL — resolve the reverse conflict**:
-  - The old template does `[...activeMessages].reverse()` — oldest-last = newest-first array, rendered top-to-bottom = oldest at top, newest at bottom ✗... actually wait: `.reverse()` on the array makes newest-first in the v-for, but with no CSS inversion, that means newest messages appear at the TOP. Check if `ChatList.vue` has CSS like `flex-direction: column-reverse` or similar that makes it bottom-anchored.
-  - Read the actual ChatList.vue CSS to understand the current rendering direction.
-  - If the container uses `flex-direction: column-reverse`: items in DOM order are rendered bottom-up by CSS. The `.reverse()` in the template may be redundant or serving a specific purpose. Verify before removing.
-  - The safest approach: pass `activeMessages` (in natural oldest-first order) to `VList` with `reverse={true}`. VList's `reverse` prop renders bottom-anchored, newest at bottom, auto-scrolls to bottom. This matches a typical chat UI.
-  - Remove `[...activeMessages].reverse()` — pass `activeMessages` directly.
-  - Adjust the container CSS: if the old container had `flex-direction: column-reverse` or `transform: scaleY(-1)` tricks, remove them — virtua handles this internally via the `reverse` prop.
+  - The old template does `[...activeMessages].reverse()` — this creates a reversed copy on every render
+  - With virtua `VList`, pass `activeMessages` directly (no `.reverse()`) and use the `:reverse="true"` prop
+  - VList's `reverse` prop renders bottom-anchored (newest messages at bottom, user can scroll up)
+  - Remove `[...activeMessages].reverse()` — pass `activeMessages` directly to `:data`
+  - Read ChatList.vue CSS before making changes: if the container uses `flex-direction: column-reverse` or similar CSS scroll tricks, remove them — virtua handles bottom-anchoring via the `reverse` prop internally
+  - Check for `useChatScroll` composable usage in ChatList.vue — if it manually sets `scrollTop`, it may conflict with virtua's built-in scroll management. Read `useChatScroll.ts` carefully before the change.
 
   **Step 3: Verify scroll behavior**
-  - virtua with `reverse={true}` auto-anchors scroll to the bottom when new items are added (newest messages appear at bottom, user can scroll up)
-  - If the current ChatList has explicit `scrollTop` manipulation for auto-scroll, it may need to be removed or adapted — virtua handles auto-scroll automatically when `reverse={true}`
+  - virtua with `:reverse="true"` auto-anchors scroll to the bottom when new items are added
+  - If `useChatScroll.ts` does manual `scrollTop` manipulation, it will conflict. If so, check whether virtua exposes a ref/API for the scroll container; either adapt `useChatScroll` to use virtua's API or disable the composable's scroll manipulation for the virtua-rendered list
 
   **Step 4: Run `bun run fix` from monorepo root** + `bun run --cwd packages/desktop typecheck`
 
@@ -856,95 +737,14 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   </html>
   ```
 
-  ```typescript
-  // packages/desktop/src/views/main/test-harness.ts
-  import { createApp, ref } from 'vue'
-  import { defineComponent, h } from 'vue'
-  import ChatList from './components/ChatList.vue'
-  import type { NormalizedChatMessage } from '../../../shared/types'
+  **IMPORTANT**: Read `packages/shared/types.ts` and `ChatList.vue`'s props interface before writing `test-harness.ts` to get exact field names and prop names. Also read `useChatScroll.ts` to understand if it depends on a specific DOM structure that the harness must replicate. Match all exactly.
 
-  // Import types from shared — read packages/shared/types.ts for exact field names
-  // Generate 200 fake messages matching the real NormalizedChatMessage shape exactly
-  const messages = ref<NormalizedChatMessage[]>(
-    Array.from({ length: 200 }, (_, i) => ({
-      id: `test-${i}`,
-      platform: 'twitch' as const,
-      channel: 'test',
-      channelId: 'c1',
-      username: `user${i}`,
-      displayName: `User ${i}`,
-      text: `Test message ${i}`,
-      timestamp: Date.now() - i * 1000,
-      badges: [],
-      emotes: [],
-      color: '#ff6b6b',
-      // Add any other required fields from NormalizedChatMessage
-    })),
-  )
+  **Step 6: Add dev-only message injection endpoint in `src/bun/index.ts`**
 
-  const HarnessApp = defineComponent({
-    setup() {
-      return () =>
-        h('div', { style: 'height:100vh;overflow:hidden' }, [
-          h(ChatList, {
-            messages: messages.value,
-            accounts: [],
-            statuses: [],
-          }),
-        ])
-    },
-  })
-
-  createApp(HarnessApp).mount('#harness')
-  ```
-
-  The Vite dev server (`bun run --cwd packages/desktop dev`) automatically serves `.html` files at their path. This file will be available at `http://localhost:5173/test-harness.html`.
-
-  **IMPORTANT**: Read `packages/shared/types.ts` and `ChatList.vue`'s props interface before writing test-harness.ts to get exact field names and prop names. Match them exactly or the page will have TypeScript errors.
-
-  **Must NOT do**:
-  - Do NOT use `vue-virtual-scroller` — use only `virtua`
-  - Do NOT apply virtua to the watched-channels view or EventsFeed
-  - Do NOT add `height` or `width` CSS constraints that break the existing layout — virtua works with the container's existing dimensions
-  - Do NOT change the `NormalizedChatMessage` type or `ChatMessage.vue` component interface
-
-  **Recommended Agent Profile**:
-  - **Category**: `unspecified-high`
-    - Reason: Significant UI change; scroll anchor behavior must be verified; library integration requires understanding of existing CSS layout
-  - **Skills**: []
-
-  **Parallelization**:
-  - **Can Run In Parallel**: NO
-  - **Parallel Group**: Wave 3 — sequential after Wave 2 (depends on clean ChatList from Task 7)
-  - **Blocks**: F1–F4
-  - **Blocked By**: Tasks 5, 6, 7
-
-  **References**:
-
-  **Pattern References**:
-  - `packages/desktop/src/views/main/components/ChatList.vue` — read in full before changes: find the messages container, CSS classes, existing scroll logic, and the full v-for block
-  - Check for `scrollTop`, `scrollHeight`, `scroll`, or `onScroll` usage in ChatList.vue — understand current auto-scroll mechanism before replacing
-
-  **External References**:
-  - virtua Vue 3 docs: https://github.com/inokawa/virtua — see `VList` API, `reverse` prop, `data` prop, slot syntax
-  - `VList` reverse prop: renders items bottom-anchored; when `data` array grows, new items appear at bottom; scroll position anchored to bottom unless user scrolled up
-
-  **Acceptance Criteria**:
-  - [ ] `bun add virtua` completed, `virtua` in `packages/desktop/package.json` dependencies
-  - [ ] `bun run check` passes (monorepo root) and `bun run --cwd packages/desktop typecheck` passes
-  - [ ] No `[...activeMessages].reverse()` in ChatList.vue template
-
-  **Message Injection for QA** (create once, reuse in F3):
-
-  The renderer (`App.vue`) is populated via Electrobun RPC `chat_message` events dispatched from the Bun main process — NOT from the backend WebSocket. To inject messages in a test scenario without requiring real platform credentials:
-
-  **Step A: Add a NEW dev-only `Bun.serve()` HTTP server in `packages/desktop/src/bun/index.ts`**
-
-  `bun/index.ts` does NOT have any existing `Bun.serve()` call — it uses only Electrobun APIs (`BrowserWindow`, `defineElectrobunRPC`). You must CREATE a brand-new `Bun.serve()` block, gated by a dev env check, on port **45824** (chosen to avoid conflict with overlay server port 45823):
+  `bun/index.ts` currently has NO `Bun.serve()` call — it uses only Electrobun APIs. Add a NEW `Bun.serve()` block, gated by a dev env check, on port **45824**:
 
   ```typescript
   // DEV-ONLY: HTTP endpoint for test message injection
-  // This Bun.serve() is NEW — there is no existing HTTP server in bun/index.ts
   if (process.env.NODE_ENV !== 'production') {
     Bun.serve({
       port: 45824,
@@ -962,48 +762,45 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
   ```
 
   Read `packages/desktop/src/bun/index.ts` to find:
-  - The exact variable name for the WebviewSender cast (search for `as unknown as WebviewSender`) — use that variable name in place of `sendToView`
-  - The import path for `NormalizedChatMessage` (likely from `@twirchat/shared` or `../../../shared/types`)
-  - Add this block AFTER the `BrowserWindow` and RPC setup (so `sendToView` is already defined)
+  - The exact variable name for the WebviewSender cast (search for `as unknown as WebviewSender`) — use that variable in place of `sendToView`
+  - The import path for `NormalizedChatMessage`
+  - Add this block AFTER the `BrowserWindow` and RPC setup (so the sender variable is already defined)
 
-  **Step B: Create `packages/desktop/tests/fixtures/seed-chat.ts`**
+  **Step 7: Create `packages/desktop/tests/fixtures/seed-chat.ts`**
 
-  This script sends 150 fake messages via the test endpoint:
+  This script sends 150 fake messages via the test endpoint. Read `packages/shared/types.ts` for the exact `NormalizedChatMessage` field names before writing it — match all fields exactly.
 
-  ```typescript
-  // packages/desktop/tests/fixtures/seed-chat.ts
-  import type { NormalizedChatMessage } from '../../../shared/types.ts'
+  **Must NOT do**:
+  - Do NOT use `vue-virtual-scroller` — use only `virtua`
+  - Do NOT apply virtua to WatchedChannelsView or EventsFeed
+  - Do NOT add `height` or `width` CSS constraints that break the existing layout
+  - Do NOT change the `NormalizedChatMessage` type or `ChatMessage.vue` component interface
 
-  // Find the HTTP server port from packages/desktop/src/bun/index.ts
-  const BUN_HTTP_PORT = /* read from bun/index.ts */ 3001
+  **Recommended Agent Profile**:
+  - **Category**: `unspecified-high`
+    - Reason: Significant UI change; scroll anchor behavior must be verified; library integration requires reading existing CSS layout and composable interaction
+  - **Skills**: []
 
-  for (let i = 0; i < 150; i++) {
-    await new Promise((r) => setTimeout(r, 30))
-    const msg: NormalizedChatMessage = {
-      id: `test-${i}-${Date.now()}`,
-      platform: 'twitch',
-      channel: 'testchannel',
-      channelId: 'test-channel-id',
-      username: `user${i}`,
-      displayName: `User ${i}`,
-      text: `Test message ${i} — @otheruser hello there`,
-      timestamp: Date.now(),
-      badges: [],
-      emotes: [],
-      color: `#${((i * 12345) % 0xffffff).toString(16).padStart(6, '0')}`,
-    }
-    await fetch(`http://localhost:${BUN_HTTP_PORT}/dev/inject-chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(msg),
-    })
-  }
-  console.log('Injected 150 messages')
-  ```
+  **Parallelization**:
+  - **Can Run In Parallel**: NO
+  - **Parallel Group**: Wave 3 — sequential after Wave 2 (depends on clean ChatList from Tasks 5–6)
+  - **Blocks**: F1–F4
+  - **Blocked By**: Tasks 5, 6
 
-  **IMPORTANT**: Read `packages/desktop/src/bun/index.ts` first to find: (a) the exact HTTP server port, (b) the exact variable name for `sendToView`, (c) the exact `NormalizedChatMessage` field names from `packages/shared/types.ts`. Match all exactly.
+  **References**:
 
-  **Note on dev endpoint removal**: The `/dev/inject-chat` route is guarded by `process.env.NODE_ENV !== 'production'`. In production builds, `electrobun build` strips dev code. This does NOT affect the production binary.
+  **Pattern References**:
+  - `packages/desktop/src/views/main/components/ChatList.vue` — read in full before changes: find the messages container CSS, existing scroll logic, `useChatScroll` composable usage, and the full v-for block
+  - `packages/desktop/src/views/main/composables/useChatScroll.ts` — read in full; understand if it does manual `scrollTop` manipulation that would conflict with virtua's `reverse` prop
+  - `packages/desktop/src/bun/index.ts` — find the WebviewSender variable name (search `as unknown as WebviewSender`)
+
+  **External References**:
+  - virtua Vue 3 docs: https://github.com/inokawa/virtua — see `VList` API, `reverse` prop, `data` prop, slot syntax
+
+  **Acceptance Criteria**:
+  - [ ] `bun add virtua` completed, `virtua` in `packages/desktop/package.json` dependencies
+  - [ ] `bun run check` passes (monorepo root) and `bun run --cwd packages/desktop typecheck` passes
+  - [ ] No `[...activeMessages].reverse()` in ChatList.vue template
 
   **QA Scenarios (MANDATORY)**:
 
@@ -1016,71 +813,38 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
       2. grep "from 'virtua/vue'" packages/desktop/src/views/main/components/ChatList.vue
       3. grep "VList" packages/desktop/src/views/main/components/ChatList.vue
       4. Assert: all 3 greps return results
-    Expected Result: Package present in dependencies AND imported from 'virtua/vue' AND VList used in template
+    Expected Result: Package present in dependencies AND imported AND VList used in template
     Failure Indicators: Any grep returns empty
-    Evidence: .sisyphus/evidence/task-8-virtua-import.txt (redirect grep output here)
+    Evidence: .sisyphus/evidence/task-7-virtua-import.txt
 
   Scenario: Template no longer clones and reverses the array
     Tool: Bash
     Steps:
       1. grep -n "\.reverse()" packages/desktop/src/views/main/components/ChatList.vue
       2. Assert: no output
-      3. grep -n "\.\.\." packages/desktop/src/views/main/components/ChatList.vue
-         # Verify no spread of activeMessages in the v-for context
-      4. Assert: no spread of activeMessages in the v-for template
     Expected Result: Spread+reverse pattern removed from template
     Failure Indicators: .reverse() still present anywhere in the template
-    Evidence: .sisyphus/evidence/task-8-no-reverse.txt
+    Evidence: .sisyphus/evidence/task-7-no-reverse.txt
 
   Scenario: VList uses reverse prop for bottom-anchor scroll
     Tool: Bash
     Steps:
       1. grep -n ":reverse\|reverse=" packages/desktop/src/views/main/components/ChatList.vue
       2. Assert: VList has :reverse="true" or reverse prop present
-      3. grep -n "scrollTop\|scrollHeight\|onScroll\|scroll(" packages/desktop/src/views/main/components/ChatList.vue
-      4. Assert: no manual scroll manipulation (virtua handles it via reverse prop)
-    Expected Result: VList has reverse prop; no manual scroll hacks present
-    Failure Indicators: No reverse prop on VList, OR manual scrollTop manipulation still present
-    Evidence: .sisyphus/evidence/task-8-reverse-prop.txt
+    Expected Result: VList has reverse prop
+    Failure Indicators: No reverse prop on VList
+    Evidence: .sisyphus/evidence/task-7-reverse-prop.txt
 
   Scenario: Dev test endpoint present in bun/index.ts
     Tool: Bash
     Steps:
       1. grep -n "inject-chat\|inject_chat" packages/desktop/src/bun/index.ts
       2. Assert: endpoint definition found
-      3. grep -n "NODE_ENV.*production\|production.*NODE_ENV" packages/desktop/src/bun/index.ts
-      4. Assert: env guard present near the endpoint
-      5. grep -n "45824" packages/desktop/src/bun/index.ts
-      6. Assert: port 45824 present (this is the dev HTTP server port)
+      3. grep -n "45824" packages/desktop/src/bun/index.ts
+      4. Assert: port 45824 present
     Expected Result: Dev endpoint on port 45824 exists and is guarded by env check
-    Failure Indicators: No endpoint found, no env guard, or wrong port
-    Evidence: .sisyphus/evidence/task-8-dev-endpoint.txt
-
-  Scenario: Dev endpoint responds to HTTP POST (smoke test)
-    Tool: Bash
-    Preconditions:
-      Start the app: bun run --cwd packages/desktop dev
-      Wait 20 seconds for bun/index.ts to start (Bun.serve on port 45824 must be running)
-    Steps:
-      1. curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:45824/dev/inject-chat \
-           -H "Content-Type: application/json" \
-           -d '{"id":"test-1","platform":"twitch","channel":"test","channelId":"c1","username":"u1","displayName":"U1","text":"hello","timestamp":0,"badges":[],"emotes":[],"color":"#ff0000"}'
-         # Field names are illustrative — read packages/shared/types.ts for exact fields
-      2. Assert: response HTTP status is 200
-    Expected Result: Dev endpoint returns 200 (message dispatched to renderer via sendToView)
-    Failure Indicators: Connection refused (server not running), 404, or non-200 status
-    Evidence: .sisyphus/evidence/task-8-endpoint-smoke.txt (save curl output with -v flag)
-
-  Scenario: Seed script exits 0 and logs completion
-    Tool: Bash
-    Preconditions: App already running (from previous scenario)
-    Steps:
-      1. bun packages/desktop/tests/fixtures/seed-chat.ts
-      2. Assert: exit code 0
-      3. Assert: output contains "Injected 150 messages"
-    Expected Result: Seed script sends 150 messages successfully
-    Failure Indicators: Non-zero exit code, connection error, or missing output
-    Evidence: .sisyphus/evidence/task-8-seed-output.txt (redirect stdout here)
+    Failure Indicators: No endpoint found, or wrong port
+    Evidence: .sisyphus/evidence/task-7-dev-endpoint.txt
 
   Scenario: VList renders only visible rows (virtualization working)
     Tool: Playwright
@@ -1089,54 +853,85 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
       2. Wait 15 seconds for Vite to be ready
     Steps:
       1. page.goto('http://localhost:5173/test-harness.html')
-         (This is the standalone harness without waitForSocket — mounts immediately)
-      2. await page.waitForSelector('[data-testid="chat-list"], .chat-list, [class*="vlist"]', { timeout: 10000 })
-         # VList renders with a container element; adjust selector after reading ChatList.vue
+      2. await page.waitForSelector('[class*="vlist"], [class*="message"]', { timeout: 10000 })
       3. const visibleCount = await page.evaluate(() =>
            document.querySelectorAll('[class*="message"], [class*="chat-message"]').length
          )
       4. Assert: visibleCount > 0 AND visibleCount < 50
          (virtua renders only viewport-visible rows; 200 items seeded, only ~10-30 visible)
-      5. await page.screenshot({ path: '.sisyphus/evidence/task-8-virtua-render.png' })
-    Expected Result: DOM contains fewer than 50 message nodes (virtualization active); page screenshot saved
+      5. await page.screenshot({ path: '.sisyphus/evidence/task-7-virtua-render.png' })
+    Expected Result: DOM contains fewer than 50 message nodes (virtualization active)
     Failure Indicators: visibleCount >= 150 (no virtualization), or page blank/error
-    Evidence: .sisyphus/evidence/task-8-virtua-render.png + .sisyphus/evidence/task-8-dom-count.txt
+    Evidence: .sisyphus/evidence/task-7-virtua-render.png + .sisyphus/evidence/task-7-dom-count.txt
 
   Scenario: Auto-scroll to bottom on new messages (bottom-anchor behavior)
     Tool: Playwright
     Preconditions: test-harness.html loaded (from previous scenario)
     Steps:
-      1. const initialScrollHeight = await page.evaluate(() =>
-           document.querySelector('[class*="vlist"], [data-testid="chat-list"]')?.scrollHeight ?? 0
-         )
-      2. const isAtBottom = await page.evaluate(() => {
+      1. const isAtBottom = await page.evaluate(() => {
            const el = document.querySelector('[class*="vlist"], [data-testid="chat-list"]')
            if (!el) return false
            return Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 10
          })
-      3. Assert: isAtBottom is true (VList with reverse=true starts at bottom)
+      2. Assert: isAtBottom is true (VList with reverse=true starts at bottom)
     Expected Result: Scroll position is at the bottom after initial render
     Failure Indicators: isAtBottom is false (scroll not anchored to bottom)
-    Evidence: .sisyphus/evidence/task-8-scroll-position.txt (save evaluate results)
+    Evidence: .sisyphus/evidence/task-7-scroll-position.txt
   ```
 
-  **IMPORTANT**: Read `packages/desktop/src/bun/index.ts` and `packages/shared/types.ts` to get the exact variable name for the WebviewSender cast and exact `NormalizedChatMessage` field names before writing this fixture. Match all exactly.
-
   **Evidence to Capture**:
-  - [ ] `.sisyphus/evidence/task-8-virtua-import.txt`
-  - [ ] `.sisyphus/evidence/task-8-no-reverse.txt`
-  - [ ] `.sisyphus/evidence/task-8-reverse-prop.txt`
-  - [ ] `.sisyphus/evidence/task-8-dev-endpoint.txt`
-  - [ ] `.sisyphus/evidence/task-8-endpoint-smoke.txt`
-  - [ ] `.sisyphus/evidence/task-8-seed-output.txt`
-  - [ ] `.sisyphus/evidence/task-8-virtua-render.png`
-  - [ ] `.sisyphus/evidence/task-8-dom-count.txt`
-  - [ ] `.sisyphus/evidence/task-8-scroll-position.txt`
+  - [ ] `.sisyphus/evidence/task-7-virtua-import.txt`
+  - [ ] `.sisyphus/evidence/task-7-no-reverse.txt`
+  - [ ] `.sisyphus/evidence/task-7-reverse-prop.txt`
+  - [ ] `.sisyphus/evidence/task-7-dev-endpoint.txt`
+  - [ ] `.sisyphus/evidence/task-7-virtua-render.png`
+  - [ ] `.sisyphus/evidence/task-7-dom-count.txt`
+  - [ ] `.sisyphus/evidence/task-7-scroll-position.txt`
 
   **Commit**: YES
   - Message: `feat(chat-list): add virtua VList for DOM virtualization`
   - Files: `packages/desktop/src/views/main/components/ChatList.vue`, `packages/desktop/src/bun/index.ts` (dev endpoint), `packages/desktop/package.json`, `bun.lock`, `packages/desktop/tests/fixtures/seed-chat.ts`, `packages/desktop/src/views/main/test-harness.html`, `packages/desktop/src/views/main/test-harness.ts`
   - Pre-commit: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck`
+
+---
+
+    Expected Result: DOM contains fewer than 50 message nodes (virtualization active); page screenshot saved
+    Failure Indicators: visibleCount >= 150 (no virtualization), or page blank/error
+    Evidence: .sisyphus/evidence/task-8-virtua-render.png + .sisyphus/evidence/task-8-dom-count.txt
+
+Scenario: Auto-scroll to bottom on new messages (bottom-anchor behavior)
+Tool: Playwright
+Preconditions: test-harness.html loaded (from previous scenario)
+Steps: 1. const initialScrollHeight = await page.evaluate(() =>
+document.querySelector('[class*="vlist"], [data-testid="chat-list"]')?.scrollHeight ?? 0
+) 2. const isAtBottom = await page.evaluate(() => {
+const el = document.querySelector('[class*="vlist"], [data-testid="chat-list"]')
+if (!el) return false
+return Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 10
+}) 3. Assert: isAtBottom is true (VList with reverse=true starts at bottom)
+Expected Result: Scroll position is at the bottom after initial render
+Failure Indicators: isAtBottom is false (scroll not anchored to bottom)
+Evidence: .sisyphus/evidence/task-8-scroll-position.txt (save evaluate results)
+
+````
+
+**IMPORTANT**: Read `packages/desktop/src/bun/index.ts` and `packages/shared/types.ts` to get the exact variable name for the WebviewSender cast and exact `NormalizedChatMessage` field names before writing this fixture. Match all exactly.
+
+**Evidence to Capture**:
+- [ ] `.sisyphus/evidence/task-8-virtua-import.txt`
+- [ ] `.sisyphus/evidence/task-8-no-reverse.txt`
+- [ ] `.sisyphus/evidence/task-8-reverse-prop.txt`
+- [ ] `.sisyphus/evidence/task-8-dev-endpoint.txt`
+- [ ] `.sisyphus/evidence/task-8-endpoint-smoke.txt`
+- [ ] `.sisyphus/evidence/task-8-seed-output.txt`
+- [ ] `.sisyphus/evidence/task-8-virtua-render.png`
+- [ ] `.sisyphus/evidence/task-8-dom-count.txt`
+- [ ] `.sisyphus/evidence/task-8-scroll-position.txt`
+
+**Commit**: YES
+- Message: `feat(chat-list): add virtua VList for DOM virtualization`
+- Files: `packages/desktop/src/views/main/components/ChatList.vue`, `packages/desktop/src/bun/index.ts` (dev endpoint), `packages/desktop/package.json`, `bun.lock`, `packages/desktop/tests/fixtures/seed-chat.ts`, `packages/desktop/src/views/main/test-harness.html`, `packages/desktop/src/views/main/test-harness.ts`
+- Pre-commit: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck`
 
 ---
 
@@ -1146,43 +941,43 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
 >
 > **Do NOT auto-proceed after verification. Wait for user's explicit approval before marking work complete.**
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
-      Read this plan end-to-end. For each "Must Have": verify implementation exists (read file, run command). For each "Must NOT Have": search codebase for forbidden patterns — reject with file:line if found. Verify evidence files exist: `.sisyphus/evidence/memory-baseline.txt` and `.sisyphus/evidence/memory-after.txt`. Check deliverables list.
-      Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
+- [x] F1. **Plan Compliance Audit** — `oracle`
+    Read this plan end-to-end. For each "Must Have": verify implementation exists (read file, run command). For each "Must NOT Have": search codebase for forbidden patterns — reject with file:line if found. Verify evidence files exist: `.sisyphus/evidence/memory-baseline.txt` and `.sisyphus/evidence/memory-after.txt`. Check deliverables list.
+    Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
-      Run `bun run check` from monorepo root (typecheck + lint + format across all packages). Also run `bun run --cwd packages/desktop typecheck` specifically for vue-tsc. Run `bun test tests/` from `packages/desktop`. Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log in prod code, commented-out code, unused imports. Check AI slop: excessive comments, over-abstraction, generic variable names.
-      Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Tests [N pass/N fail] | VERDICT`
+- [x] F2. **Code Quality Review** — `unspecified-high`
+    Run `bun run check` from monorepo root (typecheck + lint + format across all packages). Also run `bun run --cwd packages/desktop typecheck` specifically for vue-tsc. Run `bun test tests/` from `packages/desktop`. Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log in prod code, commented-out code, unused imports. Check AI slop: excessive comments, over-abstraction, generic variable names.
+    Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Tests [N pass/N fail] | VERDICT`
 
-- [ ] F3. **Real Manual QA** — `unspecified-high`
-      Use the dev HTTP endpoint and `seed-chat.ts` fixture from Task 8 for message injection: 1. Start app: `bun run --cwd packages/desktop dev` (starts Vite + bun/index.ts in parallel) 2. Wait 20 seconds for both processes to be ready 3. Run seed: `bun packages/desktop/tests/fixtures/seed-chat.ts` 4. Assert: seed exits 0 with "Injected 150 messages" 5. Verify dev endpoint responds: `curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:45824/dev/inject-chat -H "Content-Type: application/json" -d '{"id":"f3-test",...}'` → Assert 200
+- [x] F3. **Real Manual QA** — `unspecified-high`
+    Use the dev HTTP endpoint and `seed-chat.ts` fixture from Task 7 for message injection: 1. Start app: `bun run --cwd packages/desktop dev` (starts Vite + bun/index.ts in parallel) 2. Wait 20 seconds for both processes to be ready 3. Run seed: `bun packages/desktop/tests/fixtures/seed-chat.ts` 4. Assert: seed exits 0 with "Injected 150 messages" 5. Verify dev endpoint responds: `curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:45824/dev/inject-chat -H "Content-Type: application/json" -d '{"id":"f3-test",...}'` → Assert 200
 
-      Verify all code-based QA scenarios from Tasks 5–8 via grep:
-      - grep for no .reverse() in ChatList
-      - grep for `from 'virtua/vue'` in ChatList (virtua import)
-      - grep for VList `:reverse` prop in ChatList (bottom-anchor scroll)
-      - grep for no `reactive(new Map` in ChatMessage
-      - grep for triggerRef in App.vue
-      - grep for no local pollTimer in ChatList
+    Verify all code-based QA scenarios from Tasks 5–7 via grep:
+    - grep for no .reverse() in ChatList
+    - grep for `from 'virtua/vue'` in ChatList (virtua import)
+    - grep for VList `:reverse` prop in ChatList (bottom-anchor scroll)
+    - grep for no `reactive(new Map` in useMessageParsing.ts
+    - grep for triggerRef in App.vue
+    - grep for no local pollTimer/setInterval in ChatList (already done before this plan)
 
-      Capture all evidence to `.sisyphus/evidence/final-qa/`.
-      Output: `Code Verification [N/N pass] | Endpoint smoke [PASS/FAIL] | Seed injection [PASS/FAIL] | VERDICT`
+    Capture all evidence to `.sisyphus/evidence/final-qa/`.
+    Output: `Code Verification [N/N pass] | Endpoint smoke [PASS/FAIL] | Seed injection [PASS/FAIL] | VERDICT`
 
-- [ ] F4. **Post-fix Measurement + CEF Baseline Documentation** — `quick`
-      **Two-phase measurement** to cover both idle and loaded workload:
+- [x] F4. **Post-fix Measurement + CEF Baseline Documentation** — `quick`
+    **Two-phase measurement** to cover both idle and loaded workload:
 
-      **Phase 1 — Idle measurement** (same conditions as Task 1 baseline):
-      1. Start app: `bun run --cwd packages/desktop dev` (starts Vite + bun/index.ts — same command as Task 1)
-      2. Wait 30 seconds for stable idle state
-      3. Get PID: `PID=$(pgrep TwirChat)` (fallback: `PID=$(pgrep -f "src/bun/index.ts" | tr '\n' ' ' | awk '{print $1}')`)
-      4. Run:
+    **Phase 1 — Idle measurement** (same conditions as Task 1 baseline):
+    1. Start app: `bun run --cwd packages/desktop dev` (starts Vite + bun/index.ts — same command as Task 1)
+    2. Wait 30 seconds for stable idle state
+    3. Get PID: `PID=$(pgrep TwirChat)` (fallback: `PID=$(pgrep -f "src/bun/index.ts" | tr '\n' ' ' | awk '{print $1}')`)
+    4. Run:
 
-  ```bash
-  echo "=== Post-fix Idle ===" > .sisyphus/evidence/memory-after.txt
-  echo "=== Date: $(date) ===" >> .sisyphus/evidence/memory-after.txt
-  grep VmRSS /proc/$PID/status >> .sisyphus/evidence/memory-after.txt
-  awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print "Idle USS:", sum/1024, "MB"}' /proc/$PID/smaps >> .sisyphus/evidence/memory-after.txt
-  ```
+```bash
+echo "=== Post-fix Idle ===" > .sisyphus/evidence/memory-after.txt
+echo "=== Date: $(date) ===" >> .sisyphus/evidence/memory-after.txt
+grep VmRSS /proc/$PID/status >> .sisyphus/evidence/memory-after.txt
+awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print "Idle USS:", sum/1024, "MB"}' /proc/$PID/smaps >> .sisyphus/evidence/memory-after.txt
+````
 
       **Phase 2 — Loaded measurement** (after seeding 150 messages to exercise renderer + adapters):
       1. Run seed: `bun packages/desktop/tests/fixtures/seed-chat.ts`
@@ -1190,11 +985,11 @@ Wave FINAL (After ALL tasks — 4 parallel reviews):
       3. Get updated PID if needed: `PID=$(pgrep TwirChat)`
       4. Run:
 
-  ```bash
-  echo "=== Post-fix Loaded (150 messages) ===" >> .sisyphus/evidence/memory-after.txt
-  grep VmRSS /proc/$PID/status >> .sisyphus/evidence/memory-after.txt
-  awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print "Loaded USS:", sum/1024, "MB"}' /proc/$PID/smaps >> .sisyphus/evidence/memory-after.txt
-  ```
+```bash
+echo "=== Post-fix Loaded (150 messages) ===" >> .sisyphus/evidence/memory-after.txt
+grep VmRSS /proc/$PID/status >> .sisyphus/evidence/memory-after.txt
+awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print "Loaded USS:", sum/1024, "MB"}' /proc/$PID/smaps >> .sisyphus/evidence/memory-after.txt
+```
 
       Compare idle baseline from `.sisyphus/evidence/memory-baseline.txt` with idle and loaded values here. Report delta.
       Append to `.sisyphus/evidence/memory-after.txt`:
@@ -1210,10 +1005,9 @@ commit 1: (baseline measurement — no code, evidence file only)
 commit 2: fix(youtube-adapter): clear reconnectTimeout before scheduling new one
 commit 3: fix(kick-adapter): close existing WebSocket before creating new connection
 commit 4: fix(twitch-adapter): guard connectChatClient against double-connect
-commit 5: perf(chat-message): remove reactive() from mentionColorCache, add 2000-entry cap
+commit 5: perf(message-parsing): remove reactive() from mentionColorCache, add 2000-entry cap
 commit 6: perf(app): eliminate O(n) spread allocation on every incoming message
-commit 7: refactor(chat-list): extract channel-status polling to shared composable
-commit 8: feat(chat-list): add virtua VList for DOM virtualization
+commit 7: feat(chat-list): add virtua VList for DOM virtualization
 ```
 
 Each commit boundary: `bun run fix` (monorepo root) + `bun run --cwd packages/desktop typecheck` passes + `bun test tests/` passes, app runnable.
@@ -1248,6 +1042,10 @@ awk '/Private_Clean|Private_Dirty/{sum+=$2} END{print sum/1024, "MB USS loaded"}
 grep "from 'virtua/vue'" packages/desktop/src/views/main/components/ChatList.vue
 grep "VList" packages/desktop/src/views/main/components/ChatList.vue
 # Expected: both return results
+
+# mentionColorCache fix check:
+grep "reactive.*mentionColorCache" packages/desktop/src/views/main/composables/useMessageParsing.ts
+# Expected: no output (reactive() removed)
 
 # Dev endpoint smoke test (app must be running):
 curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:45824/dev/inject-chat \

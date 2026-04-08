@@ -19,6 +19,7 @@
     "**/coverage/**",
     "**/.opencode/**",
     "**/*.graphql",
-    "**/*.proto"
+    "**/*.proto",
+    "**/.sisyphus/**"
   ]
 }

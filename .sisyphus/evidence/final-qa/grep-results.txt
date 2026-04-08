@@ -1,0 +1,35 @@
+=== MEMORY OPTIMIZATION QA - GREP RESULTS ===
+Date: 2026-04-08
+
+CHECK 1: No .reverse() in ChatList.vue
+COMMAND: grep -n "\.reverse()" packages/desktop/src/views/main/components/ChatList.vue
+RESULT: PASS (no output - .reverse() not found)
+
+CHECK 2: virtua import in ChatList.vue
+COMMAND: grep -n "from 'virtua/vue'" packages/desktop/src/views/main/components/ChatList.vue
+RESULT: PASS
+  Line 3: import { VList } from 'virtua/vue'
+  Line 4: import type { VListHandle } from 'virtua/vue'
+
+CHECK 3: VList :reverse prop in ChatList.vue
+COMMAND: grep -n ":reverse\|reverse=" packages/desktop/src/views/main/components/ChatList.vue
+RESULT: PASS
+  Line 52: // With :reverse="true", offset near 0 means at the bottom (latest messages)
+  Line 361: :reverse="true"
+
+CHECK 4: No reactive(new Map in useMessageParsing.ts
+COMMAND: grep -n "reactive.*Map\|Map.*reactive" packages/desktop/src/views/main/composables/useMessageParsing.ts
+RESULT: PASS (no output - no reactive Map found)
+
+CHECK 5: triggerRef in App.vue
+COMMAND: grep -n "triggerRef" packages/desktop/src/views/main/App.vue
+RESULT: PASS
+  Line 2: import { computed, onMounted, ref, triggerRef } from 'vue'
+  Line 213: triggerRef(watchedMessages)
+  Line 342: triggerRef(watchedMessages)
+
+CHECK 6: No setInterval/pollTimer in ChatList.vue
+COMMAND: grep -n "setInterval\|pollTimer" packages/desktop/src/views/main/components/ChatList.vue
+RESULT: PASS (no output - no setInterval/pollTimer found)
+
+SUMMARY: 6/6 PASS

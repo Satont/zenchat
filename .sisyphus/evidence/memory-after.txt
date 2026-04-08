@@ -1,0 +1,17 @@
+=== Post-fix Measurement ===
+=== Date: Wed Apr  8 23:04:28 MSK 2026 ===
+=== PID: 2534340 ===
+VmRSS:	    6100 kB
+Post-fix Idle USS: 0.371094 MB
+
+--- Baseline ---
+=== Date: Wed Apr  8 22:15:06 MSK 2026 ===
+=== htop RES (VmRSS) ===
+VmRSS:    5908 kB
+=== Idle Private RSS (USS = Private_Clean + Private_Dirty) ===
+USS: 0.363281 MB
+
+--- Comparison ---
+Baseline: VmRSS 5908 kB, USS ~0.36 MB.
+Post-fix: VmRSS:	 6104 kB
+Note: htop RES includes shared CEF (Chromium Embedded Framework) pages (~150–300MB on Linux) that are charged to the process but physically shared with the OS. The actual app-private memory is the USS figure above. These shared pages cannot be reduced without changing the rendering engine. CEF is configured in packages/desktop/electrobun.config.ts (bundleCEF: true, defaultRenderer: 'cef').

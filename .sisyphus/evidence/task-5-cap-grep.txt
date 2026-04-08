@@ -1,0 +1,4 @@
+33:    if (mentionColorCache.size > 2000) {
+34:      mentionColorCache.clear()
+39:    if (mentionColorCache.size > 2000) {
+40:      mentionColorCache.clear()
