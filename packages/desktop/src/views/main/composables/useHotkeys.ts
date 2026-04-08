@@ -1,3 +1,4 @@
+import { onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import type { AppSettings } from '@twirchat/shared/types'
 
@@ -128,6 +129,13 @@ export function useHotkeys(
     window.addEventListener('keydown', globalKeydown)
     _isInitialized = true
   }
+
+  onUnmounted(() => {
+    window.removeEventListener('keydown', globalKeydown)
+    _isInitialized = false
+    _handlers = null
+    _settingsRef = null
+  })
 
   return { pause, resume }
 }
