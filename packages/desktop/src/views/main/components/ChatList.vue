@@ -57,7 +57,7 @@ function onVListScroll(offset: number) {
 
 function scrollToBottom() {
   const len = activeMessages.value.length
-  if (len > 0) vlistRef.value?.scrollToIndex(len - 1)
+  if (len > 0) vlistRef.value?.scrollToIndex(len - 1, { align: 'end' })
 }
 
 const replyTarget = ref<NormalizedChatMessage | null>(null)
@@ -164,16 +164,24 @@ const { start: startPolling } = usePolling(fetchChannelStatuses, 10_000)
 
 onMounted(() => {
   startPolling()
+  scrollToBottom()
 })
 
 // Auto-scroll to bottom when new messages arrive and user is already at bottom
+let initialScrollDone = false
 watch(
   () => activeMessages.value.length,
-  () => {
+  (len) => {
+    if (!initialScrollDone && len > 0) {
+      initialScrollDone = true
+      scrollToBottom()
+      return
+    }
     if (isAtBottom.value) {
       scrollToBottom()
     }
   },
+  { flush: 'post' },
 )
 
 // Re-fetch immediately when channels change

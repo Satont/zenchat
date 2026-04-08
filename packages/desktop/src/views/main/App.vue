@@ -198,7 +198,7 @@ async function loadInitialData() {
   try {
     const recentMsgs = await rpc.request.getRecentMessages({})
     if (recentMsgs !== undefined && recentMsgs.length > 0) {
-      messages.value = [...recentMsgs].toReversed()
+      messages.value = [...recentMsgs]
     }
   } catch (error) {
     console.warn('[App] Failed to load recent messages:', error)
