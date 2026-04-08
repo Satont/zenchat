@@ -115,6 +115,17 @@ export interface SelfPingConfig {
   color: string
 }
 
+export interface HotkeySettings {
+  /** Open Add Channel modal */
+  newTab: string
+  /** Cycle to next watched-channel tab */
+  nextTab: string
+  /** Cycle to previous watched-channel tab */
+  prevTab: string
+  /** Open fuzzy tab selector modal */
+  tabSelector: string
+}
+
 export interface AppSettings {
   theme: 'light' | 'dark'
   chatTheme: 'modern' | 'compact'
@@ -126,6 +137,7 @@ export interface AppSettings {
   showAvatars: boolean
   showBadges: boolean
   platformFilter: Platform[] | 'all'
+  hotkeys: HotkeySettings
   overlay: OverlayConfig
   /** Auto-check for updates on startup */
   autoCheckUpdates?: boolean
@@ -155,6 +167,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   chatTheme: 'modern',
   fontFamily: 'inter',
   fontSize: 14,
+  hotkeys: {
+    newTab: 'ctrl+t',
+    nextTab: 'ctrl+tab',
+    prevTab: 'ctrl+shift+tab',
+    tabSelector: 'ctrl+l',
+  },
   overlay: {
     animation: 'slide',
     background: 'transparent',
