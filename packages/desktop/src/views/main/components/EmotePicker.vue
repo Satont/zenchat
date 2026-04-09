@@ -194,18 +194,24 @@ defineExpose({
   justify-content: center;
   cursor: pointer;
   border-radius: 6px;
-  padding: 6px;
+  padding: 5px;
   transition: background 0.1s;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 .emote-cell:hover {
   background: rgba(255, 255, 255, 0.09);
 }
 
 .emote-img {
-  width: 100%;
-  height: 100%;
+  width: 32px;
+  height: 32px;
+  max-width: 32px;
+  max-height: 32px;
   object-fit: contain;
   pointer-events: none;
   display: block;
+  flex-shrink: 0;
 }
 </style>
