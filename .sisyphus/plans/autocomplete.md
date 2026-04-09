@@ -262,7 +262,7 @@ Wave FINAL (After ALL tasks):
   - Message: `feat(rpc): add getChannelEmotes request and channel_emote* push messages`
   - Files: `packages/desktop/src/views/main/composables/useMessageParsing.ts`
 
-- [ ] 3. Implement Bun-side handler and emote push messages
+- [x] 3. Implement Bun-side handler and emote push messages
 
   **What to do**:
   - In `packages/desktop/src/bun/index.ts`:
@@ -342,7 +342,7 @@ Wave FINAL (After ALL tasks):
   - Message: `feat(rpc): implement getChannelEmotes handler and emote push messages in bun/index.ts`
   - Files: `packages/desktop/src/bun/index.ts`
 
-- [ ] 4. Create `useAutocomplete.ts` composable
+- [x] 4. Create `useAutocomplete.ts` composable
 
   **What to do**:
   Create `packages/desktop/src/views/main/composables/useAutocomplete.ts`:
@@ -443,7 +443,7 @@ Wave FINAL (After ALL tasks):
 
   **Commit**: NO (commit with Task 5+6)
 
-- [ ] 5. Create `AutocompletePopup.vue` component
+- [x] 5. Create `AutocompletePopup.vue` component
 
   **What to do**:
   Create `packages/desktop/src/views/main/components/AutocompletePopup.vue`:
@@ -541,7 +541,7 @@ Wave FINAL (After ALL tasks):
 
   **Commit**: NO (commit with Task 6)
 
-- [ ] 6. Integrate autocomplete into `ChatInput.vue` and pass `messages` prop from `ChatList.vue`
+- [x] 6. Integrate autocomplete into `ChatInput.vue` and pass `messages` prop from `ChatList.vue`
 
   **What to do**:
 

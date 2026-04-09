@@ -1,8 +1,0 @@
-55:  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null
-530:    if (this.reconnectTimeout) {
-531:      clearTimeout(this.reconnectTimeout)
-532:      this.reconnectTimeout = null
-697:    if (this.reconnectTimeout) {
-698:      clearTimeout(this.reconnectTimeout)
-699:      this.reconnectTimeout = null
-723:    this.reconnectTimeout = setTimeout(() => {

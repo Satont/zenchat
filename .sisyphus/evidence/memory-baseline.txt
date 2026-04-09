@@ -1,5 +1,0 @@
-=== Date: Wed Apr  8 22:15:06 MSK 2026 ===
-=== htop RES (VmRSS) ===
-VmRSS:	    5908 kB
-=== Idle Private RSS (USS = Private_Clean + Private_Dirty) ===
-USS: 0.363281 MB
