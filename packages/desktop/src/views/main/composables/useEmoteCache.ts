@@ -32,9 +32,11 @@ async function loadEmotes(platform: string, channelId: string): Promise<void> {
       platform: platform as Platform,
       channelId,
     })
-    const next = new Map(emoteCache.value)
-    next.set(key, emotes)
-    emoteCache.value = next
+    if (emotes.length > 0) {
+      const next = new Map(emoteCache.value)
+      next.set(key, emotes)
+      emoteCache.value = next
+    }
   } catch (err) {
     console.warn('[useEmoteCache] Failed to load emotes:', platform, channelId, err)
   }

@@ -44,3 +44,4 @@
 - **Two-Branch Emote Insertion**: It's crucial to check if the user is currently typing a token (`parseToken`) when they click an emote. If they are, use `replaceToken` to replace the current `:alias` with the selected emote. Otherwise, read the cursor position (`textareaEl.selectionStart`), slice the text value, and inject the emote alias, then safely restore the cursor focus via `nextTick()`.
 
 - **Popover Trigger Double Toggle**: When `PopoverTrigger as-child` is paired with `v-model:open`, do not manually toggle the open ref in the trigger click handler. Let reka-ui own the toggle and use a `watch(openRef, ...)` for side effects like focusing the emote picker.
+2026-04-10: useEmoteCache should only cache non-empty RPC results; empty arrays must not write the cache so the picker can retry until channel_emotes_set arrives.
