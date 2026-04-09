@@ -876,6 +876,7 @@ if (process.platform === 'linux') {
 
 // Subscribe to update status changes and forward to webview
 Updater.onStatusChange((entry) => {
+  if (silentCheck && entry.status === 'no-update') return
   log.info(`[Updater] ${entry.status}: ${entry.message}`)
   sendToView.update_status({
     message: entry.message,
@@ -891,8 +892,10 @@ const settings = SettingsStore.get()
 const UPDATE_CHECK_INTERVAL_MS = 1 * 60 * 1000 // 1 minute
 
 let skippedHash: string | null = null
+let silentCheck = false
 
 function runUpdateCheck() {
+  silentCheck = true
   Updater.checkForUpdate()
     .then((updateInfo) => {
       if (updateInfo.updateAvailable) {
@@ -910,6 +913,9 @@ function runUpdateCheck() {
     })
     .catch((error) => {
       log.error('Failed to check for updates', { error: String(error) })
+    })
+    .finally(() => {
+      silentCheck = false
     })
 }
 
