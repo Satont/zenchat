@@ -9,6 +9,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/shared/package.json ./packages/shared/
+COPY patches ./patches
 
 # Install dependencies
 RUN bun install
