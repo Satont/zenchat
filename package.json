@@ -40,5 +40,8 @@
     "playwright": "1.59.1",
     "png-to-ico": "3.0.1",
     "sharp": "0.34.5"
+  },
+  "patchedDependencies": {
+    "electrobun@1.16.0": "patches/electrobun@1.16.0.patch"
   }
 }

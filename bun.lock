@@ -79,6 +79,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "electrobun@1.16.0": "patches/electrobun@1.16.0.patch",
+  },
   "catalog": {
     "@types/bun": "latest",
     "@types/node": "latest",
