@@ -25,3 +25,9 @@
 - packages/desktop/src/views/main/utils/autocompleteUtils.ts
 - packages/desktop/src/views/main/utils/fuzzyFilter.ts
 - useAutocomplete's PUBLIC API must remain unchanged (suggestions, isOpen, selectedIndex, mode, selectSuggestion, moveUp, moveDown, close)
+
+## 2026-04-09
+
+- `useEmoteCache` must be a module-level singleton so repeated composable calls share the same Map.
+- Bun tests in this worktree need an explicit `mock.module('vue', ...)` shim for composables that import Vue runtime APIs.
+- `bun test` passed for the new cache tests, but desktop `vue-tsc` still fails in this environment because workspace deps are unresolved (`vue`, `pinia`, `@twurple/*`, `youtubei.js`, `@babylonjs/core`).
