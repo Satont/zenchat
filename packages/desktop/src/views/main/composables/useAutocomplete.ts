@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref, watch, type ComputedRef, type Ref } from 'vue'
+import { onMounted, onUnmounted, computed, ref, watch, type ComputedRef, type Ref } from 'vue'
 
 import type {
   NormalizedChatMessage,
@@ -141,7 +141,20 @@ export function useAutocomplete(params: {
         void loadEmotes(wc.platform, wc.channelSlug)
       }
     },
-    { immediate: false },
+    { immediate: true },
+  )
+
+  watch(
+    statuses,
+    () => {
+      if (watchedChannel.value) return
+
+      const ch = getCurrentChannelKey()
+      if (ch) {
+        void loadEmotes(ch.platform, ch.channelId)
+      }
+    },
+    { immediate: true },
   )
 
   function onEmotesSet(payload: { platform: Platform; channelId: string; emotes: SevenTVEmote[] }) {
@@ -195,11 +208,6 @@ export function useAutocomplete(params: {
     rpc.addMessageListener('channel_emote_added', onEmoteAdded)
     rpc.addMessageListener('channel_emote_removed', onEmoteRemoved)
     rpc.addMessageListener('channel_emote_updated', onEmoteUpdated)
-
-    const ch = getCurrentChannelKey()
-    if (ch) {
-      void loadEmotes(ch.platform, ch.channelId)
-    }
   })
 
   onUnmounted(() => {

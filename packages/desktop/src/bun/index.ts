@@ -196,14 +196,16 @@ setOnAuthSuccessCallback(async (platform, channelSlug) => {
         sevenTvChannelId = String(broadcasterUserId)
       }
     }
-    sevenTVService.subscribeToChannel(platform, sevenTvChannelId).catch((error) => {
-      log.error('Failed to subscribe to 7TV', {
-        platform,
-        channelSlug: sevenTvChannelId,
-        error: String(error),
-        action: '7tv',
+    sevenTVService
+      .subscribeToChannel(platform, sevenTvChannelId, [targetChannel])
+      .catch((error) => {
+        log.error('Failed to subscribe to 7TV', {
+          platform,
+          channelSlug: sevenTvChannelId,
+          error: String(error),
+          action: '7tv',
+        })
       })
-    })
   } catch (error) {
     log.error('Failed to reconnect adapter', {
       platform,
@@ -312,14 +314,16 @@ const rpc = defineElectrobunRPC<TwirChatRPCSchema>('bun', {
                 sevenTvChannelId = String(broadcasterUserId)
               }
             }
-            sevenTVService.subscribeToChannel(platform, sevenTvChannelId).catch((err) => {
-              log.error('Failed to subscribe to 7TV', {
-                platform,
-                channelSlug: sevenTvChannelId,
-                error: String(err),
-                action: '7tv',
+            sevenTVService
+              .subscribeToChannel(platform, sevenTvChannelId, [channelSlug])
+              .catch((err) => {
+                log.error('Failed to subscribe to 7TV', {
+                  platform,
+                  channelSlug: sevenTvChannelId,
+                  error: String(err),
+                  action: '7tv',
+                })
               })
-            })
           })
           .catch((err) => {
             log.error('Failed to connect', {
@@ -1123,14 +1127,16 @@ for (const [platform, slugs] of Object.entries(savedChannels)) {
             sevenTvChannelId = String(broadcasterUserId)
           }
         }
-        sevenTVService.subscribeToChannel(platform as Platform, sevenTvChannelId).catch((error) => {
-          log.error('Failed to subscribe to 7TV', {
-            platform,
-            channelSlug: sevenTvChannelId,
-            error: String(error),
-            action: '7tv',
+        sevenTVService
+          .subscribeToChannel(platform as Platform, sevenTvChannelId, [slug])
+          .catch((error) => {
+            log.error('Failed to subscribe to 7TV', {
+              platform,
+              channelSlug: sevenTvChannelId,
+              error: String(error),
+              action: '7tv',
+            })
           })
-        })
       })
       .catch((error) => {
         log.error('Failed to connect', {
@@ -1190,14 +1196,16 @@ for (const account of accounts) {
             sevenTvChannelId = String(broadcasterUserId)
           }
         }
-        sevenTVService.subscribeToChannel(account.platform, sevenTvChannelId).catch((error) => {
-          log.error('Failed to subscribe to 7TV', {
-            platform: account.platform,
-            channelSlug: sevenTvChannelId,
-            error: String(error),
-            action: '7tv',
+        sevenTVService
+          .subscribeToChannel(account.platform, sevenTvChannelId, [channelSlug])
+          .catch((error) => {
+            log.error('Failed to subscribe to 7TV', {
+              platform: account.platform,
+              channelSlug: sevenTvChannelId,
+              error: String(error),
+              action: '7tv',
+            })
           })
-        })
       })
       .catch((error) => {
         log.error("Failed to connect to user's channel", {

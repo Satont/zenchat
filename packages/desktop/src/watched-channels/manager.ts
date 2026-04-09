@@ -224,15 +224,17 @@ export class WatchedChannelManager {
       }
     }
 
-    sevenTVService.subscribeToChannel(ch.platform, entry.sevenTvChannelId).catch((error) => {
-      log.error('Failed to subscribe to 7TV for watched channel', {
-        id: ch.id,
-        platform: ch.platform,
-        channelSlug: entry.sevenTvChannelId,
-        error: String(error),
-        action: '7tv',
+    sevenTVService
+      .subscribeToChannel(ch.platform, entry.sevenTvChannelId, [ch.channelSlug])
+      .catch((error) => {
+        log.error('Failed to subscribe to 7TV for watched channel', {
+          id: ch.id,
+          platform: ch.platform,
+          channelSlug: entry.sevenTvChannelId,
+          error: String(error),
+          action: '7tv',
+        })
       })
-    })
   }
 
   private bindAdapter(entry: WatchedEntry): void {
