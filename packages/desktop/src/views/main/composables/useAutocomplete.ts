@@ -9,7 +9,7 @@ import type { SevenTVEmote } from '@twirchat/shared/protocol'
 
 import { fuzzyFilter } from '../utils/fuzzyFilter'
 import { mentionColorCache } from './useMessageParsing'
-import { useEmoteCache } from './useEmoteCache'
+import { useEmoteStore } from '../stores/emoteStore'
 import {
   parseToken,
   replaceToken,
@@ -39,7 +39,7 @@ export function useAutocomplete(params: {
 } {
   const { text, messages, watchedChannel, statuses } = params
 
-  const { emoteCache, loadEmotes } = useEmoteCache()
+  const emoteStore = useEmoteStore()
   const closedQuery = ref('')
   const selectedIndex = ref(0)
 
@@ -85,7 +85,7 @@ export function useAutocomplete(params: {
     const ch = getCurrentChannelKey()
     if (!ch) return []
 
-    const emotes = emoteCache.value.get(`${ch.platform}:${ch.channelId}`) ?? []
+    const emotes = emoteStore.emoteMap.get(`${ch.platform}:${ch.channelId}`) ?? []
 
     return emotes.map(
       (e: SevenTVEmote): EmoteSuggestion => ({
@@ -120,7 +120,7 @@ export function useAutocomplete(params: {
     watchedChannel,
     (wc: WatchedChannel | null | undefined) => {
       if (wc) {
-        void loadEmotes(wc.platform, wc.channelSlug)
+        void emoteStore.loadEmotes(wc.platform, wc.channelSlug)
       }
     },
     { immediate: true },
@@ -133,7 +133,7 @@ export function useAutocomplete(params: {
 
       const ch = getCurrentChannelKey()
       if (ch) {
-        void loadEmotes(ch.platform, ch.channelId)
+        void emoteStore.loadEmotes(ch.platform, ch.channelId)
       }
     },
     { immediate: true },

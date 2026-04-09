@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { VList } from 'virtua/vue'
 import type { SevenTVEmote } from '@twirchat/shared/protocol'
-import { useEmoteCache } from '../composables/useEmoteCache'
+import { useEmoteStore } from '../stores/emoteStore'
 import { fuzzyFilter } from '../utils/fuzzyFilter'
 
 const ITEMS_PER_ROW = 6
@@ -16,23 +16,23 @@ const emit = defineEmits<{
   select: [alias: string]
 }>()
 
-const { emoteCache, loadEmotes } = useEmoteCache()
+const emoteStore = useEmoteStore()
 const searchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const listRef = ref<InstanceType<typeof VList> | null>(null)
 
 onMounted(() => {
-  void loadEmotes(props.platform, props.channelId)
+  void emoteStore.loadEmotes(props.platform, props.channelId)
 })
 
 const cacheKey = computed(() => `${props.platform}:${props.channelId}`)
 
 const allEmotes = computed((): SevenTVEmote[] => {
-  return emoteCache.value.get(cacheKey.value) ?? []
+  return emoteStore.emoteMap.get(cacheKey.value) ?? []
 })
 
 const isLoading = computed((): boolean => {
-  return allEmotes.value.length === 0 && !emoteCache.value.has(cacheKey.value)
+  return allEmotes.value.length === 0 && !emoteStore.emoteMap.has(cacheKey.value)
 })
 
 const filteredEmotes = computed(() => {
