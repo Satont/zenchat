@@ -7,12 +7,51 @@ interface EmoteSetData {
   emotes: Map<string, SevenTVEmote> // Alias -> emote
 }
 
+interface ChannelSubscription {
+  platform: Platform
+  channelId: string
+  lookupIds: Set<string>
+}
+
 class DesktopSevenTVService {
   private emoteSets = new Map<string, EmoteSetData>() // ChannelKey -> emoteSet
+  private subscriptions = new Map<string, ChannelSubscription>()
+  private lookupToChannelKey = new Map<string, string>()
   private _backendUrl: string | null = null
 
   private getChannelKey(platform: Platform, channelId: string): string {
     return `${platform}:${channelId}`
+  }
+
+  private rememberLookupIds(
+    platform: Platform,
+    channelId: string,
+    lookupIds: Iterable<string>,
+  ): ChannelSubscription {
+    const channelKey = this.getChannelKey(platform, channelId)
+    let subscription = this.subscriptions.get(channelKey)
+
+    if (!subscription) {
+      subscription = {
+        channelId,
+        lookupIds: new Set<string>(),
+        platform,
+      }
+      this.subscriptions.set(channelKey, subscription)
+    }
+
+    for (const lookupId of lookupIds) {
+      const lookupKey = this.getChannelKey(platform, lookupId)
+      this.lookupToChannelKey.set(lookupKey, channelKey)
+      subscription.lookupIds.add(lookupId)
+    }
+
+    return subscription
+  }
+
+  private resolveChannelKey(platform: Platform, channelId: string): string {
+    const channelKey = this.getChannelKey(platform, channelId)
+    return this.lookupToChannelKey.get(channelKey) ?? channelKey
   }
 
   private get backendUrl(): string {
@@ -23,7 +62,13 @@ class DesktopSevenTVService {
   }
 
   // Subscribe to 7TV emotes for a channel (called when joining a channel)
-  async subscribeToChannel(platform: Platform, channelId: string): Promise<void> {
+  async subscribeToChannel(
+    platform: Platform,
+    channelId: string,
+    lookupIds: string[] = [],
+  ): Promise<void> {
+    this.rememberLookupIds(platform, channelId, [channelId, ...lookupIds])
+
     // Send via backend WebSocket
     const message = {
       channelId,
@@ -37,14 +82,25 @@ class DesktopSevenTVService {
 
   // Unsubscribe when leaving channel
   async unsubscribeFromChannel(platform: Platform, channelId: string): Promise<void> {
-    const channelKey = this.getChannelKey(platform, channelId)
+    const channelKey = this.resolveChannelKey(platform, channelId)
+    const subscription = this.subscriptions.get(channelKey)
+    const backendChannelId = subscription?.channelId ?? channelId
 
     // Remove from local cache
     this.emoteSets.delete(channelKey)
+    this.subscriptions.delete(channelKey)
+
+    if (subscription) {
+      for (const lookupId of subscription.lookupIds) {
+        this.lookupToChannelKey.delete(this.getChannelKey(platform, lookupId))
+      }
+    } else {
+      this.lookupToChannelKey.delete(this.getChannelKey(platform, channelId))
+    }
 
     // Send via backend WebSocket
     const message = {
-      channelId,
+      channelId: backendChannelId,
       platform,
       type: 'seventv_unsubscribe' as const,
     }
@@ -67,6 +123,7 @@ class DesktopSevenTVService {
   // Handle incoming emote set from backend
   handleEmoteSet(platform: Platform, channelId: string, emotes: SevenTVEmote[]): void {
     const channelKey = this.getChannelKey(platform, channelId)
+    this.rememberLookupIds(platform, channelId, [channelId])
     const emoteMap = new Map<string, SevenTVEmote>()
 
     for (const emote of emotes) {
@@ -136,7 +193,7 @@ class DesktopSevenTVService {
 
   // Lookup emote by alias for a channel
   getEmote(platform: Platform, channelId: string, alias: string): SevenTVEmote | undefined {
-    const channelKey = this.getChannelKey(platform, channelId)
+    const channelKey = this.resolveChannelKey(platform, channelId)
     const emoteSet = this.emoteSets.get(channelKey)
 
     if (!emoteSet) {
@@ -148,7 +205,7 @@ class DesktopSevenTVService {
 
   // Get all emotes for a channel
   getEmotes(platform: Platform, channelId: string): SevenTVEmote[] {
-    const channelKey = this.getChannelKey(platform, channelId)
+    const channelKey = this.resolveChannelKey(platform, channelId)
     const emoteSet = this.emoteSets.get(channelKey)
 
     if (!emoteSet) {
@@ -160,10 +217,21 @@ class DesktopSevenTVService {
 
   // Get all subscribed channels
   getSubscribedChannels(): { platform: Platform; channelId: string }[] {
-    return [...this.emoteSets.values()].map((set) => ({
-      channelId: set.channelId,
-      platform: set.platform,
+    return [...this.subscriptions.values()].map((subscription) => ({
+      channelId: subscription.channelId,
+      platform: subscription.platform,
     }))
+  }
+
+  getLookupChannelIds(platform: Platform, channelId: string): string[] {
+    const channelKey = this.resolveChannelKey(platform, channelId)
+    const subscription = this.subscriptions.get(channelKey)
+
+    if (!subscription) {
+      return [channelId]
+    }
+
+    return [...subscription.lookupIds]
   }
 
   // This will be set by the backend connection module
