@@ -1,16 +1,15 @@
-import { onMounted, onUnmounted, computed, ref, watch, type ComputedRef, type Ref } from 'vue'
+import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
 
 import type {
   NormalizedChatMessage,
-  Platform,
   PlatformStatusInfo,
   WatchedChannel,
 } from '@twirchat/shared/types'
 import type { SevenTVEmote } from '@twirchat/shared/protocol'
 
 import { fuzzyFilter } from '../utils/fuzzyFilter'
-import { rpc } from '../main'
 import { mentionColorCache } from './useMessageParsing'
+import { useEmoteStore } from '../stores/emoteStore'
 import {
   parseToken,
   replaceToken,
@@ -40,7 +39,7 @@ export function useAutocomplete(params: {
 } {
   const { text, messages, watchedChannel, statuses } = params
 
-  const emoteCache = ref<Map<string, SevenTVEmote[]>>(new Map())
+  const emoteStore = useEmoteStore()
   const closedQuery = ref('')
   const selectedIndex = ref(0)
 
@@ -86,7 +85,7 @@ export function useAutocomplete(params: {
     const ch = getCurrentChannelKey()
     if (!ch) return []
 
-    const emotes = emoteCache.value.get(`${ch.platform}:${ch.channelId}`) ?? []
+    const emotes = emoteStore.emoteMap.get(`${ch.platform}:${ch.channelId}`) ?? []
 
     return emotes.map(
       (e: SevenTVEmote): EmoteSuggestion => ({
@@ -117,28 +116,11 @@ export function useAutocomplete(params: {
     closedQuery.value = ''
   })
 
-  async function loadEmotes(platform: string, channelId: string): Promise<void> {
-    const key = `${platform}:${channelId}`
-    if (emoteCache.value.has(key)) return
-
-    try {
-      const emotes = await rpc.request.getChannelEmotes({
-        platform: platform as Platform,
-        channelId,
-      })
-      const next = new Map(emoteCache.value)
-      next.set(key, emotes)
-      emoteCache.value = next
-    } catch (err) {
-      console.warn('[useAutocomplete] Failed to load emotes:', platform, channelId, err)
-    }
-  }
-
   watch(
     watchedChannel,
     (wc: WatchedChannel | null | undefined) => {
       if (wc) {
-        void loadEmotes(wc.platform, wc.channelSlug)
+        void emoteStore.loadEmotes(wc.platform, wc.channelSlug)
       }
     },
     { immediate: true },
@@ -151,71 +133,11 @@ export function useAutocomplete(params: {
 
       const ch = getCurrentChannelKey()
       if (ch) {
-        void loadEmotes(ch.platform, ch.channelId)
+        void emoteStore.loadEmotes(ch.platform, ch.channelId)
       }
     },
     { immediate: true },
   )
-
-  function onEmotesSet(payload: { platform: Platform; channelId: string; emotes: SevenTVEmote[] }) {
-    const key = `${payload.platform}:${payload.channelId}`
-    const next = new Map(emoteCache.value)
-    next.set(key, payload.emotes)
-    emoteCache.value = next
-  }
-
-  function onEmoteAdded(payload: { platform: Platform; channelId: string; emote: SevenTVEmote }) {
-    const key = `${payload.platform}:${payload.channelId}`
-    const next = new Map(emoteCache.value)
-    next.set(key, [...(emoteCache.value.get(key) ?? []), payload.emote])
-    emoteCache.value = next
-  }
-
-  function onEmoteRemoved(payload: { platform: Platform; channelId: string; emoteId: string }) {
-    const key = `${payload.platform}:${payload.channelId}`
-    const existing = emoteCache.value.get(key)
-    if (!existing) return
-    const next = new Map(emoteCache.value)
-    next.set(
-      key,
-      existing.filter((e: SevenTVEmote) => e.id !== payload.emoteId),
-    )
-    emoteCache.value = next
-  }
-
-  function onEmoteUpdated(payload: {
-    platform: Platform
-    channelId: string
-    emoteId: string
-    newAlias: string
-  }) {
-    const key = `${payload.platform}:${payload.channelId}`
-    const existing = emoteCache.value.get(key)
-    if (!existing) return
-    const next = new Map(emoteCache.value)
-    next.set(
-      key,
-      existing.map((e: SevenTVEmote) => {
-        if (e.id !== payload.emoteId) return e
-        return Object.assign({}, e, { alias: payload.newAlias })
-      }),
-    )
-    emoteCache.value = next
-  }
-
-  onMounted(() => {
-    rpc.addMessageListener('channel_emotes_set', onEmotesSet)
-    rpc.addMessageListener('channel_emote_added', onEmoteAdded)
-    rpc.addMessageListener('channel_emote_removed', onEmoteRemoved)
-    rpc.addMessageListener('channel_emote_updated', onEmoteUpdated)
-  })
-
-  onUnmounted(() => {
-    rpc.removeMessageListener('channel_emotes_set', onEmotesSet)
-    rpc.removeMessageListener('channel_emote_added', onEmoteAdded)
-    rpc.removeMessageListener('channel_emote_removed', onEmoteRemoved)
-    rpc.removeMessageListener('channel_emote_updated', onEmoteUpdated)
-  })
 
   function selectSuggestion(index: number): void {
     const s = suggestions.value[index]

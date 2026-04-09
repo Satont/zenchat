@@ -1,0 +1,9 @@
+bunx vue-tsc --noEmit
+
+Error summary:
+- Cannot find module 'vue' or its corresponding type declarations.
+- Cannot find module 'pinia' or its corresponding type declarations.
+- Cannot find module '@twurple/auth' or '@twurple/chat'.
+- Cannot find module 'youtubei.js'.
+- Cannot find module '@babylonjs/core'.
+- Many existing implicit-any diagnostics across desktop/backend sources.
