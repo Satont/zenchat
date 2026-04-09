@@ -9,6 +9,9 @@ import ChatAppearancePopover from './ui/ChatAppearancePopover.vue'
 import { rpc } from '../main'
 import { platformColor } from '../../shared/utils/platform'
 import { useStreamStatusStore } from '../stores/streamStatus'
+import KickIcon from '../../../assets/icons/platforms/kick.svg'
+import TwitchIcon from '../../../assets/icons/platforms/twitch.svg'
+import YoutubeIcon from '../../../assets/icons/platforms/youtube.svg'
 import type {
   Account,
   AppSettings,
@@ -68,6 +71,20 @@ function onReply(msg: NormalizedChatMessage) {
 }
 
 const streamStatusStore = useStreamStatusStore()
+
+function platformIcon(platform: string) {
+  if (platform === 'twitch') return TwitchIcon
+  if (platform === 'kick') return KickIcon
+  return YoutubeIcon
+}
+
+const watchedStreamStatus = computed(() => {
+  if (!props.watchedChannel || props.watchedChannel.platform === 'youtube') return undefined
+  return streamStatusStore.getStatus(
+    props.watchedChannel.platform as 'twitch' | 'kick',
+    props.watchedChannel.channelSlug,
+  )
+})
 
 // ---- Active messages (home vs watched) ----
 const activeMessages = computed<NormalizedChatMessage[]>(() => {
@@ -235,10 +252,25 @@ function onAppearanceChange(s: AppSettings) {
             connecting: watchedChannelStatus?.status === 'connecting',
           }"
         />
+        <component
+          :is="platformIcon(watchedChannel.platform)"
+          class="watched-platform-icon"
+          :style="{ color: platformColor(watchedChannel.platform) }"
+          width="14"
+          height="14"
+        />
         <span class="chat-header-title">{{ watchedChannel.displayName }}</span>
-        <span class="watched-platform" :style="{ color: platformColor(watchedChannel.platform) }">
-          {{ watchedChannel.platform }}
-        </span>
+        <template v-if="watchedStreamStatus?.isLive">
+          <span v-if="watchedStreamStatus.viewerCount !== undefined" class="watched-viewers">
+            {{ formatViewers(watchedStreamStatus.viewerCount) }}
+          </span>
+          <span v-if="watchedStreamStatus.categoryName" class="watched-category">
+            {{ watchedStreamStatus.categoryName }}
+          </span>
+          <span v-if="watchedStreamStatus.title" class="watched-stream-title">
+            {{ watchedStreamStatus.title }}
+          </span>
+        </template>
         <span
           v-if="watchedChannelStatus"
           class="watched-mode"
@@ -522,11 +554,37 @@ function onAppearanceChange(s: AppSettings) {
   background: #f59e0b;
 }
 
-.watched-platform {
+.watched-platform-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.watched-viewers {
   font-size: 11px;
   font-weight: 600;
-  text-transform: capitalize;
-  opacity: 0.8;
+  color: #22c55e;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.watched-category {
+  font-size: 11px;
+  color: var(--c-text-2, #8b8b99);
+  flex-shrink: 0;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watched-stream-title {
+  font-size: 11px;
+  color: var(--c-text-2, #8b8b99);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .watched-mode {
