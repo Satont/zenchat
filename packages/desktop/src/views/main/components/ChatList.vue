@@ -8,6 +8,7 @@ import Tooltip from './ui/Tooltip.vue'
 import ChatAppearancePopover from './ui/ChatAppearancePopover.vue'
 import { rpc } from '../main'
 import { platformColor } from '../../shared/utils/platform'
+import { useAliasStore } from '../stores/useAliasStore'
 import { useStreamStatusStore } from '../stores/streamStatus'
 import KickIcon from '../../../assets/icons/platforms/kick.svg'
 import TwitchIcon from '../../../assets/icons/platforms/twitch.svg'
@@ -71,11 +72,17 @@ function onReply(msg: NormalizedChatMessage) {
 }
 
 const streamStatusStore = useStreamStatusStore()
+const aliasStore = useAliasStore()
 
 function platformIcon(platform: string) {
   if (platform === 'twitch') return TwitchIcon
   if (platform === 'kick') return KickIcon
   return YoutubeIcon
+}
+
+function getAliasForMessage(msg: NormalizedChatMessage): string | undefined {
+  if (!msg.author.id) return undefined
+  return aliasStore.getAlias(msg.platform, msg.author.id)
 }
 
 const watchedStreamStatus = computed(() => {
@@ -383,6 +390,7 @@ function onAppearanceChange(s: AppSettings) {
           <ChatMessage
             :key="item.id"
             :message="item"
+            :alias="getAliasForMessage(item)"
             :show-platform-color-stripe="settings?.showPlatformColorStripe"
             :show-platform-icon="settings?.showPlatformIcon"
             :show-timestamp="settings?.showTimestamp"

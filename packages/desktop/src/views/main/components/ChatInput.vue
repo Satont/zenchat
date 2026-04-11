@@ -10,6 +10,7 @@ import TwitchIcon from '../../../assets/icons/platforms/twitch.svg'
 import YoutubeIcon from '../../../assets/icons/platforms/youtube.svg'
 import KickIcon from '../../../assets/icons/platforms/kick.svg'
 import { parseToken, replaceToken, useAutocomplete } from '../composables/useAutocomplete'
+import { useAliasStore } from '../stores/useAliasStore'
 import AutocompletePopup from './AutocompletePopup.vue'
 import { PopoverContent, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import EmotePicker from './EmotePicker.vue'
@@ -34,6 +35,7 @@ const emit = defineEmits<{
 
 const text = ref('')
 const textareaEl = ref<HTMLTextAreaElement | null>(null)
+const aliasStore = useAliasStore()
 
 const showEmotePicker = ref(false)
 const emotePickerRef = ref<InstanceType<typeof EmotePicker> | null>(null)
@@ -44,6 +46,7 @@ const { suggestions, isOpen, selectedIndex, mode, selectSuggestion, moveUp, move
     messages: computed(() => props.messages ?? []),
     watchedChannel: computed(() => props.watchedChannel ?? null),
     statuses: computed(() => props.statuses),
+    aliasMap: computed(() => aliasStore.aliasMap),
   })
 
 const currentChannelInfo = computed((): { platform: string; channelId: string } | null => {
