@@ -1,6 +1,7 @@
 export interface MentionSuggestion {
   type: 'mention'
   label: string
+  insertLabel: string
   color: string | null
 }
 
@@ -45,7 +46,7 @@ export function replaceToken(text: string, suggestion: AutocompleteSuggestion): 
   const before = text.slice(0, match.index)
 
   if (suggestion.type === 'mention') {
-    return `${before}@${suggestion.label} `
+    return `${before}@${suggestion.insertLabel} `
   }
 
   return `${before}${suggestion.label} `

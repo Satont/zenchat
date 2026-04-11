@@ -2,6 +2,7 @@ import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
 
 import type {
   NormalizedChatMessage,
+  Platform,
   PlatformStatusInfo,
   WatchedChannel,
 } from '@twirchat/shared/types'
@@ -27,6 +28,7 @@ export function useAutocomplete(params: {
   messages: Ref<NormalizedChatMessage[]>
   watchedChannel: Ref<WatchedChannel | null | undefined>
   statuses: Ref<Map<string, PlatformStatusInfo>>
+  aliasMap?: Ref<Map<Platform, Map<string, string>>>
 }): {
   suggestions: ComputedRef<AutocompleteSuggestion[]>
   isOpen: ComputedRef<boolean>
@@ -37,7 +39,7 @@ export function useAutocomplete(params: {
   moveDown: () => void
   close: () => void
 } {
-  const { text, messages, watchedChannel, statuses } = params
+  const { text, messages, watchedChannel, statuses, aliasMap } = params
 
   const emoteStore = useEmoteStore()
   const closedQuery = ref('')
@@ -52,13 +54,23 @@ export function useAutocomplete(params: {
     const result: MentionSuggestion[] = []
 
     for (const msg of messages.value) {
-      const lower = msg.author.displayName.toLowerCase()
-      if (seen.has(lower)) continue
-      seen.add(lower)
+      const displayName = msg.author.displayName
+      const lower = displayName.toLowerCase()
+      const dedupKey = msg.author.id
+        ? `${msg.platform}:${msg.author.id}`
+        : `${msg.platform}:${lower}`
+
+      if (seen.has(dedupKey)) continue
+      seen.add(dedupKey)
+
+      const alias = msg.author.id
+        ? aliasMap?.value.get(msg.platform)?.get(msg.author.id)
+        : undefined
 
       result.push({
         type: 'mention',
-        label: msg.author.displayName,
+        label: alias || displayName,
+        insertLabel: displayName,
         color: mentionColorCache.get(`${msg.platform}:${lower}`) ?? null,
       })
     }

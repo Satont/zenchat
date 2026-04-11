@@ -17,7 +17,11 @@ const emit = defineEmits<{
     <ul class="autocomplete-list">
       <li
         v-for="(suggestion, i) in suggestions"
-        :key="suggestion.label"
+        :key="
+          suggestion.type === 'mention'
+            ? `${suggestion.label}:${suggestion.insertLabel}`
+            : suggestion.label
+        "
         class="autocomplete-item"
         :class="{ 'is-selected': i === selectedIndex }"
         @mousedown.prevent="emit('select', i)"
@@ -28,6 +32,9 @@ const emit = defineEmits<{
             :style="{ backgroundColor: suggestion.color || '#8b8b99' }"
           ></span>
           <span class="mention-label">{{ suggestion.label }}</span>
+          <span v-if="suggestion.insertLabel !== suggestion.label" class="mention-real-name"
+            >→ {{ suggestion.insertLabel }}</span
+          >
         </template>
 
         <template v-else-if="suggestion.type === 'emote'">
@@ -98,6 +105,13 @@ const emit = defineEmits<{
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--c-text);
+}
+
+.mention-real-name {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--c-text-2);
+  white-space: nowrap;
 }
 
 .emote-image {
