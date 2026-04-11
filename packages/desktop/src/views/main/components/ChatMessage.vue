@@ -7,6 +7,7 @@ import { platformColor } from '../../shared/utils/platform'
 import TwitchIcon from '../../../assets/icons/platforms/twitch.svg'
 import YoutubeIcon from '../../../assets/icons/platforms/youtube.svg'
 import KickIcon from '../../../assets/icons/platforms/kick.svg'
+import UserContextMenu from './UserContextMenu.vue'
 import { useMessageParsing } from '../composables/useMessageParsing'
 import type { MessagePart } from '../composables/useMessageParsing'
 
@@ -22,6 +23,7 @@ const props = defineProps<{
   accounts?: Account[]
   selfPingEnabled?: boolean
   selfPingColor?: string
+  alias?: string
 }>()
 
 const emit = defineEmits<{
@@ -241,9 +243,22 @@ function scopeBadgeSvg(svgString: string, badgeId: string): string {
           />
           <span v-else class="badge-text">{{ badge.text }}</span>
         </span></span
-      ><span class="author" :style="message.author.color ? { color: message.author.color } : {}">{{
-        message.author.displayName
-      }}</span
+      ><template v-if="isSystemMessage"
+        ><span
+          class="author"
+          :style="message.author.color ? { color: message.author.color } : {}"
+          >{{ message.author.displayName }}</span
+        ></template
+      ><UserContextMenu
+        v-else
+        :platform="message.platform"
+        :platform-user-id="message.author.id"
+        :display-name="message.author.displayName"
+        :current-alias="props.alias"
+      >
+        <span class="author" :style="message.author.color ? { color: message.author.color } : {}">{{
+          props.alias ?? message.author.displayName
+        }}</span> </UserContextMenu
       ><span class="compact-sep">: </span
       ><span class="msg-text" :class="{ italic: message.type === 'action' }">
         <template v-for="(part, index) in messageParts" :key="index">
@@ -411,10 +426,26 @@ function scopeBadgeSvg(svgString: string, badgeId: string): string {
           </span>
         </span>
 
-        <!-- Author name -->
-        <span class="author" :style="message.author.color ? { color: message.author.color } : {}">{{
-          message.author.displayName
-        }}</span>
+        <template v-if="isSystemMessage">
+          <span
+            class="author"
+            :style="message.author.color ? { color: message.author.color } : {}"
+            >{{ message.author.displayName }}</span
+          >
+        </template>
+        <UserContextMenu
+          v-else
+          :platform="message.platform"
+          :platform-user-id="message.author.id"
+          :display-name="message.author.displayName"
+          :current-alias="props.alias"
+        >
+          <span
+            class="author"
+            :style="message.author.color ? { color: message.author.color } : {}"
+            >{{ props.alias ?? message.author.displayName }}</span
+          >
+        </UserContextMenu>
 
         <span v-if="props.showTimestamp" class="timestamp">{{
           formatTime(message.timestamp)
@@ -630,7 +661,7 @@ function scopeBadgeSvg(svgString: string, badgeId: string): string {
 .author {
   font-weight: 700;
   font-size: 0.9em;
-  cursor: default;
+  cursor: pointer;
 }
 
 .timestamp {

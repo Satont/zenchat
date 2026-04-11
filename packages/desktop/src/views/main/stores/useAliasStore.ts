@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { Platform } from '@twirchat/shared/types'
-import type { UserAlias } from '../../shared/rpc'
+import type { UserAlias } from '../../../shared/rpc'
 import { rpc } from '../main'
 
 export const useAliasStore = defineStore('aliases', () => {
@@ -41,8 +41,9 @@ export const useAliasStore = defineStore('aliases', () => {
       const idx = aliases.value.findIndex(
         (a) => a.platform === platform && a.platformUserId === platformUserId,
       )
-      if (idx >= 0) {
-        aliases.value[idx] = { ...aliases.value[idx], alias }
+      if (idx >= 0 && aliases.value[idx]) {
+        aliases.value[idx]!.alias = alias
+        aliases.value[idx]!.updatedAt = Date.now()
       } else {
         aliases.value.push({
           platform,
