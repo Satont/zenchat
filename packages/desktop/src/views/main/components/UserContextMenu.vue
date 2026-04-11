@@ -118,61 +118,6 @@ async function handleRemoveAlias() {
 </template>
 
 <style scoped>
-.context-menu-content {
-  min-width: 160px;
-  background: var(--c-bg-2, #2a2a35);
-  border: 1px solid var(--c-border, #3a3a45);
-  border-radius: 6px;
-  padding: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  z-index: 1000;
-}
-
-.context-menu-label {
-  padding: 6px 10px;
-  font-size: 0.85em;
-  color: var(--c-text-2, #8b8b99);
-  font-weight: 600;
-}
-
-.context-menu-alias-label {
-  padding: 0 10px 6px;
-  font-size: 0.8em;
-  color: var(--c-accent, #9147ff);
-  font-style: italic;
-}
-
-.context-menu-item {
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9em;
-  color: var(--c-text, #e2e2e8);
-  outline: none;
-}
-
-.context-menu-item:hover,
-.context-menu-item[data-highlighted] {
-  background: var(--c-bg, #1e1e24);
-  color: var(--c-text, #e2e2e8);
-}
-
-.context-menu-item-danger {
-  color: #ff5050;
-}
-
-.context-menu-item-danger:hover,
-.context-menu-item-danger[data-highlighted] {
-  background: rgba(255, 80, 80, 0.15);
-  color: #ff5050;
-}
-
-.context-menu-separator {
-  height: 1px;
-  background: var(--c-border, #3a3a45);
-  margin: 4px 0;
-}
-
 .dialog-overlay {
   background: rgba(0, 0, 0, 0.6);
   position: fixed;
@@ -256,5 +201,64 @@ async function handleRemoveAlias() {
 
 .dialog-btn-save:hover {
   opacity: 0.9;
+}
+</style>
+
+<style>
+/* Global styles — ContextMenuContent is portalled outside the component tree */
+.context-menu-content {
+  min-width: 160px;
+  background-color: var(--c-surface-2, #1f1f24) !important;
+  border: 1px solid var(--c-border, #2a2a33);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  color-scheme: dark;
+}
+
+.context-menu-label {
+  padding: 6px 10px;
+  font-size: 0.85em;
+  color: var(--c-text-2, #8b8b99);
+  font-weight: 600;
+}
+
+.context-menu-alias-label {
+  padding: 0 10px 6px;
+  font-size: 0.8em;
+  color: var(--c-accent, #9147ff);
+  font-style: italic;
+}
+
+.context-menu-item {
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: var(--c-text, #e2e2e8);
+  outline: none;
+}
+
+.context-menu-item:hover,
+.context-menu-item[data-highlighted] {
+  background: var(--c-bg, #1e1e24);
+  color: var(--c-text, #e2e2e8);
+}
+
+.context-menu-item-danger {
+  color: #ff5050;
+}
+
+.context-menu-item-danger:hover,
+.context-menu-item-danger[data-highlighted] {
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff5050;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: var(--c-border, #2a2a33);
+  margin: 4px 0;
 }
 </style>
