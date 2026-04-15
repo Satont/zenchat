@@ -1,4 +1,6 @@
 import type { ElectrobunConfig } from 'electrobun/bun'
+import path from "path";
+import { readFileSync } from "fs";
 
 /**
  * TwirChat Electrobun build configuration.
@@ -7,17 +9,33 @@ import type { ElectrobunConfig } from 'electrobun/bun'
  * Electrobun copies the Vite dist output into the views:// protocol.
  */
 
+const packageJson = JSON.parse(readFileSync("./package.json", "utf-8"));
+
+const aliasPlugin = {
+  name: "alias-resolver",
+  setup(build: Bun.PluginBuilder) {
+    build.onResolve({ filter: /^@\// }, (args) => {
+      let resolved = path.resolve(process.cwd(), "src", args.path.slice(2));
+      if (!path.extname(resolved)) {
+        resolved += ".ts";
+      }
+      return { path: resolved };
+    });
+  },
+};
+
 const config: ElectrobunConfig = {
   app: {
     description: 'Multi-platform chat manager for streamers',
     identifier: 'dev.twirchat.app',
     name: 'TwirChat',
-    version: '0.1.0',
+    version: packageJson.version,
   },
 
   build: {
     bun: {
       entrypoint: 'src/bun/index.ts',
+      plugins: [aliasPlugin],
     },
     bunVersion: '1.3.12',
 

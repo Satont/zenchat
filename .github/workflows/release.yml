@@ -53,9 +53,46 @@ jobs:
           skip-git-pull: true
           create-summary: true
 
-  build-desktop:
-    name: Build Desktop (${{ matrix.os }})
+  build-views:
+    name: Build Views (Vite)
     needs: changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('bun.lock', 'package.json') }}
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Build views
+        working-directory: packages/desktop
+        run: bun run build:views
+
+      - name: Upload views artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-views
+          path: packages/desktop/dist/**
+          if-no-files-found: error
+
+  build-desktop:
+    name: Build Desktop (${{ matrix.target }})
+    needs: [changelog, build-views]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -71,18 +108,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install dependencies
-        run: bun install
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('bun.lock', 'package.json') }}
 
-      - name: Build views
-        working-directory: packages/desktop
-        run: bun run build:views
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Download views artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-views
+          path: packages/desktop/dist
 
       - name: Build Electrobun
         working-directory: packages/desktop
@@ -91,6 +140,10 @@ jobs:
           CHATRIX_BACKEND_URL: ${{ secrets.BACKEND_URL }}
           CHATRIX_BACKEND_WS_URL: ${{ secrets.BACKEND_WS_URL }}
         run: bunx electrobun build --env=stable
+
+      - name: Copy Linux installer script
+        if: matrix.target == 'linux-x64'
+        run: cp scripts/install-linux.sh packages/desktop/artifacts/install-linux.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -112,8 +165,16 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('bun.lock', 'package.json') }}
+
       - name: Install dependencies
-        run: bun install
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: bun install --frozen-lockfile
 
       - name: Build backend binary
         working-directory: packages/backend
