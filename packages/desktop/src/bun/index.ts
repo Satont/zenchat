@@ -888,13 +888,15 @@ if (process.platform === 'linux') {
 
       clearSizeRequest(win.ptr)
 
-      // NOTE: We intentionally do NOT attach a resize handler.
-      // The original handler called FFI (gtk_widget_set_size_request) on
-      // every resize via setTimeout, which triggered a Bun WebWorker
-      // use-after-free crash (segfault at 0x8 in FFI_Callback_threadsafe).
-      // The one-shot clear above is sufficient to prevent the minimum-size
-      // lock; Electrobun re-applies the constraint only on explicit resizes
-      // initiated from the Bun side, not on user-driven window moves.
+      // Sync handler — no setTimeout/FFI callback indirection that crashes
+      // Bun's WebWorker (segfault at 0x8 in FFI_Callback_threadsafe_call).
+      win.on('resize', () => {
+        try {
+          if (win.ptr) clearSizeRequest(win.ptr)
+        } catch {
+          // Window destroyed — ignore.
+        }
+      })
     } catch (err) {
       log.warn('[linux] failed to clear gtk size constraints', { error: String(err) })
     }
